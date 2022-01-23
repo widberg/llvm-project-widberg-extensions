@@ -1395,6 +1395,10 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_PreserveAll;
   case CC_X86RegCall:
     return llvm::dwarf::DW_CC_LLVM_X86RegCall;
+  case CC_UserCall:
+    return llvm::dwarf::DW_CC_LLVM_UserCall;
+  case CC_UserPurge:
+    return llvm::dwarf::DW_CC_LLVM_UserPurge;
   }
   return 0;
 }

@@ -1363,6 +1363,8 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
   case tok::kw___stdcall:       // struct foo {...} __stdcall    x;
   case tok::kw___thiscall:      // struct foo {...} __thiscall   x;
   case tok::kw___vectorcall:    // struct foo {...} __vectorcall x;
+  case tok::kw___usercall:
+  case tok::kw___userpurge:
     // We will diagnose these calling-convention specifiers on non-function
     // declarations later, so claim they are valid after a type specifier.
     return getLangOpts().MicrosoftExt;

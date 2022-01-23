@@ -987,6 +987,12 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_PreserveAll:
       OS << " __attribute__((preserve_all))";
       break;
+    case CC_UserCall:
+      OS << "__attribute__((usercall))";
+      break;
+    case CC_UserPurge:
+      OS << "__attribute__((userpurge))";
+      break;
     }
   }
 
@@ -1765,6 +1771,16 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::BTFTypeTag:
     OS << "btf_type_tag";
+    break;
+  case attr::UserCall:
+    OS << "usercall";
+    break;
+  case attr::UserPurge:
+    OS << "userpurge";
+    break;
+  case attr::ReturnRegister:
+    OS << "return_register(";
+    OS << ")";
     break;
   }
   OS << "))";

@@ -15,6 +15,7 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/CallingConv.h"
 
 using namespace llvm;
@@ -337,6 +338,67 @@ static bool CC_X86_64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     LocVT = MVT::i64;
     LocInfo = CCValAssign::ZExt;
   }
+  return false;
+}
+
+static bool CC_X86_32_UserCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                              CCValAssign::LocInfo &LocInfo,
+                              ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  // MachineFunction &MF = State.getMachineFunction();
+  // Function &F = MF.getFunction();
+
+  // if (!F.hasParamAttribute(ValNo, "parameter-register")) {
+  //   F.dump();
+  //   printf("%d\n", F.getCallingConv());
+  //   llvm_unreachable("RetCC_X86_32_UserCall bad attr.");
+
+  //   return false;
+  // }
+
+  // StringRef return_register = F.getParamAttribute(ValNo, "parameter-register").getAsString();
+
+  // Optional<MCRegister> PhysReg = MF.getMMI()
+  //                                 .getContext()
+  //                                 .getRegisterInfo()
+  //                                 ->getRegNo(return_register);
+  
+  // if (PhysReg) {
+  //   unsigned Reg = State.AllocateReg(*PhysReg);
+  //   if (Reg) {
+  //     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+  //     return true;
+  //   }
+
+  //   llvm_unreachable("CC_X86_32_UserCall unable to allocate register.");
+
+  //   return false;
+  // }
+
+  // llvm_unreachable("CC_X86_32_UserCall Bad register name.");
+
+  return false;
+}
+
+static bool RetCC_X86_32_UserCall(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                      CCValAssign::LocInfo LocInfo,
+                                      ISD::ArgFlagsTy ArgFlags,
+                                      CCState &State) {
+
+  MCRegister return_register = ArgFlags.getLocation();
+
+  if (!return_register.isValid()) {
+    llvm_unreachable("usercallret: invalid reg");
+    return false;
+  }
+  
+  unsigned Reg = State.AllocateReg(return_register);
+  if (Reg) {
+    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+    return true;
+  }
+
+  llvm_unreachable("RetCC_X86_32_UserCall unable to allocate register.");
+
   return false;
 }
 

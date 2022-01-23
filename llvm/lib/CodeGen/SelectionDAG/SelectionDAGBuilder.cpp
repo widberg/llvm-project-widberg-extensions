@@ -2014,6 +2014,20 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
           Flags.setSExt();
         else if (ExtendKind == ISD::ZERO_EXTEND)
           Flags.setZExt();
+        
+        if (F->getAttributes().hasRetAttr("return-register")) {
+          Optional<MCRegister> PhysReg = TLI.getTargetMachine().getMCRegisterInfo()
+                                      ->getRegNo(F->getAttributes().getRetAttr("return-register").getValueAsString());
+      
+          if (PhysReg) {
+            Flags.setLocation(*PhysReg);
+          }
+          else
+          {
+            printf("%s\n", F->getAttributes().getRetAttr("return-register").getValueAsString().str().c_str());
+            llvm_unreachable("Target lowering: Bad register");
+          }
+        }
 
         for (unsigned i = 0; i < NumParts; ++i) {
           Outs.push_back(ISD::OutputArg(Flags,
@@ -9518,7 +9532,7 @@ static AttributeList getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
     Attrs.push_back(Attribute::InReg);
 
   return AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
-                            Attrs);
+                            Attrs).addRetAttribute(CLI.RetTy->getContext(), "return-register", CLI.ReturnLocation);
 }
 
 /// TargetLowering::LowerCallTo - This is the default LowerCallTo

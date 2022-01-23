@@ -280,6 +280,8 @@ namespace clang {
     CC_PreserveMost, // __attribute__((preserve_most))
     CC_PreserveAll,  // __attribute__((preserve_all))
     CC_AArch64VectorCall, // __attribute__((aarch64_vector_pcs))
+    CC_UserCall, // __attribute__((usercall))
+    CC_UserPurge, // __attribute__((userpurge))
   };
 
   /// Checks whether the given calling convention supports variadic
@@ -296,6 +298,8 @@ namespace clang {
     case CC_OpenCLKernel:
     case CC_Swift:
     case CC_SwiftAsync:
+    case CC_UserCall:
+    case CC_UserPurge:
       return false;
     default:
       return true;

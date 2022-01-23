@@ -567,6 +567,12 @@ KEYWORD(__forceinline               , KEYMS)
 KEYWORD(__unaligned                 , KEYMS)
 KEYWORD(__super                     , KEYMS)
 
+// UserCall extension
+KEYWORD(__usercall                  , KEYALL)
+ALIAS("_usercall"     , __usercall  , KEYALL)
+KEYWORD(__userpurge                 , KEYALL)
+ALIAS("_userpurge"    , __userpurge , KEYALL)
+
 // OpenCL address space qualifiers
 KEYWORD(__global                    , KEYOPENCLC | KEYOPENCLCXX)
 KEYWORD(__local                     , KEYOPENCLC | KEYOPENCLCXX)

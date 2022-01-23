@@ -1659,7 +1659,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
   ComputeValueVTs(TLI, DL, ReturnType, ValueVTs);
   unsigned NumValues = ValueVTs.size();
   if (NumValues == 0) return;
-
+  
   for (unsigned j = 0, f = NumValues; j != f; ++j) {
     EVT VT = ValueVTs[j];
     ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
@@ -1694,6 +1694,24 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
       Flags.setSExt();
     else if (attr.hasRetAttr(Attribute::ZExt))
       Flags.setZExt();
+    
+    if (CC == CallingConv::UserCall || CC == CallingConv::UserPurge) {
+      if (attr.hasRetAttr("return-register")) {
+        Optional<MCRegister> PhysReg = TLI.getTargetMachine().getMCRegisterInfo()
+                                    ->getRegNo(attr.getRetAttr("return-register").getValueAsString());
+    
+        if (PhysReg) {
+          Flags.setLocation(*PhysReg);
+        }
+        else
+        {
+          printf("%s\n", attr.getRetAttr("return-register").getValueAsString().str().c_str());
+          llvm_unreachable("Target lowering: Bad register");
+        }
+      } else {
+        llvm_unreachable("usercall no return reg");
+      }
+    }
 
     for (unsigned i = 0; i < NumParts; ++i)
       Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));

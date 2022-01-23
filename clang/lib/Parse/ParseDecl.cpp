@@ -786,7 +786,9 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
     case tok::kw___w64:
     case tok::kw___ptr32:
     case tok::kw___sptr:
-    case tok::kw___uptr: {
+    case tok::kw___uptr:
+    case tok::kw___usercall:
+    case tok::kw___userpurge: {
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
       SourceLocation AttrNameLoc = ConsumeToken();
       attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
@@ -827,6 +829,8 @@ SourceLocation Parser::SkipExtendedMicrosoftTypeAttributes() {
     case tok::kw___unaligned:
     case tok::kw___sptr:
     case tok::kw___uptr:
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
       EndLoc = ConsumeToken();
       break;
     default:
@@ -3643,6 +3647,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw___thiscall:
     case tok::kw___regcall:
     case tok::kw___vectorcall:
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
       ParseMicrosoftTypeAttributes(DS.getAttributes());
       continue;
 
@@ -5159,6 +5165,8 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___ptr32:
   case tok::kw___pascal:
   case tok::kw___unaligned:
+  case tok::kw___usercall:
+  case tok::kw___userpurge:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -5391,6 +5399,8 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw___forceinline:
   case tok::kw___pascal:
   case tok::kw___unaligned:
+  case tok::kw___usercall:
+  case tok::kw___userpurge:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -5656,6 +5666,8 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___thiscall:
     case tok::kw___regcall:
     case tok::kw___vectorcall:
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
       if (AttrReqs & AR_DeclspecAttributesParsed) {
         ParseMicrosoftTypeAttributes(DS.getAttributes());
         continue;

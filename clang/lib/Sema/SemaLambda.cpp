@@ -1296,7 +1296,7 @@ static void repeatForLambdaConversionFunctionCallingConvs(
   if (S.getLangOpts().MSVCCompat) {
     CallingConv Convs[] = {
         CC_C,        CC_X86StdCall, CC_X86FastCall, CC_X86VectorCall,
-        DefaultFree, DefaultMember, CallOpCC};
+        DefaultFree, DefaultMember, CallOpCC, CC_UserCall, CC_UserPurge};
     llvm::sort(Convs);
     llvm::iterator_range<CallingConv *> Range(
         std::begin(Convs), std::unique(std::begin(Convs), std::end(Convs)));

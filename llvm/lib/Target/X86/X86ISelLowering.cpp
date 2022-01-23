@@ -3434,6 +3434,8 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::X86_StdCall:
   case CallingConv::X86_VectorCall:
   case CallingConv::X86_FastCall:
+  case CallingConv::UserCall:
+  case CallingConv::UserPurge:
   // Swift:
   case CallingConv::Swift:
     return true;
@@ -4710,6 +4712,17 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     InFlag = Chain.getValue(1);
   }
 
+  for (auto& f : Ins) {
+    if (CallConv == CallingConv::UserCall || CallConv == CallingConv::UserPurge) {
+      Optional<MCRegister> PhysReg = MF.getMMI().getTarget().getMCRegisterInfo()
+                                  ->getRegNo(CLI.ReturnLocation);
+  
+      if (PhysReg) {
+        f.Flags.setLocation(*PhysReg);
+      }
+    }
+  }
+
   // Handle result values, copying them out of physregs into vregs that we
   // return.
   return LowerCallResult(Chain, InFlag, CallConv, isVarArg, Ins, dl, DAG,
@@ -5242,6 +5255,7 @@ bool X86::isCalleePop(CallingConv::ID CallingConv,
   case CallingConv::X86_FastCall:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_VectorCall:
+  case CallingConv::UserCall:
     return !is64Bit;
   }
 }
@@ -27822,7 +27836,9 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
     default:
       llvm_unreachable("Unsupported calling convention");
     case CallingConv::C:
-    case CallingConv::X86_StdCall: {
+    case CallingConv::X86_StdCall:
+    case CallingConv::UserCall:
+    case CallingConv::UserPurge: {
       // Pass 'nest' parameter in ECX.
       // Must be kept in sync with X86CallingConv.td
       NestReg = X86::ECX;
@@ -27841,6 +27857,9 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
             const DataLayout &DL = DAG.getDataLayout();
             // FIXME: should only count parameters that are lowered to integers.
             InRegCount += (DL.getTypeSizeInBits(*I) + 31) / 32;
+          } else if (Attrs.hasParamAttr(Idx, "parameter-register")) {
+            report_fatal_error("Nest register in use - dont use ecx"
+                               " parameter-register!");
           }
 
         if (InRegCount > 2) {

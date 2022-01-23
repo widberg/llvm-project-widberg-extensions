@@ -359,6 +359,8 @@ public:
     case CC_X86Pascal:
     case CC_IntelOclBicc:
     case CC_OpenCLKernel:
+    case CC_UserCall:
+    case CC_UserPurge:
       return CCCR_OK;
     case CC_SwiftAsync:
       return CCCR_Error;
@@ -796,6 +798,8 @@ public:
     case CC_X86StdCall:
     case CC_X86ThisCall:
     case CC_X86FastCall:
+    case CC_UserCall:
+    case CC_UserPurge:
       return CCCR_Ignore;
     case CC_C:
     case CC_X86VectorCall:

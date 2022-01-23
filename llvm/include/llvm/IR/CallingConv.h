@@ -252,6 +252,12 @@ namespace CallingConv {
     /// M68k_INTR - Calling convention used for M68k interrupt routines.
     M68k_INTR = 101,
 
+    /// UserCall
+    UserCall = 102,
+
+    /// UserPurge
+    UserPurge = 103,
+
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023
   };

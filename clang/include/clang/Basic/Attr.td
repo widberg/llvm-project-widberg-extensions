@@ -3914,3 +3914,26 @@ def Error : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [ErrorAttrDocs];
 }
+
+def UserCall : DeclOrTypeAttr {
+  let Spellings = [GCC<"usercall">, Keyword<"__usercall">, Keyword<"_usercall">];
+  let Documentation = [Undocumented];
+}
+
+def UserPurge : DeclOrTypeAttr {
+  let Spellings = [GCC<"userpurge">, Keyword<"__userpurge">, Keyword<"_userpurge">];
+  let Documentation = [Undocumented];
+}
+
+def ReturnRegister : DeclOrTypeAttr {
+  let Spellings = [GNU<"return_register">];
+  let Args = [StringArgument<"RegisterName">];
+  let Documentation = [Undocumented];
+}
+
+def ParameterRegister : InheritableAttr {
+  let Spellings = [GNU<"parameter_register">];
+  let Args = [StringArgument<"RegisterName">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let Documentation = [Undocumented];
+}

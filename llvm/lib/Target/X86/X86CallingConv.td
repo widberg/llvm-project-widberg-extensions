@@ -440,7 +440,6 @@ def RetCC_X86_64_HHVM: CallingConv<[
                                  RAX, R10, R11, R13, R14, R15]>>
 ]>;
 
-
 defm X86_32_RegCall :
 	 X86_RegCall_base<RC_X86_32_RegCall>;
 defm X86_Win64_RegCall :
@@ -458,6 +457,8 @@ def RetCC_X86_32 : CallingConv<[
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<RetCC_X86_32_HiPE>>,
   CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<RetCC_X86_32_VectorCall>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<RetCC_X86_32_RegCall>>,
+  CCIfCC<"CallingConv::UserCall", CCCustom<"RetCC_X86_32_UserCall">>,
+  CCIfCC<"CallingConv::UserPurge", CCCustom<"RetCC_X86_32_UserCall">>,
 
   // Otherwise, use RetCC_X86_32_C.
   CCDelegateTo<RetCC_X86_32_C>
@@ -1083,6 +1084,8 @@ def CC_X86_32 : CallingConv<[
   CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_X86_32_GHC>>,
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<CC_X86_32_HiPE>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_32_RegCall>>,
+  CCIfCC<"CallingConv::UserCall", CCCustom<"CC_X86_32_UserCall">>,
+  CCIfCC<"CallingConv::UserPurge", CCCustom<"CC_X86_32_UserCall">>,
 
   // Otherwise, drop to normal X86-32 CC
   CCDelegateTo<CC_X86_32_C>

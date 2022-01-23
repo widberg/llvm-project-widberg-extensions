@@ -4994,6 +4994,12 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_PreserveAll:
     D->addAttr(::new (S.Context) PreserveAllAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_UserCall:
+    D->addAttr(::new (S.Context) UserCallAttr(S.Context, AL));
+    return;
+  case ParsedAttr::AT_UserPurge:
+    D->addAttr(::new (S.Context) UserPurgeAttr(S.Context, AL));
+    return;
   default:
     llvm_unreachable("unexpected attribute kind");
   }
@@ -5164,6 +5170,12 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_PreserveAll:
     CC = CC_PreserveAll;
+    break;
+  case ParsedAttr::AT_UserCall:
+    CC = CC_UserCall;
+    break;
+  case ParsedAttr::AT_UserPurge:
+    CC = CC_UserPurge;
     break;
   default: llvm_unreachable("unexpected attribute kind");
   }
@@ -8119,6 +8131,22 @@ EnforceTCBLeafAttr *Sema::mergeEnforceTCBLeafAttr(
       *this, D, AL);
 }
 
+static void handleParameterRegisterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef RegisterName;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, RegisterName))
+    return;
+  D->addAttr(::new (S.Context)
+                 ParameterRegisterAttr(S.Context, AL, RegisterName));
+}
+
+static void handleReturnRegisterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef RegisterName;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, RegisterName))
+    return;
+  D->addAttr(::new (S.Context)
+                 ReturnRegisterAttr(S.Context, AL, RegisterName));
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -8551,6 +8579,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_PreserveMost:
   case ParsedAttr::AT_PreserveAll:
   case ParsedAttr::AT_AArch64VectorPcs:
+  case ParsedAttr::AT_UserCall:
+  case ParsedAttr::AT_UserPurge:
     handleCallConvAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Suppress:
@@ -8780,6 +8810,14 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 
   case ParsedAttr::AT_UsingIfExists:
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_ParameterRegister:
+    handleParameterRegisterAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_ReturnRegister:
+    handleReturnRegisterAttr(S, D, AL);
     break;
   }
 }

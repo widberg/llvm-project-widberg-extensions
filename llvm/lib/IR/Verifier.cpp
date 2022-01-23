@@ -59,6 +59,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -2464,6 +2466,19 @@ void Verifier::visitFunction(const Function &F) {
            &F);
     break;
   }
+  
+  if (Attrs.hasRetAttr("return-register")) {
+    Assert(F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge,
+           "Attribute 'return-register' requires 'usercall' or 'userpurge' calling convention", F);
+  }
+
+  for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
+    AttributeSet ArgAttrs = Attrs.getParamAttrs(i);
+    if (ArgAttrs.hasAttribute("parameter-register")) {
+      Assert(F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge,
+            "Attribute 'return-register' requires 'usercall' or 'userpurge' calling convention", F);
+    }
+  }
 
   // Check that the argument values match the function type for this function...
   unsigned i = 0;
@@ -3148,6 +3163,16 @@ void Verifier::visitCallBase(CallBase &Call) {
            "speculatable attribute may not apply to call sites", Call);
   }
 
+  if (Attrs.hasRetAttr("return-register")) {
+    Assert(Callee && Callee->hasRetAttribute("return-register"),
+           "return-register attribute may not apply only to call sites", Call);
+  }
+
+  if (Callee && Callee->hasRetAttribute("return-register")) {
+    Assert(Attrs.hasRetAttr("return-register"),
+           "return-register attribute may not apply only to definition", Call);
+  }
+
   if (Attrs.hasFnAttr(Attribute::Preallocated)) {
     Assert(Call.getCalledFunction()->getIntrinsicID() ==
                Intrinsic::call_preallocated_arg,
@@ -3186,6 +3211,18 @@ void Verifier::visitCallBase(CallBase &Call) {
       Assert(ArgI->hasSwiftErrorAttr(),
              "swifterror argument for call has mismatched parameter", ArgI,
              Call);
+    }
+
+    if (Attrs.hasParamAttr(i, "parameter-register")) {
+      Assert(Callee && Callee->hasParamAttribute(i, "parameter-register"),
+             "parameter-register may not apply only to call sites",
+             Call.getArgOperand(i), Call);
+    }
+
+    if (Callee && Callee->hasParamAttribute(i, "parameter-register")) {
+      Assert(Attrs.hasParamAttr(i, "parameter-register"),
+             "parameter-register may not apply only to definition",
+             Call.getArgOperand(i), Call);
     }
 
     if (Attrs.hasParamAttr(i, Attribute::ImmArg)) {

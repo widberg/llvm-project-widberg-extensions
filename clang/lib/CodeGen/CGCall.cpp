@@ -67,6 +67,8 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_PreserveAll: return llvm::CallingConv::PreserveAll;
   case CC_Swift: return llvm::CallingConv::Swift;
   case CC_SwiftAsync: return llvm::CallingConv::SwiftTail;
+  case CC_UserCall: return llvm::CallingConv::UserCall;
+  case CC_UserPurge: return llvm::CallingConv::UserPurge;
   }
 }
 
@@ -241,6 +243,12 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<PreserveAllAttr>())
     return CC_PreserveAll;
+
+  if (D->hasAttr<UserCallAttr>())
+    return CC_UserCall;
+
+  if (D->hasAttr<UserPurgeAttr>())
+    return CC_UserPurge;
 
   return CC_C;
 }
@@ -2134,6 +2142,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                llvm::toStringRef(CodeGenOpts.UniformWGSize));
       }
     }
+
+    if (TargetDecl->hasAttr<ReturnRegisterAttr>()) {
+        RetAttrs.addAttribute("return-register", TargetDecl->getAttr<ReturnRegisterAttr>()->getRegisterName());
+    }
   }
 
   // Attach "no-builtins" attributes to:
@@ -2515,6 +2527,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (FI.getExtParameterInfo(ArgNo).isNoEscape())
       Attrs.addAttribute(llvm::Attribute::NoCapture);
+    
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
+      for (unsigned i = 0, e = FD->getNumParams(); i < e; ++i) {
+        const ParmVarDecl *PDecl = FD->getParamDecl(i);
+        if (PDecl->hasAttr<ParameterRegisterAttr>()) {
+          Attrs.addAttribute("parameter-register", PDecl->getAttr<ParameterRegisterAttr>()->getRegisterName());
+        }
+      }
+    }
 
     if (Attrs.hasAttributes()) {
       unsigned FirstIRArg, NumIRArgs;

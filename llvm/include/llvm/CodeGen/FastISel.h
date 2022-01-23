@@ -96,6 +96,8 @@ public:
     SmallVector<ISD::InputArg, 4> Ins;
     SmallVector<Register, 4> InRegs;
 
+    StringRef ReturnLocation;
+
     CallLoweringInfo()
         : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
           DoesNotReturn(false), IsReturnValueUsed(true), IsPatchPoint(false) {}
@@ -112,6 +114,7 @@ public:
       IsReturnValueUsed = !Call.use_empty();
       RetSExt = Call.hasRetAttr(Attribute::SExt);
       RetZExt = Call.hasRetAttr(Attribute::ZExt);
+      ReturnLocation = Call.hasRetAttr("return-register") ? Call.getRetAttr("return-register").getValueAsString() : "";
 
       CallConv = Call.getCallingConv();
       Args = std::move(ArgsList);
@@ -136,6 +139,7 @@ public:
       IsReturnValueUsed = !Call.use_empty();
       RetSExt = Call.hasRetAttr(Attribute::SExt);
       RetZExt = Call.hasRetAttr(Attribute::ZExt);
+      ReturnLocation = Call.hasRetAttr("return-register") ? Call.getRetAttr("return-register").getValueAsString() : "";
 
       CallConv = Call.getCallingConv();
       Args = std::move(ArgsList);
