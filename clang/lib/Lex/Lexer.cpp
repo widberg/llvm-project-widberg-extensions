@@ -4002,11 +4002,12 @@ LexNextToken:
     break;
 
   case '@':
-    // Objective C support.
-    if (CurPtr[-1] == '@' && LangOpts.ObjC)
-      Kind = tok::at;
-    else
-      Kind = tok::unknown;
+    Kind = tok::at;
+//    // Objective C support.
+//    if (CurPtr[-1] == '@' && LangOpts.ObjC)
+//      Kind = tok::at;
+//    else
+//      Kind = tok::unknown;
     break;
 
   // UCNs (C99 6.4.3, C++11 [lex.charset]p2)

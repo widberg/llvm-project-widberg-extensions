@@ -1291,7 +1291,8 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
   // We saved the argument into a virtual register in the entry block,
   // so now we copy the value out and into %rax/%eax.
   if (F.hasStructRetAttr() && CC != CallingConv::Swift &&
-      CC != CallingConv::SwiftTail) {
+      CC != CallingConv::SwiftTail && CC != CallingConv::UserCall &&
+      CC != CallingConv::UserPurge) {
     Register Reg = X86MFInfo->getSRetReturnReg();
     assert(Reg &&
            "SRetReturnReg should have been set in LowerFormalArguments()!");
@@ -3188,6 +3189,10 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Functions with no_callee_saved_registers that need special handling.
   if ((CB && CB->hasFnAttr("no_callee_saved_registers")))
+    return false;
+
+  // Functions with spoils that need special handling.
+  if ((CB && CB->hasFnAttr("spoils")))
     return false;
 
   // Functions using thunks for indirect calls need to use SDISel.

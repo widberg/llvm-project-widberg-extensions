@@ -2871,8 +2871,22 @@ private:
                                   SourceLocation AttrNameLoc,
                                   ParsedAttributes &Attrs);
   void ParseMicrosoftTypeAttributes(ParsedAttributes &attrs);
+  void ParseWidbergTypeAttributes(ParsedAttributes &attrs);
+  bool MaybeParseWidbergSpoils(ParsedAttributes &Attrs,
+                               SourceLocation *End = nullptr) {
+    const auto &LO = getLangOpts();
+    if (LO.WidbergExt && Tok.is(tok::kw___spoils)) {
+      ParseWidbergSpoils(Attrs, End);
+      return true;
+    }
+    return false;
+  }
+  void ParseWidbergSpoils(ParsedAttributes &Attrs,
+                          SourceLocation *End = nullptr);
   void DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
   SourceLocation SkipExtendedMicrosoftTypeAttributes();
+  void DiagnoseAndSkipExtendedWidbergTypeAttributes();
+  SourceLocation SkipExtendedWidbergTypeAttributes();
   void ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs);
   void ParseBorlandTypeAttributes(ParsedAttributes &attrs);
   void ParseOpenCLKernelAttributes(ParsedAttributes &attrs);

@@ -3163,16 +3163,6 @@ void Verifier::visitCallBase(CallBase &Call) {
            "speculatable attribute may not apply to call sites", Call);
   }
 
-  if (Attrs.hasRetAttr("return-register")) {
-    Assert(Callee && Callee->hasRetAttribute("return-register"),
-           "return-register attribute may not apply only to call sites", Call);
-  }
-
-  if (Callee && Callee->hasRetAttribute("return-register")) {
-    Assert(Attrs.hasRetAttr("return-register"),
-           "return-register attribute may not apply only to definition", Call);
-  }
-
   if (Attrs.hasFnAttr(Attribute::Preallocated)) {
     Assert(Call.getCalledFunction()->getIntrinsicID() ==
                Intrinsic::call_preallocated_arg,

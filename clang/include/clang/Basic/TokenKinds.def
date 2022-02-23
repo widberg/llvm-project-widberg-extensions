@@ -567,11 +567,13 @@ KEYWORD(__forceinline               , KEYMS)
 KEYWORD(__unaligned                 , KEYMS)
 KEYWORD(__super                     , KEYMS)
 
-// UserCall extension
+// Widberg extensions
 KEYWORD(__usercall                  , KEYALL)
-ALIAS("_usercall"     , __usercall  , KEYALL)
 KEYWORD(__userpurge                 , KEYALL)
+KEYWORD(__spoils                    , KEYALL)
+ALIAS("_usercall"     , __usercall  , KEYALL)
 ALIAS("_userpurge"    , __userpurge , KEYALL)
+ALIAS("_spoils"       , __spoils    , KEYALL)
 
 // OpenCL address space qualifiers
 KEYWORD(__global                    , KEYOPENCLC | KEYOPENCLCXX)

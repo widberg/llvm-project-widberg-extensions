@@ -295,11 +295,62 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().hasFnAttribute("no_callee_saved_registers"))
     return CSR_NoRegs_SaveList;
 
+  if (MF->getFunction().hasFnAttribute("spoils")) {
+    StringRef SpoilsList = MF->getFunction().getFnAttribute("spoils")
+                               .getValueAsString();
+
+    const MCPhysReg *AllRegs;
+
+    if (Is64Bit) {
+      if (HasAVX512)
+        AllRegs = CSR_64_AllRegs_AVX512_SaveList;
+      if (HasAVX)
+        AllRegs = CSR_64_AllRegs_AVX_SaveList;
+      if (HasSSE)
+        AllRegs = CSR_64_AllRegs_SaveList;
+      AllRegs = CSR_64_AllRegs_NoSSE_SaveList;
+    } else {
+      if (HasAVX512)
+        AllRegs = CSR_32_AllRegs_AVX512_SaveList;
+      if (HasAVX)
+        AllRegs = CSR_32_AllRegs_AVX_SaveList;
+      if (HasSSE)
+        AllRegs = CSR_32_AllRegs_SSE_SaveList;
+      AllRegs = CSR_32_AllRegs_SaveList;
+    }
+
+    if (SpoilsList.empty())
+      return AllRegs;
+
+    SmallVector<StringRef> SpoilsListVec;
+    SmallVector<MCRegister> SpoilsMCRegs;
+    SpoilsList.split(SpoilsListVec, ',');
+    for (const StringRef &SpoilsRegName : SpoilsListVec) {
+      Optional<MCRegister> PhysReg =
+          MF->getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
+
+      if (PhysReg) {
+        SpoilsMCRegs.push_back(*PhysReg);
+      } else {
+        printf("%s\n", SpoilsRegName.str().c_str());
+        llvm_unreachable("Spoils: Bad register");
+      }
+    }
+    SmallVector<MCPhysReg> *CalleeSavedRegs = new SmallVector<MCPhysReg>;
+    for (size_t i = 0; AllRegs[i]; ++i) {
+      if (std::find(SpoilsMCRegs.begin(), SpoilsMCRegs.end(), AllRegs[i]) == SpoilsMCRegs.end()) {
+        CalleeSavedRegs->push_back(AllRegs[i]);
+      }
+    }
+
+    CalleeSavedRegs->push_back(0);
+
+    return CalleeSavedRegs->data();
+  }
+
   switch (CC) {
   case CallingConv::GHC:
   case CallingConv::HiPE:
-  case CallingConv::UserCall:
-  case CallingConv::UserPurge:
     return CSR_NoRegs_SaveList;
   case CallingConv::AnyReg:
     if (HasAVX)
@@ -420,11 +471,66 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
 
+  if (MF.getFunction().hasFnAttribute("spoils")) {
+    StringRef SpoilsList = MF.getFunction().getFnAttribute("spoils")
+                               .getValueAsString();
+
+    const uint32_t *AllRegs;
+
+    if (Is64Bit) {
+      if (HasAVX512)
+        AllRegs = CSR_64_AllRegs_AVX512_RegMask;
+      if (HasAVX)
+        AllRegs = CSR_64_AllRegs_AVX_RegMask;
+      if (HasSSE)
+        AllRegs = CSR_64_AllRegs_RegMask;
+      AllRegs = CSR_64_AllRegs_NoSSE_RegMask;
+    } else {
+      if (HasAVX512)
+        AllRegs = CSR_32_AllRegs_AVX512_RegMask;
+      if (HasAVX)
+        AllRegs = CSR_32_AllRegs_AVX_RegMask;
+      if (HasSSE)
+        AllRegs = CSR_32_AllRegs_SSE_RegMask;
+      AllRegs = CSR_32_AllRegs_RegMask;
+    }
+
+    if (SpoilsList.empty())
+      return AllRegs;
+
+    SmallVector<StringRef> SpoilsListVec;
+    BitVector Reserved(MF.getTarget().getMCRegisterInfo()->getNumRegs());
+    Reserved.setBitsInMask(AllRegs);
+
+    SpoilsList.split(SpoilsListVec, ',');
+    for (const StringRef &SpoilsRegName : SpoilsListVec) {
+      Optional<MCRegister> PhysReg =
+          MF.getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
+
+      if (PhysReg) {
+        for (const MCPhysReg &SubReg : subregs_inclusive(*PhysReg))
+          Reserved.reset(SubReg);
+      } else {
+        printf("%s\n", SpoilsRegName.str().c_str());
+        llvm_unreachable("Spoils: Bad register");
+      }
+    }
+
+    uint32_t *CallPreservedRegs = new uint32_t[(Reserved.getMemorySize() + 3)/4];
+
+    for (unsigned i = 0, e = Reserved.size(); i < e; i += 32) {
+      unsigned Value = 0;
+      for (unsigned j = 0; j != 32 && i + j != e; ++j)
+        Value |= Reserved.test(i + j) << j;
+      CallPreservedRegs[i / 32] = Value;
+    }
+
+    return CallPreservedRegs;
+  }
+
   switch (CC) {
   case CallingConv::GHC:
   case CallingConv::HiPE:
-  case CallingConv::UserCall:
-  case CallingConv::UserPurge:
     return CSR_NoRegs_RegMask;
   case CallingConv::AnyReg:
     if (HasAVX)

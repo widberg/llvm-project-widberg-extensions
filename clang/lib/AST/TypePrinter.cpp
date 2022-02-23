@@ -1782,6 +1782,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     OS << "return_register(";
     OS << ")";
     break;
+  case attr::Spoils:
+    OS << "spoils(";
+    OS << ")";
+    break;
   }
   OS << "))";
 }

@@ -6295,6 +6295,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fminimize-whitespace");
   }
 
+  // -fwidberg-extensions is default
+  if (Args.hasFlag(options::OPT_fwidberg_extensions,
+                   options::OPT_fno_widberg_extensions, true))
+    CmdArgs.push_back("-fwidberg-extensions");
+
   // -fms-extensions=0 is default.
   if (Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
                    IsWindowsMSVC))

@@ -2146,6 +2146,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (TargetDecl->hasAttr<ReturnRegisterAttr>()) {
         RetAttrs.addAttribute("return-register", TargetDecl->getAttr<ReturnRegisterAttr>()->getRegisterName());
     }
+
+    if (TargetDecl->hasAttr<SpoilsAttr>()) {
+      FuncAttrs.addAttribute("spoils", TargetDecl->getAttr<SpoilsAttr>()->getSpoilsList());
+    }
   }
 
   // Attach "no-builtins" attributes to:

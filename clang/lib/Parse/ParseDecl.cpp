@@ -801,6 +801,56 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
   }
 }
 
+void Parser::ParseWidbergTypeAttributes(ParsedAttributes &attrs) {
+  // Treat these like attributes
+  while (true) {
+    switch (Tok.getKind()) {
+    case tok::kw___usercall:
+    case tok::kw___userpurge: {
+      IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+      SourceLocation AttrNameLoc = ConsumeToken();
+      attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+                   ParsedAttr::AS_Keyword);
+      break;
+    }
+    default:
+      return;
+    }
+  }
+}
+
+void Parser::ParseWidbergSpoils(ParsedAttributes &Attrs,
+                                     SourceLocation *End) {
+  // assert(getLangOpts().WidbergExt && "__spoils keyword is not enabled");
+  assert(Tok.is(tok::kw___spoils) && "Not a spoils!");
+
+  while (Tok.is(tok::kw___spoils)) {
+    ConsumeToken();
+    if (Tok.isNot(tok::less))
+      return;
+
+    ConsumeToken();
+
+    // An empty declspec is perfectly legal and should not warn.  Additionally,
+    // you can specify multiple attributes per declspec.
+    while (Tok.isNot(tok::greater)) {
+      // Attribute not present.
+      if (TryConsumeToken(tok::comma))
+        continue;
+
+      bool IsString = Tok.getKind() == tok::string_literal;
+      if (!IsString && Tok.getKind() != tok::identifier) {
+        Diag(Tok, diag::err_ms_declspec_type);
+        return;
+      }
+      ConsumeToken();
+    }
+    if (End)
+      *End = Tok.getLocation();
+    ConsumeToken();
+  }
+}
+
 void Parser::DiagnoseAndSkipExtendedMicrosoftTypeAttributes() {
   SourceLocation StartLoc = Tok.getLocation();
   SourceLocation EndLoc = SkipExtendedMicrosoftTypeAttributes();
@@ -829,6 +879,31 @@ SourceLocation Parser::SkipExtendedMicrosoftTypeAttributes() {
     case tok::kw___unaligned:
     case tok::kw___sptr:
     case tok::kw___uptr:
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
+      EndLoc = ConsumeToken();
+      break;
+    default:
+      return EndLoc;
+    }
+  }
+}
+
+void Parser::DiagnoseAndSkipExtendedWidbergTypeAttributes() {
+  SourceLocation StartLoc = Tok.getLocation();
+  SourceLocation EndLoc = SkipExtendedWidbergTypeAttributes();
+
+  if (EndLoc.isValid()) {
+    SourceRange Range(StartLoc, EndLoc);
+    Diag(StartLoc, diag::warn_microsoft_qualifiers_ignored) << Range;
+  }
+}
+
+SourceLocation Parser::SkipExtendedWidbergTypeAttributes() {
+  SourceLocation EndLoc;
+
+  while (true) {
+    switch (Tok.getKind()) {
     case tok::kw___usercall:
     case tok::kw___userpurge:
       EndLoc = ConsumeToken();
@@ -2156,6 +2231,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     // MSVC parses but ignores qualifiers after the comma as an extension.
     if (getLangOpts().MicrosoftExt)
       DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
+
+    // Widberg parses but ignores qualifiers after the comma as an extension.
+    if (getLangOpts().WidbergExt)
+      DiagnoseAndSkipExtendedWidbergTypeAttributes();
 
     ParseDeclarator(D);
     if (!D.isInvalidType()) {
@@ -3647,9 +3726,17 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw___thiscall:
     case tok::kw___regcall:
     case tok::kw___vectorcall:
+      ParseMicrosoftTypeAttributes(DS.getAttributes());
+      continue;
+
+    // Widberg
     case tok::kw___usercall:
     case tok::kw___userpurge:
-      ParseMicrosoftTypeAttributes(DS.getAttributes());
+      ParseWidbergTypeAttributes(DS.getAttributes());
+      continue;
+
+    case tok::kw___spoils:
+      ParseWidbergSpoils(DS.getAttributes());
       continue;
 
     // Borland single token adornments.
@@ -5165,8 +5252,10 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___ptr32:
   case tok::kw___pascal:
   case tok::kw___unaligned:
+
   case tok::kw___usercall:
   case tok::kw___userpurge:
+  case tok::kw___spoils:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -5399,8 +5488,10 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw___forceinline:
   case tok::kw___pascal:
   case tok::kw___unaligned:
+
   case tok::kw___usercall:
   case tok::kw___userpurge:
+  case tok::kw___spoils:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -5666,10 +5757,21 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___thiscall:
     case tok::kw___regcall:
     case tok::kw___vectorcall:
+      if (AttrReqs & AR_DeclspecAttributesParsed) {
+        ParseMicrosoftTypeAttributes(DS.getAttributes());
+        continue;
+      }
+      goto DoneWithTypeQuals;
     case tok::kw___usercall:
     case tok::kw___userpurge:
       if (AttrReqs & AR_DeclspecAttributesParsed) {
-        ParseMicrosoftTypeAttributes(DS.getAttributes());
+        ParseWidbergTypeAttributes(DS.getAttributes());
+        continue;
+      }
+      goto DoneWithTypeQuals;
+    case tok::kw___spoils:
+      if (AttrReqs & AR_DeclspecAttributesParsed) {
+        ParseWidbergSpoils(DS.getAttributes());
         continue;
       }
       goto DoneWithTypeQuals;
@@ -6280,6 +6382,19 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
  PastIdentifier:
   assert(D.isPastIdentifier() &&
          "Haven't past the location of the identifier yet?");
+
+  if (Tok.is(tok::at)) {
+    ConsumeToken();
+    if (Tok.is(tok::less)) {
+      ConsumeToken();
+      if (Tok.is(tok::identifier)) {
+        ConsumeToken();
+        if (Tok.is(tok::greater)) {
+          ConsumeToken();
+        }
+      }
+    }
+  }
 
   // Don't parse attributes unless we have parsed an unparenthesized name.
   if (D.hasName() && !D.getNumTypeObjects())

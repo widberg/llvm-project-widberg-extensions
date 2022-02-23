@@ -321,6 +321,7 @@ class LangOpt<string name, code customCode = [{}]> {
   // "LangOpts" bound.
   code CustomCode = customCode;
 }
+def WidbergExt : LangOpt<"WidbergExt">;
 def MicrosoftExt : LangOpt<"MicrosoftExt">;
 def Borland : LangOpt<"Borland">;
 def CUDA : LangOpt<"CUDA">;
@@ -3925,14 +3926,20 @@ def UserPurge : DeclOrTypeAttr {
   let Documentation = [Undocumented];
 }
 
+def Spoils : DeclOrTypeAttr {
+  let Spellings = [Clang<"spoils">];
+  let Args = [StringArgument<"SpoilsList">];
+  let Documentation = [Undocumented];
+}
+
 def ReturnRegister : DeclOrTypeAttr {
-  let Spellings = [GNU<"return_register">];
+  let Spellings = [Clang<"return_register">];
   let Args = [StringArgument<"RegisterName">];
   let Documentation = [Undocumented];
 }
 
 def ParameterRegister : InheritableAttr {
-  let Spellings = [GNU<"parameter_register">];
+  let Spellings = [Clang<"parameter_register">];
   let Args = [StringArgument<"RegisterName">];
   let Subjects = SubjectList<[ParmVar]>;
   let Documentation = [Undocumented];

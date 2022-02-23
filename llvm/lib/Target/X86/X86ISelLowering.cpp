@@ -2843,7 +2843,11 @@ bool X86TargetLowering::CanLowerReturn(
   return CCInfo.CheckReturn(Outs, RetCC_X86);
 }
 
-const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID) const {
+const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID CC) const {
+  static const MCPhysReg UserCallScratchRegs[] = { 0 };
+  if (CC == CallingConv::UserCall || CC == CallingConv::UserPurge)
+    return UserCallScratchRegs;
+
   static const MCPhysReg ScratchRegs[] = { X86::R11, 0 };
   return ScratchRegs;
 }

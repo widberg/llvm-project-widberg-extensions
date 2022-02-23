@@ -8147,6 +8147,14 @@ static void handleReturnRegisterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  ReturnRegisterAttr(S.Context, AL, RegisterName));
 }
 
+static void handleSpoilsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef SpoilsList;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, SpoilsList))
+    return;
+  D->addAttr(::new (S.Context)
+                 SpoilsAttr(S.Context, AL, SpoilsList));
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -8818,6 +8826,10 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 
   case ParsedAttr::AT_ReturnRegister:
     handleReturnRegisterAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_Spoils:
+    handleSpoilsAttr(S, D, AL);
     break;
   }
 }
