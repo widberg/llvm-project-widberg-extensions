@@ -3676,6 +3676,7 @@ public:
     };
     enum { NoCfCheckMask = 0x800 };
     enum { CmseNSCallMask = 0x1000 };
+    enum { SpoilsMask = 0x2000 };
     uint16_t Bits = CC_C;
 
     ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)) {}
@@ -3707,6 +3708,7 @@ public:
     bool getProducesResult() const { return Bits & ProducesResultMask; }
     bool getCmseNSCall() const { return Bits & CmseNSCallMask; }
     bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
+    bool getSpoils() const { return Bits & SpoilsMask; }
     bool getNoCfCheck() const { return Bits & NoCfCheckMask; }
     bool getHasRegParm() const { return ((Bits & RegParmMask) >> RegParmOffset) != 0; }
 
@@ -3755,6 +3757,13 @@ public:
         return ExtInfo(Bits | NoCallerSavedRegsMask);
       else
         return ExtInfo(Bits & ~NoCallerSavedRegsMask);
+    }
+
+    ExtInfo withSpoils(bool spoils) const {
+      if (spoils)
+        return ExtInfo(Bits | SpoilsMask);
+      else
+        return ExtInfo(Bits & ~SpoilsMask);
     }
 
     ExtInfo withNoCfCheck(bool noCfCheck) const {

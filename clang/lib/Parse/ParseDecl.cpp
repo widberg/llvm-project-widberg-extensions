@@ -820,34 +820,92 @@ void Parser::ParseWidbergTypeAttributes(ParsedAttributes &attrs) {
 }
 
 void Parser::ParseWidbergSpoils(ParsedAttributes &Attrs,
-                                     SourceLocation *End) {
-  // assert(getLangOpts().WidbergExt && "__spoils keyword is not enabled");
-  assert(Tok.is(tok::kw___spoils) && "Not a spoils!");
+                                     SourceLocation *EndLoc) {
 
-  while (Tok.is(tok::kw___spoils)) {
-    ConsumeToken();
-    if (Tok.isNot(tok::less))
-      return;
+    assert(getLangOpts().WidbergExt && "__spoils keyword is not enabled");
+    assert(Tok.is(tok::kw___spoils) && "Not a spoils!");
 
-    ConsumeToken();
+    while (Tok.is(tok::kw___spoils)) {
+      IdentifierInfo *KWName = Tok.getIdentifierInfo();
+      SourceLocation KWLoc = ConsumeToken();
 
-    // An empty declspec is perfectly legal and should not warn.  Additionally,
-    // you can specify multiple attributes per declspec.
-    while (Tok.isNot(tok::greater)) {
-      // Attribute not present.
-      if (TryConsumeToken(tok::comma))
-        continue;
+      ArgsVector RegisterNames;
 
-      bool IsString = Tok.getKind() == tok::string_literal;
-      if (!IsString && Tok.getKind() != tok::identifier) {
-        Diag(Tok, diag::err_ms_declspec_type);
+      if (ExpectAndConsume(tok::less, diag::err_expected_less_after, KWName->getName()))
         return;
+
+      while (Tok.isNot(tok::greater)) {
+        // Attribute not present.
+        if (TryConsumeToken(tok::comma))
+          continue;
+
+        if (Tok.getKind() != tok::identifier) {
+          Diag(Tok, diag::err_widberg_spoils_type);
+          SkipUntil(tok::greater);
+          return;
+        }
+
+        RegisterNames.push_back(ParseIdentifierLoc());
       }
-      ConsumeToken();
+
+      SourceLocation RAngleBracketLoc = Tok.getLocation();
+
+      if (ExpectAndConsume(tok::greater))
+        return;
+
+      if (EndLoc)
+        *EndLoc = RAngleBracketLoc;
+
+      Attrs.addNew(KWName, KWLoc, nullptr, KWLoc, RegisterNames.data(), RegisterNames.size(),
+                   ParsedAttr::AS_Keyword);
+
     }
-    if (End)
-      *End = Tok.getLocation();
-    ConsumeToken();
+}
+
+void Parser::ParseWidbergRegister(ParsedAttributes &Attrs,
+                                  SourceLocation *EndLoc) {
+
+  assert(getLangOpts().WidbergExt && "registers not enabled");
+  assert(Tok.is(tok::at) && "Not an at!");
+
+  /* SourceLocation ATLoc = */ ConsumeToken();
+
+  ArgsVector RegisterNames;
+
+  if (ExpectAndConsume(tok::less, diag::err_expected_less_after, "@"))
+    return;
+
+  while (Tok.isNot(tok::greater)) {
+    if (TryConsumeToken(tok::colon))
+      continue;
+
+    if (Tok.getKind() != tok::identifier) {
+      Diag(Tok, diag::err_widberg_spoils_type);
+      SkipUntil(tok::greater);
+      return;
+    }
+
+    RegisterNames.push_back(ParseIdentifierLoc());
+  }
+
+  SourceLocation RAngleBracketLoc = Tok.getLocation();
+
+  if (ExpectAndConsume(tok::greater))
+    return;
+
+  if (EndLoc)
+    *EndLoc = RAngleBracketLoc;
+
+//  Attrs.addNew(, ATLoc, nullptr, ATLoc, RegisterNames.data(), RegisterNames.size(),
+//               ParsedAttr::AS_Keyword);
+}
+
+void Parser::MaybeParseWidbergRegister(Declarator &D) {
+  if (getLangOpts().WidbergExt) {
+    ParsedAttributesWithRange attrs(AttrFactory);
+    SourceLocation endLoc;
+    ParseWidbergRegister(attrs, &endLoc);
+    D.takeAttributes(attrs, endLoc);
   }
 }
 
@@ -6383,18 +6441,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   assert(D.isPastIdentifier() &&
          "Haven't past the location of the identifier yet?");
 
-  if (Tok.is(tok::at)) {
-    ConsumeToken();
-    if (Tok.is(tok::less)) {
-      ConsumeToken();
-      if (Tok.is(tok::identifier)) {
-        ConsumeToken();
-        if (Tok.is(tok::greater)) {
-          ConsumeToken();
-        }
-      }
-    }
-  }
+  if (Tok.is(tok::at))
+    MaybeParseWidbergRegister(D);
 
   // Don't parse attributes unless we have parsed an unparenthesized name.
   if (D.hasName() && !D.getNumTypeObjects())

@@ -7555,6 +7555,20 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     return true;
   }
 
+  if (attr.getKind() == ParsedAttr::AT_Spoils) {
+    if (S.CheckAttrTarget(attr) || S.CheckAttrNoArgs(attr))
+      return true;
+
+    // Delay if this is not a function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    FunctionType::ExtInfo EI =
+        unwrapped.get()->getExtInfo().withSpoils(true);
+    type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+    return true;
+  }
+
   if (attr.getKind() == ParsedAttr::AT_AnyX86NoCfCheck) {
     if (!S.getLangOpts().CFProtectionBranch) {
       S.Diag(attr.getLoc(), diag::warn_nocf_check_attribute_ignored);

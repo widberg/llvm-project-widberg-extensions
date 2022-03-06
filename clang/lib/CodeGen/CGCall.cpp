@@ -2144,11 +2144,31 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
 
     if (TargetDecl->hasAttr<ReturnRegisterAttr>()) {
-        RetAttrs.addAttribute("return-register", TargetDecl->getAttr<ReturnRegisterAttr>()->getRegisterName());
+      std::string regs;
+      for (auto &reg : TargetDecl->getAttr<SpoilsAttr>()->spoilsList()) {
+        regs += reg->getName();
+        regs += ',';
+      }
+
+      if (!regs.empty()) {
+        regs.pop_back();
+      }
+
+      RetAttrs.addAttribute("return-register", regs);
     }
 
     if (TargetDecl->hasAttr<SpoilsAttr>()) {
-      FuncAttrs.addAttribute("spoils", TargetDecl->getAttr<SpoilsAttr>()->getSpoilsList());
+      std::string spoils;
+      for (auto &reg : TargetDecl->getAttr<SpoilsAttr>()->spoilsList()) {
+        spoils += reg->getName();
+        spoils += ',';
+      }
+
+      if (!spoils.empty()) {
+        spoils.pop_back();
+      }
+
+      FuncAttrs.addAttribute("spoils", spoils);
     }
   }
 

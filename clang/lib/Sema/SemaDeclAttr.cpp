@@ -8140,19 +8140,44 @@ static void handleParameterRegisterAttr(Sema &S, Decl *D, const ParsedAttr &AL) 
 }
 
 static void handleReturnRegisterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  StringRef RegisterName;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, RegisterName))
+  if (!AL.checkAtLeastNumArgs(S, 1))
     return;
+
+  SmallVector<IdentifierInfo *, 4> RegisterNames;
+  for (unsigned ArgNo = 0; ArgNo < getNumAttributeArgs(AL); ++ArgNo) {
+    if (!AL.isArgIdent(ArgNo)) {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+      return;
+    }
+
+    IdentifierLoc *RegisterArg = AL.getArgAsIdent(ArgNo);
+    // StringRef CPUName = RegisterArg->Ident->getName().trim();
+
+    RegisterNames.push_back(RegisterArg->Ident);
+  }
+
   D->addAttr(::new (S.Context)
-                 ReturnRegisterAttr(S.Context, AL, RegisterName));
+                 ReturnRegisterAttr(S.Context, AL, RegisterNames.data(), RegisterNames.size()));
 }
 
 static void handleSpoilsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  StringRef SpoilsList;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, SpoilsList))
-    return;
+  SmallVector<IdentifierInfo *, 4> SpoilsList;
+  for (unsigned ArgNo = 0; ArgNo < getNumAttributeArgs(AL); ++ArgNo) {
+    if (!AL.isArgIdent(ArgNo)) {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+      return;
+    }
+
+    IdentifierLoc *RegisterArg = AL.getArgAsIdent(ArgNo);
+    // StringRef CPUName = RegisterArg->Ident->getName().trim();
+
+    SpoilsList.push_back(RegisterArg->Ident);
+  }
+
   D->addAttr(::new (S.Context)
-                 SpoilsAttr(S.Context, AL, SpoilsList));
+                 SpoilsAttr(S.Context, AL, SpoilsList.data(), SpoilsList.size()));
 }
 
 //===----------------------------------------------------------------------===//

@@ -3927,14 +3927,14 @@ def UserPurge : DeclOrTypeAttr {
 }
 
 def Spoils : DeclOrTypeAttr {
-  let Spellings = [Clang<"spoils">];
-  let Args = [StringArgument<"SpoilsList">];
+  let Spellings = [GCC<"__spoils">, Keyword<"__spoils">, Keyword<"_spoils">];
+  let Args = [VariadicIdentifierArgument<"SpoilsList">];
   let Documentation = [Undocumented];
 }
 
 def ReturnRegister : DeclOrTypeAttr {
   let Spellings = [Clang<"return_register">];
-  let Args = [StringArgument<"RegisterName">];
+  let Args = [VariadicIdentifierArgument<"RegisterName">];
   let Documentation = [Undocumented];
 }
 

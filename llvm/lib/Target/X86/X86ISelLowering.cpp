@@ -4605,6 +4605,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (CB && CB->hasFnAttr("no_callee_saved_registers"))
       AdaptedCC = (CallingConv::ID)CallingConv::GHC;
     return RegInfo->getCallPreservedMask(MF, AdaptedCC);
+
+    // spoils
   }();
   assert(Mask && "Missing call preserved mask for calling convention");
 

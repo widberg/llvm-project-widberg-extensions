@@ -3584,6 +3584,20 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     RequiresAdjustment = true;
   }
 
+  if (OldTypeInfo.getSpoils() !=
+      NewTypeInfo.getSpoils()) {
+    if (NewTypeInfo.getSpoils()) {
+      SpoilsAttr *Attr =
+          New->getAttr<SpoilsAttr>();
+      Diag(New->getLocation(), diag::err_function_attribute_mismatch) << Attr;
+      Diag(OldLocation, diag::note_previous_declaration);
+      return true;
+    }
+
+    NewTypeInfo = NewTypeInfo.withSpoils(true);
+    RequiresAdjustment = true;
+  }
+
   if (RequiresAdjustment) {
     const FunctionType *AdjustedType = New->getType()->getAs<FunctionType>();
     AdjustedType = Context.adjustFunctionType(AdjustedType, NewTypeInfo);
