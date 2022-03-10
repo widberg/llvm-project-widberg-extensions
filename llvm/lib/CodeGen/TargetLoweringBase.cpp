@@ -1697,17 +1697,27 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     
     if (CC == CallingConv::UserCall || CC == CallingConv::UserPurge) {
       if (attr.hasRetAttr("return-register")) {
-        Optional<MCRegister> PhysReg = TLI.getTargetMachine().getMCRegisterInfo()
-                                    ->getRegNo(attr.getRetAttr("return-register").getValueAsString());
-    
-        if (PhysReg) {
-          Flags.setLocation(*PhysReg);
+        StringRef regs = attr.getRetAttr("return-register").getValueAsString();
+
+        SmallVector<StringRef, 2> Registers;
+        regs.split(Registers, ',');
+
+        SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+        for (StringRef reg : Registers) {
+          Optional<MCRegister> PhysReg = TLI.getTargetMachine().getMCRegisterInfo()
+              ->getRegNo(reg);
+
+          if (PhysReg) {
+            MCRegisters.push_back(*PhysReg);
+          }
+          else
+          {
+            printf("%s\n", attr.getRetAttr("return-register").getValueAsString().str().c_str());
+            llvm_unreachable("Target lowering: Bad register");
+          }
         }
-        else
-        {
-          printf("%s\n", attr.getRetAttr("return-register").getValueAsString().str().c_str());
-          llvm_unreachable("Target lowering: Bad register");
-        }
+        Flags.setLocation(MCRegisters);
       } else {
         llvm_unreachable("usercall no return reg");
       }

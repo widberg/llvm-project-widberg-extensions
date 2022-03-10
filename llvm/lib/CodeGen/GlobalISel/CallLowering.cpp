@@ -603,6 +603,8 @@ bool CallLowering::determineAssignments(ValueAssigner &Assigner,
           Flags.setSplitEnd();
       }
 
+      Flags.setSplitRegIndex(Part);
+
       Args[i].Flags.push_back(Flags);
       if (Assigner.assignArg(i, CurVT, NewVT, NewVT, CCValAssign::Full, Args[i],
                              Args[i].Flags[Part], CCInfo)) {

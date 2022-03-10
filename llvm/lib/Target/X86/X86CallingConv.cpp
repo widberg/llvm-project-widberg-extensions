@@ -344,62 +344,41 @@ static bool CC_X86_64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 static bool CC_X86_32_UserCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                               CCValAssign::LocInfo &LocInfo,
                               ISD::ArgFlagsTy &ArgFlags, CCState &State) {
-  // MachineFunction &MF = State.getMachineFunction();
-  // Function &F = MF.getFunction();
+  SmallVector<llvm::MCRegister, 2> MCRegisters = ArgFlags.getLocation();
 
-  // if (!F.hasParamAttribute(ValNo, "parameter-register")) {
-  //   F.dump();
-  //   printf("%d\n", F.getCallingConv());
-  //   llvm_unreachable("RetCC_X86_32_UserCall bad attr.");
+//  printf("%d %zu %d\n", ValNo, MCRegisters.size(), ArgFlags.getSplitRegIndex());
 
-  //   return false;
-  // }
+  if (MCRegisters.empty())
+    return false;
 
-  // StringRef return_register = F.getParamAttribute(ValNo, "parameter-register").getAsString();
+  unsigned Reg = State.AllocateReg(MCRegisters[ArgFlags.getSplitRegIndex()]);
 
-  // Optional<MCRegister> PhysReg = MF.getMMI()
-  //                                 .getContext()
-  //                                 .getRegisterInfo()
-  //                                 ->getRegNo(return_register);
-  
-  // if (PhysReg) {
-  //   unsigned Reg = State.AllocateReg(*PhysReg);
-  //   if (Reg) {
-  //     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-  //     return true;
-  //   }
+  // Since we previously made sure that 2 registers are available
+  // we expect that a real register number will be returned.
+  assert(Reg && "Expecting a register will be available");
 
-  //   llvm_unreachable("CC_X86_32_UserCall unable to allocate register.");
+  // Assign the value to the allocated register
+  State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
 
-  //   return false;
-  // }
-
-  // llvm_unreachable("CC_X86_32_UserCall Bad register name.");
-
-  return false;
+  return true;
 }
 
 static bool RetCC_X86_32_UserCall(unsigned ValNo, MVT ValVT, MVT LocVT,
                                       CCValAssign::LocInfo LocInfo,
                                       ISD::ArgFlagsTy ArgFlags,
                                       CCState &State) {
+  SmallVector<llvm::MCRegister, 2> MCRegisters = ArgFlags.getLocation();
 
-  MCRegister return_register = ArgFlags.getLocation();
+  unsigned Reg = State.AllocateReg(MCRegisters[ValNo]);
 
-  if (!return_register.isValid()) {
-    llvm_unreachable("usercallret: invalid reg");
-    return false;
-  }
-  
-  unsigned Reg = State.AllocateReg(return_register);
-  if (Reg) {
-    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-    return true;
-  }
+  // Since we previously made sure that 2 registers are available
+  // we expect that a real register number will be returned.
+  assert(Reg && "Expecting a register will be available");
 
-  llvm_unreachable("RetCC_X86_32_UserCall unable to allocate register.");
+  // Assign the value to the allocated register
+  State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
 
-  return false;
+  return true;
 }
 
 // Provides entry points of CC_X86 and RetCC_X86.

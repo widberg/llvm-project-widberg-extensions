@@ -8132,11 +8132,25 @@ EnforceTCBLeafAttr *Sema::mergeEnforceTCBLeafAttr(
 }
 
 static void handleParameterRegisterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  StringRef RegisterName;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, RegisterName))
+  if (!AL.checkAtLeastNumArgs(S, 1))
     return;
+
+  SmallVector<IdentifierInfo *, 4> RegisterNames;
+  for (unsigned ArgNo = 0; ArgNo < getNumAttributeArgs(AL); ++ArgNo) {
+    if (!AL.isArgIdent(ArgNo)) {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+      return;
+    }
+
+    IdentifierLoc *RegisterArg = AL.getArgAsIdent(ArgNo);
+    // StringRef CPUName = RegisterArg->Ident->getName().trim();
+
+    RegisterNames.push_back(RegisterArg->Ident);
+  }
+
   D->addAttr(::new (S.Context)
-                 ParameterRegisterAttr(S.Context, AL, RegisterName));
+                 ParameterRegisterAttr(S.Context, AL, RegisterNames.data(), RegisterNames.size()));
 }
 
 static void handleReturnRegisterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

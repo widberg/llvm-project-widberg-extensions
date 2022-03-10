@@ -308,7 +308,15 @@ bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
   return getParent()->hasParamAttribute(getArgNo(), Kind);
 }
 
+bool Argument::hasAttribute(StringRef Kind) const {
+  return getParent()->hasParamAttribute(getArgNo(), Kind);
+}
+
 Attribute Argument::getAttribute(Attribute::AttrKind Kind) const {
+  return getParent()->getParamAttribute(getArgNo(), Kind);
+}
+
+Attribute Argument::getAttribute(StringRef Kind) const {
   return getParent()->getParamAttribute(getArgNo(), Kind);
 }
 

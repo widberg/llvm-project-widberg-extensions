@@ -2145,13 +2145,14 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<ReturnRegisterAttr>()) {
       std::string regs;
-      for (auto &reg : TargetDecl->getAttr<SpoilsAttr>()->spoilsList()) {
-        regs += reg->getName();
-        regs += ',';
-      }
 
-      if (!regs.empty()) {
-        regs.pop_back();
+      auto *attr = TargetDecl->getAttr<ReturnRegisterAttr>();
+      for (auto *it = attr->registerName_begin();
+           it != attr->registerName_end();
+           ++it) {
+        if (it != attr->registerName_begin())
+          regs += ',';
+        regs += (*it)->getName();
       }
 
       RetAttrs.addAttribute("return-register", regs);
@@ -2159,13 +2160,14 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<SpoilsAttr>()) {
       std::string spoils;
-      for (auto &reg : TargetDecl->getAttr<SpoilsAttr>()->spoilsList()) {
-        spoils += reg->getName();
-        spoils += ',';
-      }
 
-      if (!spoils.empty()) {
-        spoils.pop_back();
+      auto *attr = TargetDecl->getAttr<SpoilsAttr>();
+      for (auto *it = attr->spoilsList_begin();
+           it != attr->spoilsList_end();
+           ++it) {
+        if (it != attr->spoilsList_begin())
+          spoils += ',';
+        spoils += (*it)->getName();
       }
 
       FuncAttrs.addAttribute("spoils", spoils);
@@ -2551,13 +2553,20 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (FI.getExtParameterInfo(ArgNo).isNoEscape())
       Attrs.addAttribute(llvm::Attribute::NoCapture);
-    
+
     if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-      for (unsigned i = 0, e = FD->getNumParams(); i < e; ++i) {
-        const ParmVarDecl *PDecl = FD->getParamDecl(i);
-        if (PDecl->hasAttr<ParameterRegisterAttr>()) {
-          Attrs.addAttribute("parameter-register", PDecl->getAttr<ParameterRegisterAttr>()->getRegisterName());
+      const ParmVarDecl *PDecl = FD->getParamDecl(ArgNo);
+      if (PDecl->hasAttr<ParameterRegisterAttr>()) {
+        std::string regs;
+
+        auto *attr = PDecl->getAttr<ParameterRegisterAttr>();
+        for (auto *it = attr->registerName_begin();
+             it != attr->registerName_end(); ++it) {
+          if (it != attr->registerName_begin())
+            regs += ',';
+          regs += (*it)->getName();
         }
+        Attrs.addAttribute("parameter-register", regs);
       }
     }
 

@@ -4720,12 +4720,27 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   for (auto& f : Ins) {
     if (CallConv == CallingConv::UserCall || CallConv == CallingConv::UserPurge) {
-      Optional<MCRegister> PhysReg = MF.getMMI().getTarget().getMCRegisterInfo()
-                                  ->getRegNo(CLI.ReturnLocation);
-  
-      if (PhysReg) {
-        f.Flags.setLocation(*PhysReg);
+      SmallVector<StringRef, 2> Registers;
+      CLI.ReturnLocation.split(Registers, ',');
+
+      SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+      for (StringRef reg : Registers) {
+        Optional<MCRegister> PhysReg = MF.getMMI().getTarget().getMCRegisterInfo()
+                                           ->getRegNo(reg);
+
+        if (PhysReg) {
+          MCRegisters.push_back(*PhysReg);
+        }
+        else
+        {
+          printf("%s\n", CLI.ReturnLocation.str().c_str());
+          llvm_unreachable("Target lowering: Bad register");
+        }
       }
+      f.Flags.setLocation(MCRegisters);
+    } else {
+      llvm_unreachable("usercall no return reg");
     }
   }
 

@@ -58,7 +58,8 @@ namespace ISD {
 
     unsigned PointerAddrSpace = 0; ///< Address space of pointer argument
 
-    llvm::Register Location;
+    SmallVector<llvm::MCRegister, 2> Location;
+    unsigned SplitRegIndex;
 
   public:
     ArgFlagsTy()
@@ -131,6 +132,9 @@ namespace ISD {
       IsInConsecutiveRegsLast = Flag;
     }
 
+    unsigned getSplitRegIndex()   const { return SplitRegIndex; }
+    void setSplitRegIndex(unsigned i)  { SplitRegIndex = i; }
+
     bool isSplit()   const { return IsSplit; }
     void setSplit()  { IsSplit = 1; }
 
@@ -189,8 +193,8 @@ namespace ISD {
     unsigned getPointerAddrSpace() const { return PointerAddrSpace; }
     void setPointerAddrSpace(unsigned AS) { PointerAddrSpace = AS; }
 
-    llvm::MCRegister getLocation() const { return Location; }
-    void setLocation(llvm::MCRegister L) { Location = L; }
+    const SmallVector<llvm::MCRegister, 2> &getLocation() const { return Location; }
+    void setLocation(const SmallVector<llvm::MCRegister, 2> &L) { Location = L; }
 };
 
   /// InputArg - This struct carries flags and type information about a

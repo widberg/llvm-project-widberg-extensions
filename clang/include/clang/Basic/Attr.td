@@ -3931,6 +3931,7 @@ def Spoils : DeclOrTypeAttr {
   let Args = [VariadicIdentifierArgument<"SpoilsList">];
   let Documentation = [Undocumented];
 }
+def : MutualExclusions<[Spoils, AnyX86NoCallerSavedRegisters]>;
 
 def ReturnRegister : DeclOrTypeAttr {
   let Spellings = [Clang<"return_register">];
@@ -3938,9 +3939,9 @@ def ReturnRegister : DeclOrTypeAttr {
   let Documentation = [Undocumented];
 }
 
-def ParameterRegister : InheritableAttr {
+def ParameterRegister : InheritableParamAttr {
   let Spellings = [Clang<"parameter_register">];
-  let Args = [StringArgument<"RegisterName">];
+  let Args = [VariadicIdentifierArgument<"RegisterName">];
   let Subjects = SubjectList<[ParmVar]>;
   let Documentation = [Undocumented];
 }
