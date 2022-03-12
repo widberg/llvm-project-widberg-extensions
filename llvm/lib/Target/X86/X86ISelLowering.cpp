@@ -27878,7 +27878,7 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
             const DataLayout &DL = DAG.getDataLayout();
             // FIXME: should only count parameters that are lowered to integers.
             InRegCount += (DL.getTypeSizeInBits(*I) + 31) / 32;
-          } else if (Attrs.hasParamAttr(Idx, "parameter-register")) {
+          } else if (Attrs.hasParamAttr(Idx, "widberg_location")) {
             report_fatal_error("Nest register in use - dont use ecx"
                                " parameter-register!");
           }

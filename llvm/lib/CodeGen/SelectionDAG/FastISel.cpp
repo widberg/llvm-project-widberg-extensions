@@ -951,7 +951,7 @@ static AttributeList getReturnAttrs(FastISel::CallLoweringInfo &CLI) {
     Attrs.push_back(Attribute::InReg);
 
   return AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
-                            Attrs).addRetAttribute(CLI.RetTy->getContext(), "return-register", CLI.ReturnLocation);
+                            Attrs).addRetAttribute(CLI.RetTy->getContext(), "widberg_location", CLI.ReturnLocation);
 }
 
 bool FastISel::lowerCallTo(const CallInst *CI, const char *SymName,

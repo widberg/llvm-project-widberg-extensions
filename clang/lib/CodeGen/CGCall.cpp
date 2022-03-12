@@ -2143,10 +2143,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       }
     }
 
-    if (TargetDecl->hasAttr<ReturnRegisterAttr>()) {
+    if (TargetDecl->hasAttr<WidbergLocationAttr>()) {
       std::string regs;
 
-      auto *attr = TargetDecl->getAttr<ReturnRegisterAttr>();
+      auto *attr = TargetDecl->getAttr<WidbergLocationAttr>();
       for (auto *it = attr->registerName_begin();
            it != attr->registerName_end();
            ++it) {
@@ -2155,7 +2155,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         regs += (*it)->getName();
       }
 
-      RetAttrs.addAttribute("return-register", regs);
+      RetAttrs.addAttribute("widberg_location", regs);
     }
 
     if (TargetDecl->hasAttr<SpoilsAttr>()) {
@@ -2556,17 +2556,17 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
       const ParmVarDecl *PDecl = FD->getParamDecl(ArgNo);
-      if (PDecl->hasAttr<ParameterRegisterAttr>()) {
+      if (PDecl->hasAttr<WidbergLocationAttr>()) {
         std::string regs;
 
-        auto *attr = PDecl->getAttr<ParameterRegisterAttr>();
+        auto *attr = PDecl->getAttr<WidbergLocationAttr>();
         for (auto *it = attr->registerName_begin();
              it != attr->registerName_end(); ++it) {
           if (it != attr->registerName_begin())
             regs += ',';
           regs += (*it)->getName();
         }
-        Attrs.addAttribute("parameter-register", regs);
+        Attrs.addAttribute("widberg_location", regs);
       }
     }
 

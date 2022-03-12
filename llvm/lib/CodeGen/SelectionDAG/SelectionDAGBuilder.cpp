@@ -2016,8 +2016,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
           Flags.setZExt();
         
         if (CC == CallingConv::UserCall || CC == CallingConv::UserPurge) {
-          if (F->getAttributes().hasRetAttr("return-register")) {
-            StringRef regs = F->getAttributes().getRetAttr("return-register").getValueAsString();
+          if (F->getAttributes().hasRetAttr("widberg_location")) {
+            StringRef regs = F->getAttributes().getRetAttr("widberg_location").getValueAsString();
 
             SmallVector<StringRef, 2> Registers;
             regs.split(Registers, ',');
@@ -2033,7 +2033,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
               }
               else
               {
-                printf("%s\n", F->getAttributes().getRetAttr("return-register").getValueAsString().str().c_str());
+                printf("%s\n", F->getAttributes().getRetAttr("widberg_location").getValueAsString().str().c_str());
                 llvm_unreachable("Target lowering: Bad register");
               }
             }
@@ -9546,7 +9546,7 @@ static AttributeList getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
     Attrs.push_back(Attribute::InReg);
 
   return AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
-                            Attrs).addRetAttribute(CLI.RetTy->getContext(), "return-register", CLI.ReturnLocation);
+                            Attrs).addRetAttribute(CLI.RetTy->getContext(), "widberg_location", CLI.ReturnLocation);
 }
 
 /// TargetLowering::LowerCallTo - This is the default LowerCallTo
@@ -10301,8 +10301,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       }
 
       if (F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge) {
-        if (Arg.hasAttribute("parameter-register")) {
-          StringRef regs = Arg.getAttribute("parameter-register").getValueAsString();
+        if (Arg.hasAttribute("widberg_location")) {
+          StringRef regs = Arg.getAttribute("widberg_location").getValueAsString();
 
           SmallVector<StringRef, 2> Registers;
           regs.split(Registers, ',');
@@ -10318,7 +10318,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
             }
             else
             {
-              printf("%s\n", Arg.getAttribute("parameter-register").getValueAsString().str().c_str());
+              printf("%s\n", Arg.getAttribute("widberg_location").getValueAsString().str().c_str());
               llvm_unreachable("Target lowering: Bad register");
             }
           }

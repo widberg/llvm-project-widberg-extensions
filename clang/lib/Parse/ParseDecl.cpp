@@ -862,13 +862,14 @@ void Parser::ParseWidbergSpoils(ParsedAttributes &Attrs,
     }
 }
 
-void Parser::ParseWidbergRegister(ParsedAttributes &Attrs,
+void Parser::ParseWidbergLocation(ParsedAttributes &Attrs,
                                   SourceLocation *EndLoc) {
 
   assert(getLangOpts().WidbergExt && "registers not enabled");
   assert(Tok.is(tok::at) && "Not an at!");
 
-  /* SourceLocation ATLoc = */ ConsumeToken();
+  IdentifierInfo *KWName = Tok.getIdentifierInfo();
+  SourceLocation ATLoc = ConsumeToken();
 
   ArgsVector RegisterNames;
 
@@ -896,15 +897,15 @@ void Parser::ParseWidbergRegister(ParsedAttributes &Attrs,
   if (EndLoc)
     *EndLoc = RAngleBracketLoc;
 
-//  Attrs.addNew(, ATLoc, nullptr, ATLoc, RegisterNames.data(), RegisterNames.size(),
-//               ParsedAttr::AS_Keyword);
+  Attrs.addNew(KWName, ATLoc, nullptr, ATLoc, RegisterNames.data(), RegisterNames.size(),
+               ParsedAttr::AS_Keyword);
 }
 
-void Parser::MaybeParseWidbergRegister(Declarator &D) {
+void Parser::MaybeParseWidbergLocation(Declarator &D) {
   if (getLangOpts().WidbergExt) {
     ParsedAttributesWithRange attrs(AttrFactory);
     SourceLocation endLoc;
-    ParseWidbergRegister(attrs, &endLoc);
+    ParseWidbergLocation(attrs, &endLoc);
     D.takeAttributes(attrs, endLoc);
   }
 }
@@ -6441,8 +6442,10 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   assert(D.isPastIdentifier() &&
          "Haven't past the location of the identifier yet?");
 
-  if (Tok.is(tok::at))
-    MaybeParseWidbergRegister(D);
+  if (Tok.is(tok::at)) {
+    MaybeParseWidbergLocation(D);
+    Actions.ActOnWidbergLocation(D);
+  }
 
   // Don't parse attributes unless we have parsed an unparenthesized name.
   if (D.hasName() && !D.getNumTypeObjects())

@@ -2467,14 +2467,14 @@ void Verifier::visitFunction(const Function &F) {
     break;
   }
   
-  if (Attrs.hasRetAttr("return-register")) {
+  if (Attrs.hasRetAttr("widberg_location")) {
     Assert(F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge,
            "Attribute 'return-register' requires 'usercall' or 'userpurge' calling convention", F);
   }
 
   for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
     AttributeSet ArgAttrs = Attrs.getParamAttrs(i);
-    if (ArgAttrs.hasAttribute("parameter-register")) {
+    if (ArgAttrs.hasAttribute("widberg_location")) {
       Assert(F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge,
             "Attribute 'return-register' requires 'usercall' or 'userpurge' calling convention", F);
     }
@@ -3203,14 +3203,14 @@ void Verifier::visitCallBase(CallBase &Call) {
              Call);
     }
 
-    if (Attrs.hasParamAttr(i, "parameter-register")) {
-      Assert(Callee && Callee->hasParamAttribute(i, "parameter-register"),
+    if (Attrs.hasParamAttr(i, "widberg_location")) {
+      Assert(Callee && Callee->hasParamAttribute(i, "widberg_location"),
              "parameter-register may not apply only to call sites",
              Call.getArgOperand(i), Call);
     }
 
-    if (Callee && Callee->hasParamAttribute(i, "parameter-register")) {
-      Assert(Attrs.hasParamAttr(i, "parameter-register"),
+    if (Callee && Callee->hasParamAttribute(i, "widberg_location")) {
+      Assert(Attrs.hasParamAttr(i, "widberg_location"),
              "parameter-register may not apply only to definition",
              Call.getArgOperand(i), Call);
     }

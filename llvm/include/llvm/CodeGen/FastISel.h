@@ -114,7 +114,7 @@ public:
       IsReturnValueUsed = !Call.use_empty();
       RetSExt = Call.hasRetAttr(Attribute::SExt);
       RetZExt = Call.hasRetAttr(Attribute::ZExt);
-      ReturnLocation = Call.hasRetAttr("return-register") ? Call.getRetAttr("return-register").getValueAsString() : "";
+      ReturnLocation = Call.hasRetAttr("widberg_location") ? Call.getRetAttr("widberg_location").getValueAsString() : "";
 
       CallConv = Call.getCallingConv();
       Args = std::move(ArgsList);
@@ -139,7 +139,7 @@ public:
       IsReturnValueUsed = !Call.use_empty();
       RetSExt = Call.hasRetAttr(Attribute::SExt);
       RetZExt = Call.hasRetAttr(Attribute::ZExt);
-      ReturnLocation = Call.hasRetAttr("return-register") ? Call.getRetAttr("return-register").getValueAsString() : "";
+      ReturnLocation = Call.hasRetAttr("widberg_location") ? Call.getRetAttr("widberg_location").getValueAsString() : "";
 
       CallConv = Call.getCallingConv();
       Args = std::move(ArgsList);

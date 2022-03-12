@@ -1696,8 +1696,8 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
       Flags.setZExt();
     
     if (CC == CallingConv::UserCall || CC == CallingConv::UserPurge) {
-      if (attr.hasRetAttr("return-register")) {
-        StringRef regs = attr.getRetAttr("return-register").getValueAsString();
+      if (attr.hasRetAttr("widberg_location")) {
+        StringRef regs = attr.getRetAttr("widberg_location").getValueAsString();
 
         SmallVector<StringRef, 2> Registers;
         regs.split(Registers, ',');
@@ -1713,7 +1713,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
           }
           else
           {
-            printf("%s\n", attr.getRetAttr("return-register").getValueAsString().str().c_str());
+            printf("%s\n", attr.getRetAttr("widberg_location").getValueAsString().str().c_str());
             llvm_unreachable("Target lowering: Bad register");
           }
         }

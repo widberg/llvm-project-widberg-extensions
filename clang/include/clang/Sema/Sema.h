@@ -6019,6 +6019,8 @@ public:
          ArrayRef<SourceRange> DynamicExceptionRanges,
          Expr *NoexceptExpr);
 
+  void ActOnWidbergLocation(Declarator &Declarator);
+
   class InheritedConstructorInfo;
 
   /// Determine if a special member function should have a deleted

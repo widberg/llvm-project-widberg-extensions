@@ -3933,15 +3933,9 @@ def Spoils : DeclOrTypeAttr {
 }
 def : MutualExclusions<[Spoils, AnyX86NoCallerSavedRegisters]>;
 
-def ReturnRegister : DeclOrTypeAttr {
-  let Spellings = [Clang<"return_register">];
+// Also extend InheritableParamAttr
+def WidbergLocation : DeclOrTypeAttr {
+  let Spellings = [Clang<"widberg_location">];
   let Args = [VariadicIdentifierArgument<"RegisterName">];
-  let Documentation = [Undocumented];
-}
-
-def ParameterRegister : InheritableParamAttr {
-  let Spellings = [Clang<"parameter_register">];
-  let Args = [VariadicIdentifierArgument<"RegisterName">];
-  let Subjects = SubjectList<[ParmVar]>;
   let Documentation = [Undocumented];
 }
