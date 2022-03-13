@@ -1,3 +1,37 @@
+# The LLVM Compiler Infrastructure With Widberg Extensions
+
+The repository is a fork of LLVM intended to implement C/C++ language
+features in LLVM/Clang to aid in reverse engineering. Currently, the
+scope of this project covers a subset of the IDA Pro __usercall
+syntax. An example of the syntax that is currently supported is as follows:
+
+```cpp
+long long __usercall __spoils<ebx,ecx>
+square@<ebx:ecx>(long long num@<eax:edx>) {
+    return num * num;
+}
+```
+
+The project is functional but lacks polish. Correct syntax will be accepted
+and generate correct code; however, incorrect syntax is handled largely by
+asserts and internal compiler errors. More work needs to be done to take
+advantage of Clang's diagnostics infrastructure and produce pretty errors
+rather than compiler stack traces. Additionally, some incorrect syntax is
+accepted and ignored rather than reported.
+
+Currently, only the X86_32 backend, Clang option "-m32", is supported in an
+effort to limit the scope of the project while it is early in development.
+As things stabilize more backends will be suppoerted. This limitation is
+entirely self-imposed and can be easily removed when the time is right.
+
+The companion repository [widberg/compiler-explorer-widberg](
+https://github.com/widberg/compiler-explorer-widberg) contains a
+compiler-explorer configuration for this Clang driver as well as a
+`run.sh` script to quickly launch the local compiler-explorer instance
+with the correct options.
+
+Pull requests and issues are encouraged.
+
 # The LLVM Compiler Infrastructure
 
 This directory and its sub-directories contain source code for LLVM,
