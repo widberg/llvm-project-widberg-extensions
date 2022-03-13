@@ -9168,6 +9168,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                               isVirtualOkay);
   if (!NewFD) return nullptr;
 
+  // NewFD->setWidbergLocation(D.getWidbergLocation());
+
   if (OriginalLexicalContext && OriginalLexicalContext->isObjCContainer())
     NewFD->setTopLevelDeclInObjCContainer();
 
@@ -18420,7 +18422,14 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   return !(FlagMask & Val) || (AllowMask && !(FlagMask & ~Val));
 }
 
-void ActOnWidbergLocation(Declarator &Declarator) {
+void Sema::ActOnWidbergLocation(Declarator &D, SourceLocation ATLoc, SourceLocation LAngleLoc, ArrayRef<IdentifierLoc *> RegisterIdentifiers, SourceLocation RAngleLoc) {
+  D.setWidbergLocation(WidbergLocation::Create(
+      Context,
+      ATLoc,
+      LAngleLoc,
+      RegisterIdentifiers,
+      RAngleLoc
+  ));
 }
 
 void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,

@@ -6019,7 +6019,7 @@ public:
          ArrayRef<SourceRange> DynamicExceptionRanges,
          Expr *NoexceptExpr);
 
-  void ActOnWidbergLocation(Declarator &Declarator);
+  void ActOnWidbergLocation(Declarator &D, SourceLocation ATLoc, SourceLocation LAngleLoc, ArrayRef<IdentifierLoc *> RegisterIdentifiers, SourceLocation RAngleLoc);
 
   class InheritedConstructorInfo;
 

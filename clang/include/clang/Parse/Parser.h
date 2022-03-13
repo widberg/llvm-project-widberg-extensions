@@ -2883,9 +2883,7 @@ private:
   }
   void ParseWidbergSpoils(ParsedAttributes &Attrs,
                           SourceLocation *End = nullptr);
-  void ParseWidbergLocation(ParsedAttributes &Attrs,
-                            SourceLocation *End = nullptr);
-  void MaybeParseWidbergLocation(Declarator &D);
+  void TryParseWidbergLocation(SourceLocation &ATLoc, SourceLocation &LAngleLoc, SmallVector<IdentifierLoc*, 2> &RegisterIdentifiers, SourceLocation &RAngleLoc);
   void DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
   SourceLocation SkipExtendedMicrosoftTypeAttributes();
   void DiagnoseAndSkipExtendedWidbergTypeAttributes();

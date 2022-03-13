@@ -862,17 +862,13 @@ void Parser::ParseWidbergSpoils(ParsedAttributes &Attrs,
     }
 }
 
-void Parser::ParseWidbergLocation(ParsedAttributes &Attrs,
-                                  SourceLocation *EndLoc) {
-
+void Parser::TryParseWidbergLocation(SourceLocation &ATLoc, SourceLocation &LAngleLoc, SmallVector<IdentifierLoc*, 2> &RegisterIdentifiers, SourceLocation &RAngleLoc) {
   assert(getLangOpts().WidbergExt && "registers not enabled");
   assert(Tok.is(tok::at) && "Not an at!");
 
-  IdentifierInfo *KWName = Tok.getIdentifierInfo();
-  SourceLocation ATLoc = ConsumeToken();
+  ATLoc = ConsumeToken();
 
-  ArgsVector RegisterNames;
-
+  LAngleLoc = Tok.getLocation();
   if (ExpectAndConsume(tok::less, diag::err_expected_less_after, "@"))
     return;
 
@@ -886,28 +882,13 @@ void Parser::ParseWidbergLocation(ParsedAttributes &Attrs,
       return;
     }
 
-    RegisterNames.push_back(ParseIdentifierLoc());
+    RegisterIdentifiers.push_back(ParseIdentifierLoc());
   }
 
-  SourceLocation RAngleBracketLoc = Tok.getLocation();
+  RAngleLoc = Tok.getLocation();
 
   if (ExpectAndConsume(tok::greater))
     return;
-
-  if (EndLoc)
-    *EndLoc = RAngleBracketLoc;
-
-  Attrs.addNew(KWName, ATLoc, nullptr, ATLoc, RegisterNames.data(), RegisterNames.size(),
-               ParsedAttr::AS_Keyword);
-}
-
-void Parser::MaybeParseWidbergLocation(Declarator &D) {
-  if (getLangOpts().WidbergExt) {
-    ParsedAttributesWithRange attrs(AttrFactory);
-    SourceLocation endLoc;
-    ParseWidbergLocation(attrs, &endLoc);
-    D.takeAttributes(attrs, endLoc);
-  }
 }
 
 void Parser::DiagnoseAndSkipExtendedMicrosoftTypeAttributes() {
@@ -6442,9 +6423,12 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   assert(D.isPastIdentifier() &&
          "Haven't past the location of the identifier yet?");
 
-  if (Tok.is(tok::at)) {
-    MaybeParseWidbergLocation(D);
-    Actions.ActOnWidbergLocation(D);
+  if (Tok.is(tok::at) && getLangOpts().WidbergExt) {
+    SourceLocation ATLoc;
+    SourceLocation LAngleLoc, RAngleLoc;
+    SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
+    TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+    Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
   }
 
   // Don't parse attributes unless we have parsed an unparenthesized name.

@@ -336,16 +336,14 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         llvm_unreachable("Spoils: Bad register");
       }
     }
-    SmallVector<MCPhysReg> *CalleeSavedRegs = new SmallVector<MCPhysReg>;
+    SmallVector<MCPhysReg> CalleeSavedRegs;
     for (size_t i = 0; AllRegs[i]; ++i) {
       if (std::find(SpoilsMCRegs.begin(), SpoilsMCRegs.end(), AllRegs[i]) == SpoilsMCRegs.end()) {
-        CalleeSavedRegs->push_back(AllRegs[i]);
+        CalleeSavedRegs.push_back(AllRegs[i]);
       }
     }
 
-    CalleeSavedRegs->push_back(0);
-
-    return CalleeSavedRegs->data();
+    return const_cast<MachineFunction *>(MF)->allocateSaveList(CalleeSavedRegs);
   }
 
   switch (CC) {
