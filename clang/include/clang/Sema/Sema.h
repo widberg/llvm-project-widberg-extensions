@@ -190,6 +190,7 @@ namespace clang {
   class TemplateDecl;
   class TemplateInstantiationCallback;
   class TemplateParameterList;
+  class WidbergLocation;
   class TemplatePartialOrderingContext;
   class TemplateTemplateParmDecl;
   class Token;

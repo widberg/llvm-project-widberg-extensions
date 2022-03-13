@@ -6079,6 +6079,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   if (!New)
     return nullptr;
 
+  New->setWidbergLocation(D.getWidbergLocation());
+
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
   if (New->getDeclName() && AddToScope)
@@ -13982,6 +13984,8 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
 
   if (getLangOpts().OpenCL)
     deduceOpenCLAddressSpace(New);
+
+  New->setWidbergLocation(D.getWidbergLocation());
 
   return New;
 }

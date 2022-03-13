@@ -22,6 +22,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclWidberg.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/CodeGenOptions.h"
@@ -2158,6 +2159,20 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       RetAttrs.addAttribute("widberg_location", regs);
     }
 
+    if (WidbergLocation *WidLoc = TargetDecl->getWidbergLocation()) {
+      std::string regs;
+
+      for (auto *it = WidLoc->begin();
+           it != WidLoc->end();
+           ++it) {
+        if (it != WidLoc->begin())
+          regs += ',';
+        regs += (*it)->Ident->getName();
+      }
+
+      RetAttrs.addAttribute("widberg_location", regs);
+    }
+
     if (TargetDecl->hasAttr<SpoilsAttr>()) {
       std::string spoils;
 
@@ -2566,6 +2581,20 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
             regs += ',';
           regs += (*it)->getName();
         }
+        Attrs.addAttribute("widberg_location", regs);
+      }
+
+      if (WidbergLocation *WidLoc = PDecl->getWidbergLocation()) {
+        std::string regs;
+
+        for (auto *it = WidLoc->begin();
+             it != WidLoc->end();
+             ++it) {
+          if (it != WidLoc->begin())
+            regs += ',';
+          regs += (*it)->Ident->getName();
+        }
+
         Attrs.addAttribute("widberg_location", regs);
       }
     }

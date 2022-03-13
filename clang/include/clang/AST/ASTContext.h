@@ -128,6 +128,7 @@ class TargetAttr;
 class TargetInfo;
 class TemplateDecl;
 class TemplateParameterList;
+class WidbergLocation;
 class TemplateTemplateParmDecl;
 class TemplateTypeParmDecl;
 class UnresolvedSetIterator;

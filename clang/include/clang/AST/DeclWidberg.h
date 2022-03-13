@@ -66,7 +66,7 @@ protected:
       begin()[Idx] = P;
     }
   }
-
+public:
   /// Iterates through the template parameters in this list.
   using iterator = IdentifierLoc **;
 
