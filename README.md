@@ -20,6 +20,19 @@ void __userpurge is_odd(int num, bool &result@<eax>) {
 }
 ```
 
+The first thing most people coming from MSVC say to me when I tell them
+about this project is, "I won't have to do the __fastcall/__thiscall trick
+anymore." What they don't know is that Clang already allows __thiscall on
+non-member functions without this fork. For example the following is
+acceptable in mainline Clang as well as this fork and produces the correct
+output (_this in ecx, other args on the stack):
+
+```cpp
+int __thiscall square(void *_this, int num) {
+    return num * num;
+}
+```
+
 The project is functional but lacks polish. Correct syntax will be accepted
 and generate correct code; however, incorrect syntax is handled largely by
 asserts and internal compiler errors. More work needs to be done to take
@@ -36,7 +49,12 @@ The companion repository [widberg/compiler-explorer-widberg](
 https://github.com/widberg/compiler-explorer-widberg) contains a
 compiler-explorer configuration for this Clang driver as well as a
 `run.sh` script to quickly launch the local compiler-explorer instance
-with the correct options.
+with the correct options. This is useful for quickly prototyping the
+compiler. Once the project is stable an attempt will be made to add it
+to the godbolt website.
+
+Next steps are to add support for function pointer types, add unit tests,
+and improve the diagnostics reporting as described above.
 
 Pull requests and issues are encouraged.
 
