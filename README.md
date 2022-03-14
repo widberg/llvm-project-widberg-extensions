@@ -1,6 +1,6 @@
 # The LLVM Compiler Infrastructure With Widberg Extensions
 
-The repository is a fork of LLVM intended to implement C/C++ language
+This repository is a fork of LLVM intended to implement C/C++ language
 features in LLVM/Clang to aid in reverse engineering. Currently, the
 scope of this project covers a subset of the IDA Pro __usercall
 syntax. An example of the syntax that is currently supported is as follows:
@@ -9,6 +9,14 @@ syntax. An example of the syntax that is currently supported is as follows:
 long long __usercall __spoils<ebx,ecx>
 square@<ebx:ecx>(long long num@<eax:edx>) {
     return num * num;
+}
+
+bool __usercall is_even@<al>(int num) {
+    return num % 2 == 0;
+}
+
+void __userpurge is_odd(int num, bool &result@<eax>) {
+    result = num % 2 == 1;
 }
 ```
 
