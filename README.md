@@ -40,7 +40,7 @@ advantage of Clang's diagnostics infrastructure and produce pretty errors
 rather than compiler stack traces. Additionally, some incorrect syntax is
 accepted and ignored rather than reported.
 
-Currently, only the X86_32 backend, Clang option "-m32", is supported in an
+Currently, only the X86_32 backend, Clang option `-m32`, is supported in an
 effort to limit the scope of the project while it is early in development.
 As things stabilize more backends will be suppoerted. This limitation is
 entirely self-imposed and can be easily removed when the time is right.
@@ -57,6 +57,29 @@ Next steps are to add support for function pointer types, add unit tests,
 and improve the diagnostics reporting as described above.
 
 Pull requests and issues are encouraged.
+
+## Enable and Disable the Extensions
+
+By default, the extensions are enabled. They can be disabled using the
+Clang option `-fno-widberg-extensions`.
+
+## Verify Widberg Extensions Are Present
+
+The following construct can be used in source files to verify that the
+widberg extensions are present:
+
+```cpp
+#ifndef __has_feature
+#  define __has_feature(x) 0  // Compatibility with non-clang compilers.
+#endif
+#ifndef __has_extension
+#  define __has_extension __has_feature // Compatibility with pre-3.0 compilers.
+#endif
+
+#if !__has_extension(widberg)
+#  error "This file requires a compiler that implements the widberg extensions."
+#endif
+```
 
 # The LLVM Compiler Infrastructure
 
