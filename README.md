@@ -81,6 +81,41 @@ widberg extensions are present:
 #endif
 ```
 
+## TODO
+
+Add functionality to support the following examples:
+
+```cpp
+int __usercall square@<ecx>(int num@<ecx>) {
+    return num * num;
+}
+
+decltype(square) *sq = square; // does not work with __usercall
+
+int main() {
+    int x = sq(0);
+}
+```
+
+```cpp
+int (__usercall *square)@<ecx>(int@<ebx>) = nullptr; // parameter locations not honored on function pointers
+
+int main() {
+    int x = square(0);
+}
+```
+
+```cpp
+int **__usercall func@<eax>(int *(__usercall *x)@<ebx>
+    (int, long@<ecx>, int)@<esi>) { // __usercall function pointer parameters not parsed correctly
+        return nullptr;
+}
+
+int main() {
+    int **x = func(nullptr);
+}
+```
+
 # The LLVM Compiler Infrastructure
 
 This directory and its sub-directories contain source code for LLVM,
