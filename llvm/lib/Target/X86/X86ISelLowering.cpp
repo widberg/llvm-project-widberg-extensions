@@ -4739,8 +4739,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         }
       }
       f.Flags.setLocation(MCRegisters);
-    } else {
-      llvm_unreachable("usercall no return reg");
     }
   }
 

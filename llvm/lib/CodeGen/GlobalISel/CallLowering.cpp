@@ -593,6 +593,8 @@ bool CallLowering::determineAssignments(ValueAssigner &Assigner,
     ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
     Args[i].Flags.clear();
 
+    assert(NumParts == OrigFlags.getLocation().size() && "number of split registers must match number of register arguments");
+
     for (unsigned Part = 0; Part < NumParts; ++Part) {
       ISD::ArgFlagsTy Flags = OrigFlags;
       if (Part == 0) {

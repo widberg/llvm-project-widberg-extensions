@@ -3776,7 +3776,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       continue;
 
     case tok::kw___spoils:
-      ParseWidbergSpoils(DS.getAttributes());
+      MaybeParseWidbergSpoils(DS.getAttributes());
       continue;
 
     // Borland single token adornments.
@@ -5811,7 +5811,7 @@ void Parser::ParseTypeQualifierListOpt(
       goto DoneWithTypeQuals;
     case tok::kw___spoils:
       if (AttrReqs & AR_DeclspecAttributesParsed) {
-        ParseWidbergSpoils(DS.getAttributes());
+        MaybeParseWidbergSpoils(DS.getAttributes());
         continue;
       }
       goto DoneWithTypeQuals;
