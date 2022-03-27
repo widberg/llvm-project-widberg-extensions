@@ -2570,32 +2570,19 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       Attrs.addAttribute(llvm::Attribute::NoCapture);
 
     if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-      const ParmVarDecl *PDecl = FD->getParamDecl(ArgNo);
-      if (PDecl->hasAttr<WidbergLocationAttr>()) {
-        std::string regs;
+      if (ArgNo < FD->getNumParams()) {
+        const ParmVarDecl *PDecl = FD->getParamDecl(ArgNo);
+        if (WidbergLocation *WidLoc = PDecl->getWidbergLocation()) {
+          std::string regs;
 
-        auto *attr = PDecl->getAttr<WidbergLocationAttr>();
-        for (auto *it = attr->registerName_begin();
-             it != attr->registerName_end(); ++it) {
-          if (it != attr->registerName_begin())
-            regs += ',';
-          regs += (*it)->getName();
+          for (auto *it = WidLoc->begin(); it != WidLoc->end(); ++it) {
+            if (it != WidLoc->begin())
+              regs += ',';
+            regs += (*it)->Ident->getName();
+          }
+
+          Attrs.addAttribute("widberg_location", regs);
         }
-        Attrs.addAttribute("widberg_location", regs);
-      }
-
-      if (WidbergLocation *WidLoc = PDecl->getWidbergLocation()) {
-        std::string regs;
-
-        for (auto *it = WidLoc->begin();
-             it != WidLoc->end();
-             ++it) {
-          if (it != WidLoc->begin())
-            regs += ',';
-          regs += (*it)->Ident->getName();
-        }
-
-        Attrs.addAttribute("widberg_location", regs);
       }
     }
 
