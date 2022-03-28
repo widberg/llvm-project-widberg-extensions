@@ -1778,10 +1778,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::UserPurge:
     OS << "userpurge";
     break;
-  case attr::ReturnRegister:
-    OS << "return_register(";
-    OS << ")";
-    break;
   }
   OS << "))";
 }

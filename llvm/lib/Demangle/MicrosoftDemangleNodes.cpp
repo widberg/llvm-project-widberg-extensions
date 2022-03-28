@@ -113,10 +113,10 @@ static void outputCallingConvention(OutputBuffer &OB, CallingConv CC) {
     OB << "__attribute__((__swiftasynccall__)) ";
     break;
   case CallingConv::UserCall:
-    OS << "__usercall";
+    OB << "__usercall";
     break;
   case CallingConv::UserPurge:
-    OS << "__userpurge";
+    OB << "__userpurge";
     break;
   default:
     break;
