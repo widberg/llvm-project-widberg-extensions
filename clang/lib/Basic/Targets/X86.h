@@ -732,6 +732,8 @@ public:
     case CC_PreserveAll:
     case CC_X86RegCall:
     case CC_OpenCLKernel:
+    case CC_UserCall:
+    case CC_UserPurge:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -798,8 +800,6 @@ public:
     case CC_X86StdCall:
     case CC_X86ThisCall:
     case CC_X86FastCall:
-    case CC_UserCall:
-    case CC_UserPurge:
       return CCCR_Ignore;
     case CC_C:
     case CC_X86VectorCall:
@@ -811,6 +811,8 @@ public:
     case CC_SwiftAsync:
     case CC_X86RegCall:
     case CC_OpenCLKernel:
+    case CC_UserCall:
+    case CC_UserPurge:
       return CCCR_OK;
     default:
       return CCCR_Warning;

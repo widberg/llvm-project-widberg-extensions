@@ -40,7 +40,7 @@ advantage of Clang's diagnostics infrastructure and produce pretty errors
 rather than compiler stack traces. Additionally, some incorrect syntax is
 accepted and ignored rather than reported.
 
-Currently, only the X86_32 backend, Clang option `-m32`, is supported in an
+Currently, only the X86_32 and X86_64 backends are supported in an
 effort to limit the scope of the project while it is early in development.
 As things stabilize more backends will be suppoerted. This limitation is
 entirely self-imposed and can be easily removed when the time is right.

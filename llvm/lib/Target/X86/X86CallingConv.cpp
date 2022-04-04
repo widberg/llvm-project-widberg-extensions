@@ -341,7 +341,7 @@ static bool CC_X86_64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
-static bool CC_X86_32_UserCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+static bool CC_X86_XX_UserCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                               CCValAssign::LocInfo &LocInfo,
                               ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   SmallVector<llvm::MCRegister, 2> MCRegisters = ArgFlags.getLocation();
@@ -363,7 +363,7 @@ static bool CC_X86_32_UserCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return true;
 }
 
-static bool RetCC_X86_32_UserCall(unsigned ValNo, MVT ValVT, MVT LocVT,
+static bool RetCC_X86_XX_UserCall(unsigned ValNo, MVT ValVT, MVT LocVT,
                                       CCValAssign::LocInfo LocInfo,
                                       ISD::ArgFlagsTy ArgFlags,
                                       CCState &State) {

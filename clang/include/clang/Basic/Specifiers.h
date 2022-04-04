@@ -298,7 +298,6 @@ namespace clang {
     case CC_OpenCLKernel:
     case CC_Swift:
     case CC_SwiftAsync:
-    case CC_UserCall:
     case CC_UserPurge:
       return false;
     default:
