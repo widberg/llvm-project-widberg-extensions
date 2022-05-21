@@ -45,14 +45,6 @@ effort to limit the scope of the project while it is early in development.
 As things stabilize more backends will be suppoerted. This limitation is
 entirely self-imposed and can be easily removed when the time is right.
 
-The companion repository [widberg/compiler-explorer-widberg](
-https://github.com/widberg/compiler-explorer-widberg) contains a
-compiler-explorer configuration for this Clang driver as well as a
-`run.sh` script to quickly launch the local compiler-explorer instance
-with the correct options. This is useful for quickly prototyping the
-compiler. Once the project is stable an attempt will be made to add it
-to the godbolt website.
-
 Next steps are to add support for function pointer types, add unit tests,
 and improve the diagnostics reporting as described above.
 
@@ -80,6 +72,17 @@ widberg extensions are present:
 #  error "This file requires a compiler that implements the widberg extensions."
 #endif
 ```
+
+## Compiler Explorer
+
+The compiler is available on the [Compiler Explorer website](https://godbolt.org/z/j4dPsE8rq).
+
+The companion repository [widberg/compiler-explorer-widberg](
+https://github.com/widberg/compiler-explorer-widberg) contains a
+compiler-explorer configuration for this Clang driver as well as a
+`run.sh` script to quickly launch the local compiler-explorer instance
+with the correct options. This is useful for quickly prototyping the
+compiler.
 
 ## TODO
 
