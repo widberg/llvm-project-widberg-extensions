@@ -2951,6 +2951,13 @@ def AnyX86NoCallerSavedRegisters : InheritableAttr,
   let SimpleHandler = 1;
 }
 
+def AnyX86NoCalleeSavedRegisters : InheritableAttr,
+                                   TargetSpecificAttr<TargetAnyX86> {
+  let Spellings = [GCC<"no_callee_saved_registers">];
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}
+
 def AnyX86NoCfCheck : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86>{
   let Spellings = [GCC<"nocf_check">];
   let Subjects = SubjectList<[FunctionLike]>;
@@ -3931,7 +3938,6 @@ def Spoils : DeclOrTypeAttr {
   let Args = [VariadicIdentifierArgument<"SpoilsList">];
   let Documentation = [Undocumented];
 }
-def : MutualExclusions<[Spoils, AnyX86NoCallerSavedRegisters]>;
 
 // Also extend InheritableParamAttr
 def WidbergLocation : DeclOrTypeAttr {

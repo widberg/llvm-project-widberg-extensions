@@ -3847,6 +3847,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+  printf("X86TargetLowering::LowerFormalArguments %zu\n", Ins.size());
   MachineFunction &MF = DAG.getMachineFunction();
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
 
@@ -3985,7 +3986,9 @@ SDValue X86TargetLowering::LowerFormalArguments(
     InVals.push_back(ArgValue);
   }
 
+  printf("X86TargetLowering::LowerFormalArguments2 %zu\n", Ins.size());
   for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
+    printf("loc size %zu\n", Ins[I].Flags.getLocation().size());
     if (Ins[I].Flags.isSwiftAsync()) {
       auto X86FI = MF.getInfo<X86MachineFunctionInfo>();
       if (Subtarget.is64Bit())
@@ -4147,6 +4150,7 @@ static SDValue getMOVL(SelectionDAG &DAG, const SDLoc &dl, MVT VT, SDValue V1,
 SDValue
 X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                              SmallVectorImpl<SDValue> &InVals) const {
+  printf("X86TargetLowering::LowerCall\n");
   SelectionDAG &DAG                     = CLI.DAG;
   SDLoc &dl                             = CLI.DL;
   SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
@@ -4173,6 +4177,30 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsIndirectCall = (CB && isa<CallInst>(CB) && CB->isIndirectCall());
   const Module *M = MF.getMMI().getModule();
   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
+
+  printf("X86TargetLowering::LowerCall Ins=%zu, Outs=%zu\n", Ins.size(), Outs.size());
+  for (auto& f : Ins) {
+    if (CallConv == CallingConv::UserCall || CallConv == CallingConv::UserPurge) {
+      SmallVector<StringRef, 2> Registers;
+      CLI.ReturnLocation.split(Registers, ',');
+
+      SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+      for (StringRef reg : Registers) {
+        printf("LowerCall3 ret %s\n", reg.str().c_str());
+        Optional<MCRegister> PhysReg =
+            MF.getMMI().getTarget().getMCRegisterInfo()->getRegNo(reg);
+
+        if (PhysReg) {
+          MCRegisters.push_back(*PhysReg);
+        } else {
+          printf("%s\n", CLI.ReturnLocation.str().c_str());
+          llvm_unreachable("Target lowering: Bad register");
+        }
+      }
+      f.Flags.setLocation(MCRegisters);
+    }
+  }
 
   MachineFunction::CallSiteInfo CSInfo;
   if (CallConv == CallingConv::X86_INTR)
@@ -4221,6 +4249,34 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (IsWin64)
     CCInfo.AllocateStack(32, Align(8));
 
+  printf("X86TargetLowering::LowerCall AnalyzeArguments\n");
+  for (auto& f : Outs) {
+    if (CallConv == CallingConv::UserCall || CallConv == CallingConv::UserPurge) {
+      printf("%u\n", f.OrigArgIndex);
+      if (CLI.CB->getAttributes().hasParamAttr(f.OrigArgIndex, "widberg_location")) {
+        SmallVector<StringRef, 2> Registers;
+        CLI.CB->getAttributes().getParamAttr(f.OrigArgIndex, "widberg_location")
+            .getValueAsString().split(Registers, ',');
+
+        SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+        for (StringRef reg : Registers) {
+          printf("LowerCall4 arg %s\n", reg.str().c_str());
+          Optional<MCRegister> PhysReg =
+              MF.getMMI().getTarget().getMCRegisterInfo()->getRegNo(reg);
+
+          if (PhysReg) {
+            MCRegisters.push_back(*PhysReg);
+          } else {
+            printf("%s\n", CLI.CB->getAttributes().getParamAttr(f.OrigArgIndex, "widberg_location")
+                               .getValueAsString().str().c_str());
+            llvm_unreachable("Target lowering: Bad register");
+          }
+        }
+        f.Flags.setLocation(MCRegisters);
+      }
+    }
+  }
   CCInfo.AnalyzeArguments(Outs, CC_X86);
 
   // In vectorcall calling convention a second pass is required for the HVA
@@ -4718,29 +4774,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     InFlag = Chain.getValue(1);
   }
 
-  for (auto& f : Ins) {
-    if (CallConv == CallingConv::UserCall || CallConv == CallingConv::UserPurge) {
-      SmallVector<StringRef, 2> Registers;
-      CLI.ReturnLocation.split(Registers, ',');
-
-      SmallVector<llvm::MCRegister, 2> MCRegisters;
-
-      for (StringRef reg : Registers) {
-        Optional<MCRegister> PhysReg = MF.getMMI().getTarget().getMCRegisterInfo()
-                                           ->getRegNo(reg);
-
-        if (PhysReg) {
-          MCRegisters.push_back(*PhysReg);
-        }
-        else
-        {
-          printf("%s\n", CLI.ReturnLocation.str().c_str());
-          llvm_unreachable("Target lowering: Bad register");
-        }
-      }
-      f.Flags.setLocation(MCRegisters);
-    }
-  }
+  printf("X86TargetLowering::LowerCall2\n");
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.

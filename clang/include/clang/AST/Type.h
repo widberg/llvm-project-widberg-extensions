@@ -63,6 +63,7 @@ class ConceptDecl;
 class TagDecl;
 class TemplateParameterList;
 class Type;
+class WidbergLocation;
 
 enum {
   TypeAlignmentInBits = 4,
@@ -3578,6 +3579,7 @@ public:
       IsNoEscape = 0x40,
     };
     unsigned char Data = 0;
+    WidbergLocation *Loc = nullptr;
 
   public:
     ExtParameterInfo() = default;
@@ -3587,6 +3589,13 @@ public:
     ExtParameterInfo withABI(ParameterABI kind) const {
       ExtParameterInfo copy = *this;
       copy.Data = (copy.Data & ~ABIMask) | unsigned(kind);
+      return copy;
+    }
+
+    WidbergLocation *getWidbergLocation() const { return Loc; }
+    ExtParameterInfo withWidbergLocation(WidbergLocation *newLoc) const {
+      ExtParameterInfo copy = *this;
+      copy.Loc = newLoc;
       return copy;
     }
 
@@ -3677,6 +3686,7 @@ public:
     enum { NoCfCheckMask = 0x800 };
     enum { CmseNSCallMask = 0x1000 };
     enum { SpoilsMask = 0x2000 };
+    enum { NoCalleeSavedRegsMask = 0x4000 };
     uint16_t Bits = CC_C;
 
     ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)) {}
@@ -3708,6 +3718,7 @@ public:
     bool getProducesResult() const { return Bits & ProducesResultMask; }
     bool getCmseNSCall() const { return Bits & CmseNSCallMask; }
     bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
+    bool getNoCalleeSavedRegs() const { return Bits & NoCalleeSavedRegsMask; }
     bool getSpoils() const { return Bits & SpoilsMask; }
     bool getNoCfCheck() const { return Bits & NoCfCheckMask; }
     bool getHasRegParm() const { return ((Bits & RegParmMask) >> RegParmOffset) != 0; }
@@ -3757,6 +3768,13 @@ public:
         return ExtInfo(Bits | NoCallerSavedRegsMask);
       else
         return ExtInfo(Bits & ~NoCallerSavedRegsMask);
+    }
+
+    ExtInfo withNoCalleeSavedRegs(bool noCalleeSavedRegs) const {
+      if (noCalleeSavedRegs)
+        return ExtInfo(Bits | NoCalleeSavedRegsMask);
+      else
+        return ExtInfo(Bits & ~NoCalleeSavedRegsMask);
     }
 
     ExtInfo withSpoils(bool spoils) const {

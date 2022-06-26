@@ -1705,6 +1705,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
         SmallVector<llvm::MCRegister, 2> MCRegisters;
 
         for (StringRef reg : Registers) {
+          printf("GetReturnInfo ret %s\n", reg.str().c_str());
           Optional<MCRegister> PhysReg = TLI.getTargetMachine().getMCRegisterInfo()
               ->getRegNo(reg);
 

@@ -344,13 +344,15 @@ static bool CC_X86_64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 static bool CC_X86_XX_UserCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                               CCValAssign::LocInfo &LocInfo,
                               ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  printf("usercall\n");
   SmallVector<llvm::MCRegister, 2> MCRegisters = ArgFlags.getLocation();
 
-//  printf("%d %zu %d\n", ValNo, MCRegisters.size(), ArgFlags.getSplitRegIndex());
+  printf("%d %zu %d\n", ValNo, MCRegisters.size(), ArgFlags.getSplitRegIndex());
 
   if (MCRegisters.empty())
     return false;
 
+  printf("usercall2\n");
   unsigned Reg = State.AllocateReg(MCRegisters[ArgFlags.getSplitRegIndex()]);
 
   // Since we previously made sure that 2 registers are available
@@ -367,6 +369,7 @@ static bool RetCC_X86_XX_UserCall(unsigned ValNo, MVT ValVT, MVT LocVT,
                                       CCValAssign::LocInfo LocInfo,
                                       ISD::ArgFlagsTy ArgFlags,
                                       CCState &State) {
+  printf("RetCC_X86_XX_UserCall\n");
   SmallVector<llvm::MCRegister, 2> MCRegisters = ArgFlags.getLocation();
 
   unsigned Reg = State.AllocateReg(MCRegisters[ValNo]);

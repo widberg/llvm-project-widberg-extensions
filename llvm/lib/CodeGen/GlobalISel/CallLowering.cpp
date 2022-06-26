@@ -83,6 +83,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              ArrayRef<ArrayRef<Register>> ArgRegs,
                              Register SwiftErrorVReg,
                              std::function<unsigned()> GetCalleeReg) const {
+  printf("CallLowering::lowerCall\n");
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
   MachineFunction &MF = MIRBuilder.getMF();
@@ -177,6 +178,8 @@ template <typename FuncInfoTy>
 void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                const DataLayout &DL,
                                const FuncInfoTy &FuncInfo) const {
+  unsigned ParamIdx = OpIdx - AttributeList::FirstArgIndex;
+
   auto &Flags = Arg.Flags[0];
   const AttributeList &Attrs = FuncInfo.getAttributes();
   addArgFlagsFromAttributes(Flags, Attrs, OpIdx);
@@ -190,7 +193,6 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   Align MemAlign = DL.getABITypeAlign(Arg.Ty);
   if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
     assert(OpIdx >= AttributeList::FirstArgIndex);
-    unsigned ParamIdx = OpIdx - AttributeList::FirstArgIndex;
 
     Type *ElementTy = FuncInfo.getParamByValType(ParamIdx);
     if (!ElementTy)
@@ -220,6 +222,33 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   // swiftself, since it won't be passed in x0.
   if (Flags.isSwiftSelf())
     Flags.setReturned(false);
+
+  if (FuncInfo.getCallingConv() == CallingConv::UserCall || FuncInfo.getCallingConv() == CallingConv::UserPurge) {
+    if (FuncInfo.getAttributes().hasParamAttr(ParamIdx, "widberg_location")) {
+      StringRef regs = FuncInfo.getAttributes().getParamAttr(ParamIdx, "widberg_location").getValueAsString();
+
+      SmallVector<StringRef, 2> Registers;
+      regs.split(Registers, ',');
+
+      SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+      for (StringRef reg : Registers) {
+        printf("setArgFlags arg %s\n", reg.str().c_str());
+        Optional<MCRegister> PhysReg = TLI->getTargetMachine().getMCRegisterInfo()
+                                           ->getRegNo(reg);
+
+        if (PhysReg) {
+          MCRegisters.push_back(*PhysReg);
+        }
+        else
+        {
+          printf("%s\n", FuncInfo.getAttributes().getParamAttr(ParamIdx, "widberg_location").getValueAsString().str().c_str());
+          llvm_unreachable("Target lowering: Bad register");
+        }
+      }
+      Flags.setLocation(MCRegisters);
+    }
+  }
 }
 
 template void

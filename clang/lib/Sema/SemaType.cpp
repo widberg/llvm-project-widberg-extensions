@@ -5341,6 +5341,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             HasAnyInterestingExtParameterInfos = true;
           }
 
+          if (WidbergLocation *Loc = Param->getWidbergLocation()) {
+            printf("WidbergLocation *Loc = Param->getWidbergLocation() == true");
+            ExtParameterInfos[i] = ExtParameterInfos[i].withWidbergLocation(Loc);
+            HasAnyInterestingExtParameterInfos = true;
+          }
+
           if (auto attr = Param->getAttr<ParameterABIAttr>()) {
             ExtParameterInfos[i] =
               ExtParameterInfos[i].withABI(attr->getABI());
@@ -7551,6 +7557,20 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
 
     FunctionType::ExtInfo EI =
         unwrapped.get()->getExtInfo().withNoCallerSavedRegs(true);
+    type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+    return true;
+  }
+
+  if (attr.getKind() == ParsedAttr::AT_AnyX86NoCalleeSavedRegisters) {
+    if (S.CheckAttrTarget(attr) || S.CheckAttrNoArgs(attr))
+      return true;
+
+    // Delay if this is not a function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    FunctionType::ExtInfo EI =
+        unwrapped.get()->getExtInfo().withNoCalleeSavedRegs(true);
     type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
     return true;
   }

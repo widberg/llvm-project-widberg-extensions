@@ -3203,11 +3203,11 @@ void Verifier::visitCallBase(CallBase &Call) {
              Call);
     }
 
-    if (Attrs.hasParamAttr(i, "widberg_location")) {
-      Assert(Callee && Callee->hasParamAttribute(i, "widberg_location"),
-             "parameter-register may not apply only to call sites",
-             Call.getArgOperand(i), Call);
-    }
+//    if (Attrs.hasParamAttr(i, "widberg_location")) {
+//      Assert(Callee && Callee->hasParamAttribute(i, "widberg_location"),
+//             "parameter-register may not apply only to call sites",
+//             Call.getArgOperand(i), Call);
+//    }
 
     if (Callee && Callee->hasParamAttribute(i, "widberg_location")) {
       Assert(Attrs.hasParamAttr(i, "widberg_location"),
@@ -3216,7 +3216,7 @@ void Verifier::visitCallBase(CallBase &Call) {
     }
 
     if (Attrs.hasParamAttr(i, Attribute::ImmArg)) {
-      // Don't allow immarg on call sites, unless the underlying declaration
+      // Don't allow immarg distributionon call sites, unless the underlying declaration
       // also has the matching immarg.
       Assert(Callee && Callee->hasParamAttribute(i, Attribute::ImmArg),
              "immarg may not apply only to call sites",

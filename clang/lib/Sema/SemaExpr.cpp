@@ -6732,7 +6732,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
       }
     }
     if (Caller->hasAttr<AnyX86InterruptAttr>() &&
-        ((!FDecl || !FDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>()))) {
+        ((!FDecl || !FDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>() || !FDecl->hasAttr<AnyX86NoCalleeSavedRegistersAttr>()))) {
       Diag(Fn->getExprLoc(), diag::warn_anyx86_interrupt_regsave);
       if (FDecl)
         Diag(FDecl->getLocation(), diag::note_callee_decl) << FDecl;

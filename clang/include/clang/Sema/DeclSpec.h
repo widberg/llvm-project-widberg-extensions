@@ -2510,6 +2510,7 @@ public:
   }
 
   void setWidbergLocation(WidbergLocation *WL) {
+    printf("setwidberglocation %s\n", WL->getRegister(0)->Ident->getName().str().c_str());
     WidLoc = WL;
   }
 

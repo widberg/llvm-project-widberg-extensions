@@ -2023,6 +2023,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                            llvm::AttributeList &AttrList,
                                            unsigned &CallingConv,
                                            bool AttrOnCallSite, bool IsThunk) {
+  printf("ConstructAttributeList name %s\n", Name.str().c_str());
+  printf("ConstructAttributeList args %ld\n", FI.arguments().size());
   llvm::AttrBuilder FuncAttrs(getLLVMContext());
   llvm::AttrBuilder RetAttrs(getLLVMContext());
 
@@ -2115,6 +2117,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
     if (TargetDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>())
       FuncAttrs.addAttribute("no_caller_saved_registers");
+    if (TargetDecl->hasAttr<AnyX86NoCalleeSavedRegistersAttr>())
+      FuncAttrs.addAttribute("no_callee_saved_registers");
     if (TargetDecl->hasAttr<AnyX86NoCfCheckAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::NoCfCheck);
     if (TargetDecl->hasAttr<LeafAttr>())
@@ -2569,21 +2573,16 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (FI.getExtParameterInfo(ArgNo).isNoEscape())
       Attrs.addAttribute(llvm::Attribute::NoCapture);
 
-    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-      if (ArgNo < FD->getNumParams()) {
-        const ParmVarDecl *PDecl = FD->getParamDecl(ArgNo);
-        if (WidbergLocation *WidLoc = PDecl->getWidbergLocation()) {
-          std::string regs;
+    if (WidbergLocation *WidLoc = FI.getExtParameterInfo(ArgNo).getWidbergLocation()) {
+      std::string regs;
 
-          for (auto *it = WidLoc->begin(); it != WidLoc->end(); ++it) {
-            if (it != WidLoc->begin())
-              regs += ',';
-            regs += (*it)->Ident->getName();
-          }
-
-          Attrs.addAttribute("widberg_location", regs);
-        }
+      for (auto *it = WidLoc->begin(); it != WidLoc->end(); ++it) {
+        if (it != WidLoc->begin())
+          regs += ',';
+        regs += (*it)->Ident->getName();
       }
+
+      Attrs.addAttribute("widberg_location", regs);
     }
 
     if (Attrs.hasAttributes()) {

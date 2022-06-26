@@ -3584,6 +3584,20 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     RequiresAdjustment = true;
   }
 
+  if (OldTypeInfo.getNoCalleeSavedRegs() !=
+      NewTypeInfo.getNoCalleeSavedRegs()) {
+    if (NewTypeInfo.getNoCalleeSavedRegs()) {
+      AnyX86NoCalleeSavedRegistersAttr *Attr =
+          New->getAttr<AnyX86NoCalleeSavedRegistersAttr>();
+      Diag(New->getLocation(), diag::err_function_attribute_mismatch) << Attr;
+      Diag(OldLocation, diag::note_previous_declaration);
+      return true;
+    }
+
+    NewTypeInfo = NewTypeInfo.withNoCallerSavedRegs(true);
+    RequiresAdjustment = true;
+  }
+
   if (OldTypeInfo.getSpoils() !=
       NewTypeInfo.getSpoils()) {
     if (NewTypeInfo.getSpoils()) {
