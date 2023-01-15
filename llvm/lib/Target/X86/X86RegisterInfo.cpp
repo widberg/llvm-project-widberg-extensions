@@ -295,7 +295,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().hasFnAttribute("no_callee_saved_registers"))
     return CSR_NoRegs_SaveList;
 
-  if (MF->getFunction().hasFnAttribute("spoils")) {
+  if (MF->getFunction().hasFnAttribute("spoils") || MF->getFunction().hasRetAttribute("widberg_location")) {
     StringRef SpoilsList = MF->getFunction().getFnAttribute("spoils")
                                .getValueAsString();
 
@@ -319,12 +319,32 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       AllRegs = CSR_32_AllRegs_SaveList;
     }
 
-    if (SpoilsList.empty())
+    if (SpoilsList.empty() && !MF->getFunction().hasRetAttribute("widberg_location"))
       return AllRegs;
 
     SmallVector<StringRef> SpoilsListVec;
     SmallVector<MCRegister> SpoilsMCRegs;
     SpoilsList.split(SpoilsListVec, ',');
+
+    if (MF->getFunction().hasRetAttribute("widberg_location")) {
+      const StringRef regs = MF->getFunction().getRetAttribute("widberg_location").getValueAsString();
+
+      SmallVector<StringRef, 2> Registers;
+      regs.split(Registers, ',');
+
+      for (StringRef SpoilsRegName : Registers) {
+        Optional<MCRegister> PhysReg =
+            MF->getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
+
+        if (PhysReg) {
+          SpoilsMCRegs.push_back(*PhysReg);
+        } else {
+          printf("%s\n", SpoilsRegName.str().c_str());
+          llvm_unreachable("Spoils: Bad register");
+        }
+      }
+    }
+
     for (const StringRef &SpoilsRegName : SpoilsListVec) {
       Optional<MCRegister> PhysReg =
           MF->getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
@@ -469,7 +489,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
 
-  if (MF.getFunction().hasFnAttribute("spoils")) {
+  if (MF.getFunction().hasFnAttribute("spoils") || MF.getFunction().hasRetAttribute("widberg_location")) {
     StringRef SpoilsList = MF.getFunction().getFnAttribute("spoils")
                                .getValueAsString();
 
@@ -493,7 +513,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       AllRegs = CSR_32_AllRegs_RegMask;
     }
 
-    if (SpoilsList.empty())
+    if (SpoilsList.empty() && !MF.getFunction().hasRetAttribute("widberg_location"))
       return AllRegs;
 
     SmallVector<StringRef> SpoilsListVec;
@@ -501,6 +521,28 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     Reserved.setBitsInMask(AllRegs);
 
     SpoilsList.split(SpoilsListVec, ',');
+
+
+    if (MF.getFunction().hasRetAttribute("widberg_location")) {
+      const StringRef regs = MF.getFunction().getRetAttribute("widberg_location").getValueAsString();
+
+      SmallVector<StringRef, 2> Registers;
+      regs.split(Registers, ',');
+
+      for (StringRef SpoilsRegName : Registers) {
+        Optional<MCRegister> PhysReg =
+            MF.getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
+
+        if (PhysReg) {
+          for (const MCPhysReg &SubReg : subregs_inclusive(*PhysReg))
+            Reserved.reset(SubReg);
+        } else {
+          printf("%s\n", SpoilsRegName.str().c_str());
+          llvm_unreachable("Spoils: Bad register");
+        }
+      }
+    }
+
     for (const StringRef &SpoilsRegName : SpoilsListVec) {
       Optional<MCRegister> PhysReg =
           MF.getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
