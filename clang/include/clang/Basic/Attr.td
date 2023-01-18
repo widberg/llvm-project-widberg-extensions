@@ -3938,10 +3938,3 @@ def Spoils : DeclOrTypeAttr {
   let Args = [VariadicIdentifierArgument<"SpoilsList">];
   let Documentation = [Undocumented];
 }
-
-// Also extend InheritableParamAttr
-def WidbergLocation : DeclOrTypeAttr {
-  let Spellings = [Clang<"widberg_location">];
-  let Args = [VariadicIdentifierArgument<"RegisterName">];
-  let Documentation = [Undocumented];
-}

@@ -72,7 +72,6 @@ class TagDecl;
 class TemplateArgumentList;
 class TemplateArgumentListInfo;
 class TemplateParameterList;
-class WidbergLocation;
 class TypeAliasTemplateDecl;
 class UnresolvedSetImpl;
 class VarTemplateDecl;

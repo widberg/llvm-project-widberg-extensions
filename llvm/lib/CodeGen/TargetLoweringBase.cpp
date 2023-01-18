@@ -1705,7 +1705,6 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
         SmallVector<llvm::MCRegister, 2> MCRegisters;
 
         for (StringRef reg : Registers) {
-          printf("GetReturnInfo ret %s\n", reg.str().c_str());
           Optional<MCRegister> PhysReg = TLI.getTargetMachine().getMCRegisterInfo()
               ->getRegNo(reg);
 
@@ -1714,7 +1713,6 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
           }
           else
           {
-            printf("%s\n", attr.getRetAttr("widberg_location").getValueAsString().str().c_str());
             llvm_unreachable("Target lowering: Bad register");
           }
         }

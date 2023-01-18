@@ -83,7 +83,6 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              ArrayRef<ArrayRef<Register>> ArgRegs,
                              Register SwiftErrorVReg,
                              std::function<unsigned()> GetCalleeReg) const {
-  printf("CallLowering::lowerCall\n");
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
   MachineFunction &MF = MIRBuilder.getMF();
@@ -233,7 +232,6 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
       SmallVector<llvm::MCRegister, 2> MCRegisters;
 
       for (StringRef reg : Registers) {
-        printf("setArgFlags arg %s\n", reg.str().c_str());
         Optional<MCRegister> PhysReg = TLI->getTargetMachine().getMCRegisterInfo()
                                            ->getRegNo(reg);
 
@@ -242,7 +240,6 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
         }
         else
         {
-          printf("%s\n", FuncInfo.getAttributes().getParamAttr(ParamIdx, "widberg_location").getValueAsString().str().c_str());
           llvm_unreachable("Target lowering: Bad register");
         }
       }

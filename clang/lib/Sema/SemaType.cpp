@@ -5342,7 +5342,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           }
 
           if (WidbergLocation *Loc = Param->getWidbergLocation()) {
-            printf("WidbergLocation *Loc = Param->getWidbergLocation() == true");
             ExtParameterInfos[i] = ExtParameterInfos[i].withWidbergLocation(Loc);
             HasAnyInterestingExtParameterInfos = true;
           }

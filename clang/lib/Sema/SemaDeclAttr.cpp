@@ -8131,28 +8131,6 @@ EnforceTCBLeafAttr *Sema::mergeEnforceTCBLeafAttr(
       *this, D, AL);
 }
 
-static void handleWidbergLocationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!AL.checkAtLeastNumArgs(S, 1))
-    return;
-
-  SmallVector<IdentifierInfo *, 4> RegisterNames;
-  for (unsigned ArgNo = 0; ArgNo < getNumAttributeArgs(AL); ++ArgNo) {
-    if (!AL.isArgIdent(ArgNo)) {
-      S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
-          << AL << AANT_ArgumentIdentifier;
-      return;
-    }
-
-    IdentifierLoc *RegisterArg = AL.getArgAsIdent(ArgNo);
-    // StringRef CPUName = RegisterArg->Ident->getName().trim();
-
-    RegisterNames.push_back(RegisterArg->Ident);
-  }
-
-  D->addAttr(::new (S.Context)
-                 WidbergLocationAttr(S.Context, AL, RegisterNames.data(), RegisterNames.size()));
-}
-
 static void handleSpoilsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SmallVector<IdentifierInfo *, 4> SpoilsList;
   for (unsigned ArgNo = 0; ArgNo < getNumAttributeArgs(AL); ++ArgNo) {
@@ -8835,10 +8813,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 
   case ParsedAttr::AT_UsingIfExists:
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
-    break;
-
-  case ParsedAttr::AT_WidbergLocation:
-    handleWidbergLocationAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_Spoils:

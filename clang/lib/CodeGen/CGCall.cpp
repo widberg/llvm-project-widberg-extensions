@@ -2023,8 +2023,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                            llvm::AttributeList &AttrList,
                                            unsigned &CallingConv,
                                            bool AttrOnCallSite, bool IsThunk) {
-  printf("ConstructAttributeList name %s\n", Name.str().c_str());
-  printf("ConstructAttributeList args %ld\n", FI.arguments().size());
   llvm::AttrBuilder FuncAttrs(getLLVMContext());
   llvm::AttrBuilder RetAttrs(getLLVMContext());
 
@@ -2146,21 +2144,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         FuncAttrs.addAttribute("uniform-work-group-size",
                                llvm::toStringRef(CodeGenOpts.UniformWGSize));
       }
-    }
-
-    if (TargetDecl->hasAttr<WidbergLocationAttr>()) {
-      std::string regs;
-
-      auto *attr = TargetDecl->getAttr<WidbergLocationAttr>();
-      for (auto *it = attr->registerName_begin();
-           it != attr->registerName_end();
-           ++it) {
-        if (it != attr->registerName_begin())
-          regs += ',';
-        regs += (*it)->getName();
-      }
-
-      RetAttrs.addAttribute("widberg_location", regs);
     }
 
     if (WidbergLocation *WidLoc = TargetDecl->getWidbergLocation()) {

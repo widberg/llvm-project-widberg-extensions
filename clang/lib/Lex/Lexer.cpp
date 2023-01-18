@@ -4002,7 +4002,11 @@ LexNextToken:
     break;
 
   case '@':
-    Kind = tok::at;
+    // Objective C and widberg extensions support.
+    if (CurPtr[-1] == '@' && (LangOpts.ObjC || LangOpts.WidbergExt))
+      Kind = tok::at;
+    else
+      Kind = tok::unknown;
     break;
 
   // UCNs (C99 6.4.3, C++11 [lex.charset]p2)

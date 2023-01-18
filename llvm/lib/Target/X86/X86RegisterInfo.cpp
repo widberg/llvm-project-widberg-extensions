@@ -339,7 +339,6 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         if (PhysReg) {
           SpoilsMCRegs.push_back(*PhysReg);
         } else {
-          printf("%s\n", SpoilsRegName.str().c_str());
           llvm_unreachable("Spoils: Bad register");
         }
       }
@@ -352,7 +351,6 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       if (PhysReg) {
         SpoilsMCRegs.push_back(*PhysReg);
       } else {
-        printf("%s\n", SpoilsRegName.str().c_str());
         llvm_unreachable("Spoils: Bad register");
       }
     }
@@ -537,7 +535,6 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
           for (const MCPhysReg &SubReg : subregs_inclusive(*PhysReg))
             Reserved.reset(SubReg);
         } else {
-          printf("%s\n", SpoilsRegName.str().c_str());
           llvm_unreachable("Spoils: Bad register");
         }
       }
@@ -551,7 +548,6 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
         for (const MCPhysReg &SubReg : subregs_inclusive(*PhysReg))
           Reserved.reset(SubReg);
       } else {
-        printf("%s\n", SpoilsRegName.str().c_str());
         llvm_unreachable("Spoils: Bad register");
       }
     }

@@ -2033,7 +2033,6 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
               }
               else
               {
-                printf("%s\n", F->getAttributes().getRetAttr("widberg_location").getValueAsString().str().c_str());
                 llvm_unreachable("Target lowering: Bad register");
               }
             }
@@ -10194,7 +10193,6 @@ static void tryToElideArgumentCopy(
 }
 
 void SelectionDAGISel::LowerArguments(const Function &F) {
-  printf("LowerArguments\n");
   SelectionDAG &DAG = SDB->DAG;
   SDLoc dl = SDB->getCurSDLoc();
   const DataLayout &DL = DAG.getDataLayout();
@@ -10229,11 +10227,9 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
   findArgumentCopyElisionCandidates(DL, FuncInfo.get(),
                                     ArgCopyElisionCandidates);
 
-  printf("LowerArguments2 %zu\n", F.arg_size());
   // Set up the incoming argument description vector.
   for (const Argument &Arg : F.args()) {
     unsigned ArgNo = Arg.getArgNo();
-    printf("LowerArguments3 %u\n", ArgNo);
     SmallVector<EVT, 4> ValueVTs;
     ComputeValueVTs(*TLI, DAG.getDataLayout(), Arg.getType(), ValueVTs);
     bool isArgValueUsed = !Arg.use_empty();
@@ -10313,7 +10309,6 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           SmallVector<llvm::MCRegister, 2> MCRegisters;
 
           for (StringRef reg : Registers) {
-            printf("LowerArguments arg %s\n", reg.str().c_str());
             Optional<MCRegister> PhysReg = TLI->getTargetMachine().getMCRegisterInfo()
                                                ->getRegNo(reg);
 
@@ -10322,7 +10317,6 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
             }
             else
             {
-              printf("%s\n", Arg.getAttribute("widberg_location").getValueAsString().str().c_str());
               llvm_unreachable("Target lowering: Bad register");
             }
           }
@@ -10374,8 +10368,6 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         Flags.setCopyElisionCandidate();
       if (Arg.hasAttribute(Attribute::Returned))
         Flags.setReturned();
-
-      printf("LowerArguments %zu\n", Flags.getLocation().size());
 
       MVT RegisterVT = TLI->getRegisterTypeForCallingConv(
           *CurDAG->getContext(), F.getCallingConv(), VT);

@@ -6,7 +6,7 @@ scope of this project covers a subset of the IDA Pro __usercall
 syntax. An example of the syntax that is currently supported is as follows:
 
 ```cpp
-long long __usercall __spoils<ebx,ecx>
+long long __usercall __spoils<eax,esi>
 square@<ebx:ecx>(long long num@<eax:edx>) {
     return num * num;
 }
@@ -45,8 +45,8 @@ effort to limit the scope of the project while it is early in development.
 As things stabilize more backends will be suppoerted. This limitation is
 entirely self-imposed and can be easily removed when the time is right.
 
-Next steps are to add support for function pointer types, add unit tests,
-and improve the diagnostics reporting as described above.
+Next steps are to add unit tests and improve the diagnostics reporting as
+described above.
 
 Pull requests and issues are encouraged.
 
@@ -93,18 +93,13 @@ int __usercall square@<ecx>(int num@<ecx>) {
     return num * num;
 }
 
+// return location to copied correctly
 decltype(square) *sq = square; // does not work with __usercall
+decltype(auto) *sq = square; // does not work with __usercall
+auto *sq = square; // does not work with __usercall
 
 int main() {
     int x = sq(0);
-}
-```
-
-```cpp
-int (__usercall *square)@<ecx>(int@<ebx>) = nullptr; // parameter locations not honored on function pointers
-
-int main() {
-    int x = square(0);
 }
 ```
 

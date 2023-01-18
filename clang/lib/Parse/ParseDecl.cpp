@@ -6429,7 +6429,6 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
     SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
     TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
     Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
-    printf("bruh\n");
   }
 
   // Don't parse attributes unless we have parsed an unparenthesized name.
