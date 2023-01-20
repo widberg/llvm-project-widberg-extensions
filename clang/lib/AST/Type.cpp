@@ -3183,6 +3183,7 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   FunctionTypeBits.HasExtParameterInfos = !!epi.ExtParameterInfos;
   FunctionTypeBits.Variadic = epi.Variadic;
   FunctionTypeBits.HasTrailingReturn = epi.HasTrailingReturn;
+  WidLoc = epi.ExtInfo.getWidbergLocation();
 
   // Fill in the extra trailing bitfields if present.
   if (hasExtraBitfields(epi.ExceptionSpec.Type)) {

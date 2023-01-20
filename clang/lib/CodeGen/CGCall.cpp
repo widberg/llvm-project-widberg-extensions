@@ -840,6 +840,8 @@ CGFunctionInfo *CGFunctionInfo::create(unsigned llvmCC,
   FI->ArgStructAlign = 0;
   FI->NumArgs = argTypes.size();
   FI->HasExtParameterInfos = !paramInfos.empty();
+  FI->WidLoc = info.getWidbergLocation();
+  FI->getReturnInfo().setWidbergLocation(FI->WidLoc);
   FI->getArgsBuffer()[0].type = resultType;
   for (unsigned i = 0, e = argTypes.size(); i != e; ++i)
     FI->getArgsBuffer()[i + 1].type = argTypes[i];
@@ -2146,20 +2148,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       }
     }
 
-    if (WidbergLocation *WidLoc = TargetDecl->getWidbergLocation()) {
-      std::string regs;
-
-      for (auto *it = WidLoc->begin();
-           it != WidLoc->end();
-           ++it) {
-        if (it != WidLoc->begin())
-          regs += ',';
-        regs += (*it)->Ident->getName();
-      }
-
-      RetAttrs.addAttribute("widberg_location", regs);
-    }
-
     if (TargetDecl->hasAttr<SpoilsAttr>()) {
       std::string spoils;
 
@@ -2262,6 +2250,28 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   QualType RetTy = FI.getReturnType();
   const ABIArgInfo &RetAI = FI.getReturnInfo();
   const llvm::DataLayout &DL = getDataLayout();
+
+  if (TargetDecl && (RetAI.getWidbergLocation() || FI.getWidbergLocation() || FI.getExtInfo().getWidbergLocation())) {
+    WidbergLocation *WidLoc;
+    if (RetAI.getWidbergLocation()) {
+      WidLoc = RetAI.getWidbergLocation();
+    } else if (FI.getWidbergLocation()) {
+      WidLoc = FI.getWidbergLocation();
+    } else {
+      WidLoc = FI.getExtInfo().getWidbergLocation();
+    }
+    std::string regs;
+
+    for (auto *it = WidLoc->begin();
+         it != WidLoc->end();
+         ++it) {
+      if (it != WidLoc->begin())
+        regs += ',';
+      regs += (*it)->Ident->getName();
+    }
+
+    RetAttrs.addAttribute("widberg_location", regs);
+  }
 
   // C++ explicitly makes returning undefined values UB. C's rule only applies
   // to used values, so we never mark them noundef for now.

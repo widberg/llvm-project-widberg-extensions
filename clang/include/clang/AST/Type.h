@@ -3688,15 +3688,17 @@ public:
     enum { SpoilsMask = 0x2000 };
     enum { NoCalleeSavedRegsMask = 0x4000 };
     uint16_t Bits = CC_C;
+    WidbergLocation *WidLoc;
 
-    ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)) {}
+    ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)), WidLoc(nullptr) {}
+    ExtInfo(unsigned Bits, WidbergLocation *WL) : Bits(static_cast<uint16_t>(Bits)), WidLoc(WL) {}
 
   public:
     // Constructor with no defaults. Use this when you know that you
     // have all the elements (when reading an AST file for example).
     ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
             bool producesResult, bool noCallerSavedRegs, bool NoCfCheck,
-            bool cmseNSCall) {
+            bool cmseNSCall, WidbergLocation *WL = nullptr) {
       assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
       Bits = ((unsigned)cc) | (noReturn ? NoReturnMask : 0) |
              (producesResult ? ProducesResultMask : 0) |
@@ -3704,6 +3706,7 @@ public:
              (hasRegParm ? ((regParm + 1) << RegParmOffset) : 0) |
              (NoCfCheck ? NoCfCheckMask : 0) |
              (cmseNSCall ? CmseNSCallMask : 0);
+      WidLoc = WL;
     }
 
     // Constructor with all defaults. Use when for example creating a
@@ -3712,7 +3715,7 @@ public:
 
     // Constructor with just the calling convention, which is an important part
     // of the canonical type.
-    ExtInfo(CallingConv CC) : Bits(CC) {}
+    ExtInfo(CallingConv CC) : Bits(CC), WidLoc(nullptr) {}
 
     bool getNoReturn() const { return Bits & NoReturnMask; }
     bool getProducesResult() const { return Bits & ProducesResultMask; }
@@ -3722,6 +3725,7 @@ public:
     bool getSpoils() const { return Bits & SpoilsMask; }
     bool getNoCfCheck() const { return Bits & NoCfCheckMask; }
     bool getHasRegParm() const { return ((Bits & RegParmMask) >> RegParmOffset) != 0; }
+    WidbergLocation *getWidbergLocation() const { return WidLoc; }
 
     unsigned getRegParm() const {
       unsigned RegParm = (Bits & RegParmMask) >> RegParmOffset;
@@ -3732,6 +3736,7 @@ public:
 
     CallingConv getCC() const { return CallingConv(Bits & CallConvMask); }
 
+    // TODO: Compare widloc
     bool operator==(ExtInfo Other) const {
       return Bits == Other.Bits;
     }
@@ -3741,6 +3746,10 @@ public:
 
     // Note that we don't have setters. That is by design, use
     // the following with methods instead of mutating these objects.
+
+    ExtInfo withWidbergLocation(WidbergLocation *WL) const {
+      return ExtInfo(Bits, WL);
+    }
 
     ExtInfo withNoReturn(bool noReturn) const {
       if (noReturn)
@@ -3821,12 +3830,14 @@ public:
     /// [implimits] 8 bits would be enough here.
     unsigned NumExceptionType;
   };
+  WidbergLocation *WidLoc;
 
 protected:
   FunctionType(TypeClass tc, QualType res, QualType Canonical,
                TypeDependence Dependence, ExtInfo Info)
       : Type(tc, Canonical, Dependence), ResultType(res) {
     FunctionTypeBits.ExtInfo = Info.Bits;
+    WidLoc = Info.WidLoc;
   }
 
   Qualifiers getFastTypeQuals() const {
@@ -3846,7 +3857,7 @@ public:
 
   bool getCmseNSCallAttr() const { return getExtInfo().getCmseNSCall(); }
   CallingConv getCallConv() const { return getExtInfo().getCC(); }
-  ExtInfo getExtInfo() const { return ExtInfo(FunctionTypeBits.ExtInfo); }
+  ExtInfo getExtInfo() const { return ExtInfo(FunctionTypeBits.ExtInfo, WidLoc); }
 
   static_assert((~Qualifiers::FastMask & Qualifiers::CVRMask) == 0,
                 "Const, volatile and restrict are assumed to be a subset of "
