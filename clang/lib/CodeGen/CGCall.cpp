@@ -2251,7 +2251,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   const ABIArgInfo &RetAI = FI.getReturnInfo();
   const llvm::DataLayout &DL = getDataLayout();
 
-  if (TargetDecl && (RetAI.getWidbergLocation() || FI.getWidbergLocation() || FI.getExtInfo().getWidbergLocation())) {
+  if (RetAI.getWidbergLocation() || FI.getWidbergLocation() || FI.getExtInfo().getWidbergLocation()) {
     WidbergLocation *WidLoc;
     if (RetAI.getWidbergLocation()) {
       WidLoc = RetAI.getWidbergLocation();

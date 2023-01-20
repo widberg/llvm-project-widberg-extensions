@@ -45,8 +45,8 @@ effort to limit the scope of the project while it is early in development.
 As things stabilize more backends will be suppoerted. This limitation is
 entirely self-imposed and can be easily removed when the time is right.
 
-Next steps are to add unit tests and improve the diagnostics reporting as
-described above.
+Next steps are to add function pointers, improve the diagnostics reporting
+as described above, and add unit tests.
 
 Pull requests and issues are encouraged.
 
@@ -89,21 +89,8 @@ compiler.
 Add functionality to support the following examples:
 
 ```cpp
-int __usercall square@<ecx>(int num@<ecx>) {
-    return num * num;
-}
+extern int (__usercall * test)@<ebx>(long@<edx>, int); // __usercall function pointers not parsed correctly
 
-// return location to copied correctly
-decltype(square) *sq = square; // does not work with __usercall
-decltype(auto) *sq = square; // does not work with __usercall
-auto *sq = square; // does not work with __usercall
-
-int main() {
-    int x = sq(0);
-}
-```
-
-```cpp
 int **__usercall func@<eax>(int *(__usercall *x)@<ebx>
     (int, long@<ecx>, int)@<esi>) { // __usercall function pointer parameters not parsed correctly
         return nullptr;
@@ -113,6 +100,15 @@ int main() {
     int **x = func(nullptr);
 }
 ```
+
+# Affiliation with LLVM (Or Lack Thereof)
+
+This project is not affiliated with the LLVM project in any way.
+This project, like the LLVM project, is under the Apache License
+v2.0 with LLVM Exceptions. I have no intention of upstreaming any
+of the changes made in this repository as I believe they are not
+useful to most people. The original LLVM project README.md begins
+below.
 
 # The LLVM Compiler Infrastructure
 
