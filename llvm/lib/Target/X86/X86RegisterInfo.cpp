@@ -337,7 +337,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
             MF->getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
 
         if (PhysReg) {
-          SpoilsMCRegs.push_back(*PhysReg);
+          for (const MCPhysReg &SubReg : sub_and_superregs_inclusive(*PhysReg))
+            SpoilsMCRegs.push_back(SubReg);
         } else {
           llvm_unreachable("Spoils: Bad register");
         }
@@ -349,7 +350,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
           MF->getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
 
       if (PhysReg) {
-        SpoilsMCRegs.push_back(*PhysReg);
+        for (const MCPhysReg &SubReg : sub_and_superregs_inclusive(*PhysReg))
+          SpoilsMCRegs.push_back(SubReg);
       } else {
         llvm_unreachable("Spoils: Bad register");
       }
@@ -532,7 +534,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
             MF.getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
 
         if (PhysReg) {
-          for (const MCPhysReg &SubReg : subregs_inclusive(*PhysReg))
+          for (const MCPhysReg &SubReg : sub_and_superregs_inclusive(*PhysReg))
             Reserved.reset(SubReg);
         } else {
           llvm_unreachable("Spoils: Bad register");
@@ -545,7 +547,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
           MF.getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
 
       if (PhysReg) {
-        for (const MCPhysReg &SubReg : subregs_inclusive(*PhysReg))
+        for (const MCPhysReg &SubReg : sub_and_superregs_inclusive(*PhysReg))
           Reserved.reset(SubReg);
       } else {
         llvm_unreachable("Spoils: Bad register");
