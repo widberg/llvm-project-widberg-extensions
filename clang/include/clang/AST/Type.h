@@ -3548,6 +3548,7 @@ public:
 class FunctionType : public Type {
   // The type returned by the function.
   QualType ResultType;
+  WidbergLocation *WidLoc = nullptr;
 
 public:
   /// Interesting information about a specific parameter that can't simply
@@ -3690,7 +3691,7 @@ public:
     uint16_t Bits = CC_C;
     WidbergLocation *WidLoc;
 
-    ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)), WidLoc(nullptr) {}
+//    ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)), WidLoc(nullptr) {}
     ExtInfo(unsigned Bits, WidbergLocation *WL) : Bits(static_cast<uint16_t>(Bits)), WidLoc(WL) {}
 
   public:
@@ -3715,7 +3716,8 @@ public:
 
     // Constructor with just the calling convention, which is an important part
     // of the canonical type.
-    ExtInfo(CallingConv CC) : Bits(CC), WidLoc(nullptr) {}
+//    ExtInfo(CallingConv CC) : Bits(CC), WidLoc(nullptr) {}
+    ExtInfo(CallingConv CC, WidbergLocation *WL) : Bits(CC), WidLoc(WL) {}
 
     bool getNoReturn() const { return Bits & NoReturnMask; }
     bool getProducesResult() const { return Bits & ProducesResultMask; }
@@ -3753,61 +3755,61 @@ public:
 
     ExtInfo withNoReturn(bool noReturn) const {
       if (noReturn)
-        return ExtInfo(Bits | NoReturnMask);
+        return ExtInfo(Bits | NoReturnMask, WidLoc);
       else
-        return ExtInfo(Bits & ~NoReturnMask);
+        return ExtInfo(Bits & ~NoReturnMask, WidLoc);
     }
 
     ExtInfo withProducesResult(bool producesResult) const {
       if (producesResult)
-        return ExtInfo(Bits | ProducesResultMask);
+        return ExtInfo(Bits | ProducesResultMask, WidLoc);
       else
-        return ExtInfo(Bits & ~ProducesResultMask);
+        return ExtInfo(Bits & ~ProducesResultMask, WidLoc);
     }
 
     ExtInfo withCmseNSCall(bool cmseNSCall) const {
       if (cmseNSCall)
-        return ExtInfo(Bits | CmseNSCallMask);
+        return ExtInfo(Bits | CmseNSCallMask, WidLoc);
       else
-        return ExtInfo(Bits & ~CmseNSCallMask);
+        return ExtInfo(Bits & ~CmseNSCallMask, WidLoc);
     }
 
     ExtInfo withNoCallerSavedRegs(bool noCallerSavedRegs) const {
       if (noCallerSavedRegs)
-        return ExtInfo(Bits | NoCallerSavedRegsMask);
+        return ExtInfo(Bits | NoCallerSavedRegsMask, WidLoc);
       else
-        return ExtInfo(Bits & ~NoCallerSavedRegsMask);
+        return ExtInfo(Bits & ~NoCallerSavedRegsMask, WidLoc);
     }
 
     ExtInfo withNoCalleeSavedRegs(bool noCalleeSavedRegs) const {
       if (noCalleeSavedRegs)
-        return ExtInfo(Bits | NoCalleeSavedRegsMask);
+        return ExtInfo(Bits | NoCalleeSavedRegsMask, WidLoc);
       else
-        return ExtInfo(Bits & ~NoCalleeSavedRegsMask);
+        return ExtInfo(Bits & ~NoCalleeSavedRegsMask, WidLoc);
     }
 
     ExtInfo withSpoils(bool spoils) const {
       if (spoils)
-        return ExtInfo(Bits | SpoilsMask);
+        return ExtInfo(Bits | SpoilsMask, WidLoc);
       else
-        return ExtInfo(Bits & ~SpoilsMask);
+        return ExtInfo(Bits & ~SpoilsMask, WidLoc);
     }
 
     ExtInfo withNoCfCheck(bool noCfCheck) const {
       if (noCfCheck)
-        return ExtInfo(Bits | NoCfCheckMask);
+        return ExtInfo(Bits | NoCfCheckMask, WidLoc);
       else
-        return ExtInfo(Bits & ~NoCfCheckMask);
+        return ExtInfo(Bits & ~NoCfCheckMask, WidLoc);
     }
 
     ExtInfo withRegParm(unsigned RegParm) const {
       assert(RegParm < 7 && "Invalid regparm value");
       return ExtInfo((Bits & ~RegParmMask) |
-                     ((RegParm + 1) << RegParmOffset));
+                     ((RegParm + 1) << RegParmOffset), WidLoc);
     }
 
     ExtInfo withCallingConv(CallingConv cc) const {
-      return ExtInfo((Bits & ~CallConvMask) | (unsigned) cc);
+      return ExtInfo((Bits & ~CallConvMask) | (unsigned) cc, WidLoc);
     }
 
     void Profile(llvm::FoldingSetNodeID &ID) const {
@@ -3830,14 +3832,12 @@ public:
     /// [implimits] 8 bits would be enough here.
     unsigned NumExceptionType;
   };
-  WidbergLocation *WidLoc;
 
 protected:
   FunctionType(TypeClass tc, QualType res, QualType Canonical,
                TypeDependence Dependence, ExtInfo Info)
-      : Type(tc, Canonical, Dependence), ResultType(res) {
+      : Type(tc, Canonical, Dependence), ResultType(res), WidLoc(Info.WidLoc) {
     FunctionTypeBits.ExtInfo = Info.Bits;
-    WidLoc = Info.WidLoc;
   }
 
   Qualifiers getFastTypeQuals() const {
@@ -4016,8 +4016,8 @@ public:
 
     ExtProtoInfo() : Variadic(false), HasTrailingReturn(false) {}
 
-    ExtProtoInfo(CallingConv CC)
-        : ExtInfo(CC), Variadic(false), HasTrailingReturn(false) {}
+    ExtProtoInfo(CallingConv CC, WidbergLocation *WL)
+        : ExtInfo(CC, WL), Variadic(false), HasTrailingReturn(false) {}
 
     ExtProtoInfo withExceptionSpec(const ExceptionSpecInfo &ESI) {
       ExtProtoInfo Result(*this);

@@ -5228,8 +5228,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         warnAboutAmbiguousFunction(S, D, DeclType, T);
 
       FunctionType::ExtInfo EI(
-          getCCForDeclaratorChunk(S, D, DeclType.getAttrs(), FTI, chunkIndex));
-      EI = EI.withWidbergLocation(D.getWidbergLocation());
+          getCCForDeclaratorChunk(S, D, DeclType.getAttrs(), FTI, chunkIndex), D.getWidbergLocation());
 
       if (!FTI.NumParams && !FTI.isVariadic && !LangOpts.CPlusPlus
                                             && !LangOpts.OpenCL) {

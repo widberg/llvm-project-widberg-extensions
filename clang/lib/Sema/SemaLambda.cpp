@@ -923,7 +923,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     //   If a lambda-expression does not include a lambda-declarator, it is as
     //   if the lambda-declarator were ().
     FunctionProtoType::ExtProtoInfo EPI(Context.getDefaultCallingConvention(
-        /*IsVariadic=*/false, /*IsCXXMethod=*/true));
+        /*IsVariadic=*/false, /*IsCXXMethod=*/true), ParamInfo.getWidbergLocation());
     EPI.HasTrailingReturn = true;
     EPI.TypeQuals.addConst();
     LangAS AS = getDefaultCXXMethodAddrSpace();
@@ -1369,7 +1369,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   // Create the type of the conversion function.
   FunctionProtoType::ExtProtoInfo ConvExtInfo(
       S.Context.getDefaultCallingConvention(
-      /*IsVariadic=*/false, /*IsCXXMethod=*/true));
+      /*IsVariadic=*/false, /*IsCXXMethod=*/true), CallOperator->getWidbergLocation());
   // The conversion function is always const and noexcept.
   ConvExtInfo.TypeQuals = Qualifiers();
   ConvExtInfo.TypeQuals.addConst();
@@ -1544,7 +1544,7 @@ static void addBlockPointerConversion(Sema &S,
 
   FunctionProtoType::ExtProtoInfo ConversionEPI(
       S.Context.getDefaultCallingConvention(
-          /*IsVariadic=*/false, /*IsCXXMethod=*/true));
+          /*IsVariadic=*/false, /*IsCXXMethod=*/true), CallOpProto->getExtInfo().getWidbergLocation());
   ConversionEPI.TypeQuals = Qualifiers();
   ConversionEPI.TypeQuals.addConst();
   QualType ConvTy = S.Context.getFunctionType(BlockPtrTy, None, ConversionEPI);

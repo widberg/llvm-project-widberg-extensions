@@ -6654,14 +6654,6 @@ void Parser::ParseParenDeclarator(Declarator &D) {
     if (EllipsisLoc.isValid())
       DiagnoseMisplacedEllipsisInDeclarator(EllipsisLoc, D);
 
-    if (Tok.is(tok::at) && getLangOpts().WidbergExt) {
-      SourceLocation ATLoc;
-      SourceLocation LAngleLoc, RAngleLoc;
-      SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
-      TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
-      Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
-    }
-
     return;
   }
 

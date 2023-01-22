@@ -89,10 +89,9 @@ compiler.
 Add functionality to support the following examples:
 
 ```cpp
-extern int (__usercall * test)@<ebx>(long@<edx>, int); // __usercall function pointers not parsed correctly
-
+extern int (__usercall * test)@<ebx>(long@<edx>, int); // __usercall function pointer return location not respected
 int **__usercall func@<eax>(int *(__usercall *x)@<ebx>
-    (int, long@<ecx>, int)@<esi>) { // __usercall function pointer parameters not parsed correctly
+    (int, long@<ecx>, int)@<esi>) { // __usercall function pointer parameters return location not respected
         return nullptr;
 }
 

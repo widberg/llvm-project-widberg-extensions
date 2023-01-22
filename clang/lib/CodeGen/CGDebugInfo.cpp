@@ -3841,7 +3841,7 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
 
   CallingConv CC = FD->getType()->castAs<FunctionType>()->getCallConv();
   QualType FnType = CGM.getContext().getFunctionType(
-      FD->getReturnType(), ArgTypes, FunctionProtoType::ExtProtoInfo(CC));
+      FD->getReturnType(), ArgTypes, FunctionProtoType::ExtProtoInfo(CC, FD->getWidbergLocation()));
   if (!FD->isExternallyVisible())
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
   if (CGM.getLangOpts().Optimize)
@@ -4087,7 +4087,7 @@ CGDebugInfo::getFunctionType(const FunctionDecl *FD, QualType RetTy,
   for (const VarDecl *VD : Args)
     ArgTypes.push_back(VD->getType());
   return CGM.getContext().getFunctionType(RetTy, ArgTypes,
-                                          FunctionProtoType::ExtProtoInfo(CC));
+                                          FunctionProtoType::ExtProtoInfo(CC, FD->getWidbergLocation()));
 }
 
 void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,

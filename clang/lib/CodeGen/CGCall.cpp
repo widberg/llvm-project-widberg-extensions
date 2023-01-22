@@ -566,7 +566,7 @@ CodeGenTypes::arrangeMSCtorClosure(const CXXConstructorDecl *CD,
       /*IsVariadic=*/false, /*IsCXXMethod=*/true);
   return arrangeLLVMFunctionInfo(Context.VoidTy, /*instanceMethod=*/true,
                                  /*chainCall=*/false, ArgTys,
-                                 FunctionType::ExtInfo(CC), {},
+                                 FunctionType::ExtInfo(CC, CD->getWidbergLocation()), {},
                                  RequiredArgs::All);
 }
 

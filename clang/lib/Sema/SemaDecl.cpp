@@ -10025,7 +10025,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // Turn this into a variadic function with no parameters.
     const auto *FT = NewFD->getType()->castAs<FunctionType>();
     FunctionProtoType::ExtProtoInfo EPI(
-        Context.getDefaultCallingConvention(true, false));
+        Context.getDefaultCallingConvention(true, false), NewFD->getWidbergLocation());
     EPI.Variadic = true;
     EPI.ExtInfo = FT->getExtInfo();
 
