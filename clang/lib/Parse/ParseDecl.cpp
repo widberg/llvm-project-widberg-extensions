@@ -887,8 +887,7 @@ void Parser::TryParseWidbergLocation(SourceLocation &ATLoc, SourceLocation &LAng
 
   RAngleLoc = Tok.getLocation();
 
-  if (ExpectAndConsume(tok::greater))
-    return;
+  ExpectAndConsume(tok::greater);
 }
 
 void Parser::DiagnoseAndSkipExtendedMicrosoftTypeAttributes() {
@@ -6490,6 +6489,14 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       break;
     }
   }
+
+  if (Tok.is(tok::at) && getLangOpts().WidbergExt) {
+    SourceLocation ATLoc;
+    SourceLocation LAngleLoc, RAngleLoc;
+    SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
+    TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+    Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+  }
 }
 
 void Parser::ParseDecompositionDeclarator(Declarator &D) {
@@ -6646,6 +6653,14 @@ void Parser::ParseParenDeclarator(Declarator &D) {
     // An ellipsis cannot be placed outside parentheses.
     if (EllipsisLoc.isValid())
       DiagnoseMisplacedEllipsisInDeclarator(EllipsisLoc, D);
+
+    if (Tok.is(tok::at) && getLangOpts().WidbergExt) {
+      SourceLocation ATLoc;
+      SourceLocation LAngleLoc, RAngleLoc;
+      SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
+      TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+      Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+    }
 
     return;
   }
