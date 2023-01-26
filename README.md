@@ -45,8 +45,8 @@ effort to limit the scope of the project while it is early in development.
 As things stabilize more backends will be suppoerted. This limitation is
 entirely self-imposed and can be easily removed when the time is right.
 
-Next steps are to add function pointers, improve the diagnostics reporting
-as described above, and add unit tests.
+Next steps are to improve the diagnostics reporting as described above
+and add unit tests.
 
 Pull requests and issues are encouraged.
 
@@ -83,22 +83,6 @@ compiler-explorer configuration for this Clang driver as well as a
 `run.sh` script to quickly launch the local compiler-explorer instance
 with the correct options. This is useful for quickly prototyping the
 compiler.
-
-## TODO
-
-Add functionality to support the following examples:
-
-```cpp
-extern int (__usercall * test)@<ebx>(long@<edx>, int); // __usercall function pointer return location not respected
-int **__usercall func@<eax>(int *(__usercall *x)@<ebx>
-    (int, long@<ecx>, int)@<esi>) { // __usercall function pointer parameters return location not respected
-        return nullptr;
-}
-
-int main() {
-    int **x = func(nullptr);
-}
-```
 
 # Affiliation with LLVM (Or Lack Thereof)
 
