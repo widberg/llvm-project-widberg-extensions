@@ -1871,6 +1871,7 @@ private:
   TemplateParameterList *InventedTemplateParameterList;
 
   WidbergLocation *WidLoc;
+  WidbergLocation *WidRetLoc;
 
 #ifndef _MSC_VER
   union {
@@ -1904,7 +1905,7 @@ public:
         ObjCWeakProperty(false), InlineStorageUsed(false),
         HasInitializer(false), Attrs(ds.getAttributePool().getFactory()),
         AsmLabel(nullptr), TrailingRequiresClause(nullptr),
-        InventedTemplateParameterList(nullptr), WidLoc(nullptr) {}
+        InventedTemplateParameterList(nullptr), WidLoc(nullptr), WidRetLoc(nullptr) {}
 
   ~Declarator() {
     clear();
@@ -1991,7 +1992,7 @@ public:
     ObjCWeakProperty = false;
     CommaLoc = SourceLocation();
     EllipsisLoc = SourceLocation();
-    WidLoc = nullptr;
+    WidRetLoc = nullptr;
   }
 
   /// mayOmitIdentifier - Return true if the identifier is either optional or
@@ -2509,12 +2510,18 @@ public:
     return InventedTemplateParameterList;
   }
 
-  void setWidbergLocation(WidbergLocation *WL) {
-    WidLoc = WL;
+  void setWidbergLocation(WidbergLocation *WL) { WidLoc = WL;
   }
 
   WidbergLocation *getWidbergLocation() {
     return WidLoc;
+  }
+
+  void setWidbergReturnLocation(WidbergLocation *WL) { WidRetLoc = WL;
+  }
+
+  WidbergLocation *getWidbergReturnLocation() {
+    return WidRetLoc;
   }
 
   /// takeAttributes - Takes attributes from the given parsed-attributes

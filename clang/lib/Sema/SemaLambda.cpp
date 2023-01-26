@@ -923,7 +923,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     //   If a lambda-expression does not include a lambda-declarator, it is as
     //   if the lambda-declarator were ().
     FunctionProtoType::ExtProtoInfo EPI(Context.getDefaultCallingConvention(
-        /*IsVariadic=*/false, /*IsCXXMethod=*/true), ParamInfo.getWidbergLocation());
+        /*IsVariadic=*/false, /*IsCXXMethod=*/true),
+        ParamInfo.getWidbergReturnLocation());
     EPI.HasTrailingReturn = true;
     EPI.TypeQuals.addConst();
     LangAS AS = getDefaultCXXMethodAddrSpace();
@@ -1369,7 +1370,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   // Create the type of the conversion function.
   FunctionProtoType::ExtProtoInfo ConvExtInfo(
       S.Context.getDefaultCallingConvention(
-      /*IsVariadic=*/false, /*IsCXXMethod=*/true), CallOperator->getWidbergLocation());
+      /*IsVariadic=*/false, /*IsCXXMethod=*/true), CallOperator->getWidbergReturnLocation());
   // The conversion function is always const and noexcept.
   ConvExtInfo.TypeQuals = Qualifiers();
   ConvExtInfo.TypeQuals.addConst();

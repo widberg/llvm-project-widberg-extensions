@@ -6094,6 +6094,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     return nullptr;
 
   New->setWidbergLocation(D.getWidbergLocation());
+  New->setWidbergReturnLocation(D.getWidbergReturnLocation());
 
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
@@ -10025,7 +10026,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // Turn this into a variadic function with no parameters.
     const auto *FT = NewFD->getType()->castAs<FunctionType>();
     FunctionProtoType::ExtProtoInfo EPI(
-        Context.getDefaultCallingConvention(true, false), NewFD->getWidbergLocation());
+        Context.getDefaultCallingConvention(true, false), NewFD->getWidbergReturnLocation());
     EPI.Variadic = true;
     EPI.ExtInfo = FT->getExtInfo();
 
@@ -14000,6 +14001,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
     deduceOpenCLAddressSpace(New);
 
   New->setWidbergLocation(D.getWidbergLocation());
+  New->setWidbergReturnLocation(D.getWidbergReturnLocation());
 
   return New;
 }
@@ -18442,12 +18444,7 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
 
 void Sema::ActOnWidbergLocation(Declarator &D, SourceLocation ATLoc, SourceLocation LAngleLoc, ArrayRef<IdentifierLoc *> RegisterIdentifiers, SourceLocation RAngleLoc) {
   D.setWidbergLocation(WidbergLocation::Create(
-      Context,
-      ATLoc,
-      LAngleLoc,
-      RegisterIdentifiers,
-      RAngleLoc
-  ));
+      Context, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc));
 }
 
 void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,

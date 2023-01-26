@@ -6467,6 +6467,17 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       if (IsFunctionDeclaration)
         Actions.ActOnFinishFunctionDeclarationDeclarator(D);
       PrototypeScope.Exit();
+
+      D.setWidbergReturnLocation(D.getWidbergLocation());
+      D.setWidbergLocation(nullptr);
+
+      if (Tok.is(tok::at) && getLangOpts().WidbergExt) {
+        SourceLocation ATLoc;
+        SourceLocation LAngleLoc, RAngleLoc;
+        SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
+        TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+        Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+      }
     } else if (Tok.is(tok::l_square)) {
       ParseBracketDeclarator(D);
     } else if (Tok.is(tok::kw_requires) && D.hasGroupingParens()) {
@@ -6488,14 +6499,6 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
     } else {
       break;
     }
-  }
-
-  if (Tok.is(tok::at) && getLangOpts().WidbergExt) {
-    SourceLocation ATLoc;
-    SourceLocation LAngleLoc, RAngleLoc;
-    SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
-    TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
-    Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
   }
 }
 
