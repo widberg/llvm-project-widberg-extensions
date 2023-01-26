@@ -18,6 +18,12 @@ bool __usercall is_even@<al>(int num) {
 void __userpurge is_odd(int num, bool &result@<eax>) {
     result = num % 2 == 1;
 }
+
+auto is_odd_also = is_odd;
+
+int *__usercall call_fn_ptr@<ebx>(int *(__usercall *x)@<eax>(long @<ecx>)@<edx>) {
+    return x(1337);
+}
 ```
 
 The first thing most people coming from MSVC say to me when I tell them

@@ -9544,8 +9544,14 @@ static AttributeList getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
   if (CLI.IsInReg)
     Attrs.push_back(Attribute::InReg);
 
-  return AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
-                            Attrs).addRetAttribute(CLI.RetTy->getContext(), "widberg_location", CLI.ReturnLocation);
+  auto ret = AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
+                                Attrs);
+  if (!CLI.ReturnLocation.empty()) {
+    ret = ret.addRetAttribute(CLI.RetTy->getContext(), "widberg_location",
+                              CLI.ReturnLocation);
+  }
+  
+  return ret;
 }
 
 /// TargetLowering::LowerCallTo - This is the default LowerCallTo

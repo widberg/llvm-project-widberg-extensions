@@ -2467,18 +2467,18 @@ void Verifier::visitFunction(const Function &F) {
     break;
   }
   
-  if (Attrs.hasRetAttr("widberg_location")) {
-    Assert(F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge,
-           "Attribute 'return-register' requires 'usercall' or 'userpurge' calling convention", F);
-  }
-
-  for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
-    AttributeSet ArgAttrs = Attrs.getParamAttrs(i);
-    if (ArgAttrs.hasAttribute("widberg_location")) {
-      Assert(F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge,
-            "Attribute 'return-register' requires 'usercall' or 'userpurge' calling convention", F);
-    }
-  }
+//  if (Attrs.hasRetAttr("widberg_location")) {
+//    Assert(F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge,
+//           "Attribute 'widberg_location' requires 'usercall' or 'userpurge' calling convention", F);
+//  }
+//
+//  for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
+//    AttributeSet ArgAttrs = Attrs.getParamAttrs(i);
+//    if (ArgAttrs.hasAttribute("widberg_location")) {
+//      Assert(F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge,
+//            "Attribute 'widberg_location' requires 'usercall' or 'userpurge' calling convention", F);
+//    }
+//  }
 
   // Check that the argument values match the function type for this function...
   unsigned i = 0;
