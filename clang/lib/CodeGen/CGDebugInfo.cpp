@@ -4087,7 +4087,7 @@ CGDebugInfo::getFunctionType(const FunctionDecl *FD, QualType RetTy,
   for (const VarDecl *VD : Args)
     ArgTypes.push_back(VD->getType());
   return CGM.getContext().getFunctionType(RetTy, ArgTypes,
-                                          FunctionProtoType::ExtProtoInfo(CC, FD->getWidbergReturnLocation()));
+                                          FunctionProtoType::ExtProtoInfo(CC, FD ? FD->getWidbergReturnLocation() : nullptr));
 }
 
 void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,

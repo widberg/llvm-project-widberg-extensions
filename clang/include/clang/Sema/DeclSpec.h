@@ -1870,8 +1870,8 @@ private:
   /// parameters (if any).
   TemplateParameterList *InventedTemplateParameterList;
 
-  WidbergLocation *WidLoc;
-  WidbergLocation *WidRetLoc;
+  WidbergLocation *WidLoc = nullptr;
+  WidbergLocation *WidRetLoc = nullptr;
 
 #ifndef _MSC_VER
   union {
