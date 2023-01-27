@@ -276,8 +276,8 @@ private:
   /// Loc - The location of this decl.
   SourceLocation Loc;
 
-  WidbergLocation *WidLoc;
-  WidbergLocation *WidRetLoc;
+  WidbergLocation *WidLoc = nullptr;
+  WidbergLocation *WidRetLoc = nullptr;
 
   /// DeclKind - This indicates which class this is.
   unsigned DeclKind : 7;
@@ -386,7 +386,7 @@ protected:
   }
 
   Decl(Kind DK, EmptyShell Empty)
-      : DeclKind(DK), InvalidDecl(false), HasAttrs(false), Implicit(false),
+      : WidLoc(nullptr), WidRetLoc(nullptr), DeclKind(DK), InvalidDecl(false), HasAttrs(false), Implicit(false),
         Used(false), Referenced(false), TopLevelDeclInObjCContainer(false),
         Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),

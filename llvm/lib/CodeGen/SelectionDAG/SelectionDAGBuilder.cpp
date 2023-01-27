@@ -9550,7 +9550,7 @@ static AttributeList getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
     ret = ret.addRetAttribute(CLI.RetTy->getContext(), "widberg_location",
                               CLI.ReturnLocation);
   }
-  
+
   return ret;
 }
 

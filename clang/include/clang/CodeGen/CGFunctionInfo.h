@@ -116,7 +116,7 @@ private:
   bool InReg : 1;           // isDirect() || isExtend() || isIndirect()
   bool CanBeFlattened: 1;   // isDirect()
   bool SignExt : 1;         // isExtend()
-  WidbergLocation *WidLoc;
+  WidbergLocation *WidLoc = nullptr;
 
   bool canHavePaddingType() const {
     return isDirect() || isExtend() || isIndirect() || isIndirectAliased() ||
@@ -604,7 +604,7 @@ class CGFunctionInfo final
   unsigned HasExtParameterInfos : 1;
 
   unsigned NumArgs;
-  WidbergLocation *WidLoc;
+  WidbergLocation *WidLoc = nullptr;
 
   ArgInfo *getArgsBuffer() {
     return getTrailingObjects<ArgInfo>();

@@ -3689,7 +3689,7 @@ public:
     enum { SpoilsMask = 0x2000 };
     enum { NoCalleeSavedRegsMask = 0x4000 };
     uint16_t Bits = CC_C;
-    WidbergLocation *WidLoc;
+    WidbergLocation *WidLoc = nullptr;
 
 //    ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)), WidLoc(nullptr) {}
     ExtInfo(unsigned Bits, WidbergLocation *WL) : Bits(static_cast<uint16_t>(Bits)), WidLoc(WL) {}
