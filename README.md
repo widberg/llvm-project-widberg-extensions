@@ -90,6 +90,15 @@ compiler-explorer configuration for this Clang driver as well as a
 with the correct options. This is useful for quickly prototyping the
 compiler.
 
+## Build
+
+Use `x64 Native Tools Command Prompt`
+
+```sh
+cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang;lld" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86"
+cmake --build build --config RelWithDebInfo --target clang lld
+```
+
 # Affiliation with LLVM (Or Lack Thereof)
 
 This project is not affiliated with the LLVM project in any way.
