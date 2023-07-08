@@ -318,6 +318,21 @@ private:
   /// Constructor for attributes with expression arguments.
   ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
              IdentifierInfo *scopeName, SourceLocation scopeLoc,
+             ArgsUnion *args, unsigned numArgs, Syntax syntaxUsed)
+      : AttributeCommonInfo(attrName, scopeName, attrRange, scopeLoc,
+                            syntaxUsed),
+        NumArgs(numArgs), Invalid(false),
+        UsedAsTypeAttr(false), IsAvailability(false),
+        IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
+        HasProcessingCache(false), IsPragmaClangAttribute(false),
+        Info(ParsedAttrInfo::get(*this)) {
+    if (numArgs)
+      memcpy(getArgsBuffer(), args, numArgs * sizeof(ArgsUnion));
+  }
+
+  /// Constructor for attributes with expression arguments.
+  ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
+             IdentifierInfo *scopeName, SourceLocation scopeLoc,
              ArgsUnion *args, unsigned numArgs, Syntax syntaxUsed,
              SourceLocation ellipsisLoc)
       : AttributeCommonInfo(attrName, scopeName, attrRange, scopeLoc,

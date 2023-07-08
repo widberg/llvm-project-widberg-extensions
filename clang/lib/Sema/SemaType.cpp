@@ -131,7 +131,9 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_Pcs:                                                     \
   case ParsedAttr::AT_IntelOclBicc:                                            \
   case ParsedAttr::AT_PreserveMost:                                            \
-  case ParsedAttr::AT_PreserveAll
+  case ParsedAttr::AT_PreserveAll:                                             \
+  case ParsedAttr::AT_UserCall:                                                \
+  case ParsedAttr::AT_UserPurge
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -5361,7 +5363,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         warnAboutAmbiguousFunction(S, D, DeclType, T);
 
       FunctionType::ExtInfo EI(
-          getCCForDeclaratorChunk(S, D, DeclType.getAttrs(), FTI, chunkIndex));
+          getCCForDeclaratorChunk(S, D, DeclType.getAttrs(), FTI, chunkIndex),
+          D.getWidbergReturnLocation());
 
       // OpenCL disallows functions without a prototype, but it doesn't enforce
       // strict prototypes as in C2x because it allows a function definition to
@@ -5486,6 +5489,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
           if (LangOpts.ObjCAutoRefCount && Param->hasAttr<NSConsumedAttr>()) {
             ExtParameterInfos[i] = ExtParameterInfos[i].withIsConsumed(true);
+            HasAnyInterestingExtParameterInfos = true;
+          }
+
+          if (WidbergLocation *Loc = Param->getWidbergLocation()) {
+            ExtParameterInfos[i] = ExtParameterInfos[i].withWidbergLocation(Loc);
             HasAnyInterestingExtParameterInfos = true;
           }
 
@@ -7660,6 +7668,10 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<PreserveMostAttr>(Ctx, Attr);
   case ParsedAttr::AT_PreserveAll:
     return createSimpleAttr<PreserveAllAttr>(Ctx, Attr);
+  case ParsedAttr::AT_UserCall:
+    return createSimpleAttr<UserCallAttr>(Ctx, Attr);
+  case ParsedAttr::AT_UserPurge:
+    return createSimpleAttr<UserPurgeAttr>(Ctx, Attr);
   }
   llvm_unreachable("unexpected attribute kind!");
 }
@@ -7742,6 +7754,34 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
 
     FunctionType::ExtInfo EI =
         unwrapped.get()->getExtInfo().withNoCallerSavedRegs(true);
+    type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+    return true;
+  }
+
+  if (attr.getKind() == ParsedAttr::AT_AnyX86NoCalleeSavedRegisters) {
+    if (S.CheckAttrTarget(attr) || S.CheckAttrNoArgs(attr))
+      return true;
+
+    // Delay if this is not a function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    FunctionType::ExtInfo EI =
+        unwrapped.get()->getExtInfo().withNoCalleeSavedRegs(true);
+    type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+    return true;
+  }
+
+  if (attr.getKind() == ParsedAttr::AT_Spoils) {
+    if (S.CheckAttrTarget(attr) || S.CheckAttrNoArgs(attr))
+      return true;
+
+    // Delay if this is not a function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    FunctionType::ExtInfo EI =
+        unwrapped.get()->getExtInfo().withSpoils(true);
     type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
     return true;
   }

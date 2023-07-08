@@ -150,6 +150,10 @@ TranslateCallingConvention(llvm::codeview::CallingConvention conv) {
     return clang::CallingConv::CC_X86ThisCall;
   case CC::NearVector:
     return clang::CallingConv::CC_X86VectorCall;
+  case CC::UserCall:
+    return clang::CallingConv::CC_UserCall;
+  case CC::UserPurge:
+    return clang::CallingConv::CC_UserPurge;
   default:
     return std::nullopt;
   }

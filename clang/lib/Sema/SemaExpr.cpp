@@ -18114,6 +18114,8 @@ static bool funcHasParameterSizeMangling(Sema &S, FunctionDecl *FD) {
   case CC_X86StdCall:
   case CC_X86FastCall:
   case CC_X86VectorCall:
+  case CC_UserCall:
+  case CC_UserPurge:
     return true;
   default:
     break;
@@ -18151,6 +18153,12 @@ static void CheckCompleteParameterTypesForMangler(Sema &S, FunctionDecl *FD,
         break;
       case CC_X86VectorCall:
         CCName = "vectorcall";
+        break;
+      case CC_UserCall:
+        CCName = "usercall";
+        break;
+      case CC_UserPurge:
+        CCName = "userpurge";
         break;
       default:
         llvm_unreachable("CC does not need mangling");

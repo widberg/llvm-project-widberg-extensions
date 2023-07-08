@@ -18,6 +18,7 @@
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -827,7 +828,9 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
     case tok::kw___w64:
     case tok::kw___ptr32:
     case tok::kw___sptr:
-    case tok::kw___uptr: {
+    case tok::kw___uptr:
+    case tok::kw___usercall:
+    case tok::kw___userpurge: {
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
       SourceLocation AttrNameLoc = ConsumeToken();
       attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
@@ -838,6 +841,93 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
       return;
     }
   }
+}
+
+void Parser::ParseWidbergTypeAttributes(ParsedAttributes &attrs) {
+  // Treat these like attributes
+  while (true) {
+    switch (Tok.getKind()) {
+    case tok::kw___usercall:
+    case tok::kw___userpurge: {
+      IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+      SourceLocation AttrNameLoc = ConsumeToken();
+      attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+                   ParsedAttr::AS_Keyword);
+      break;
+    }
+    default:
+      return;
+    }
+  }
+}
+
+void Parser::ParseWidbergSpoils(ParsedAttributes &Attrs,
+                                     SourceLocation *EndLoc) {
+
+    assert(getLangOpts().WidbergExt && "__spoils keyword is not enabled");
+    assert(Tok.is(tok::kw___spoils) && "Not a spoils!");
+
+    while (Tok.is(tok::kw___spoils)) {
+      IdentifierInfo *KWName = Tok.getIdentifierInfo();
+      SourceLocation KWLoc = ConsumeToken();
+
+      ArgsVector RegisterNames;
+
+      if (ExpectAndConsume(tok::less, diag::err_expected_less_after, KWName->getName()))
+        return;
+
+      while (Tok.isNot(tok::greater)) {
+        // Attribute not present.
+        if (TryConsumeToken(tok::comma))
+          continue;
+
+        if (Tok.getKind() != tok::identifier) {
+          Diag(Tok, diag::err_widberg_spoils_type);
+          SkipUntil(tok::greater);
+          return;
+        }
+
+        RegisterNames.push_back(ParseIdentifierLoc());
+      }
+
+      SourceLocation RAngleBracketLoc = Tok.getLocation();
+
+      if (ExpectAndConsume(tok::greater))
+        return;
+
+      if (EndLoc)
+        *EndLoc = RAngleBracketLoc;
+
+      Attrs.addNew(KWName, KWLoc, nullptr, KWLoc, RegisterNames.data(), RegisterNames.size(),
+                   ParsedAttr::AS_Keyword);
+
+    }
+}
+
+bool Parser::TryParseWidbergLocation(SourceLocation &ATLoc, SourceLocation &LAngleLoc, SmallVector<IdentifierLoc*, 2> &RegisterIdentifiers, SourceLocation &RAngleLoc) {
+  assert(getLangOpts().WidbergExt && "registers not enabled");
+  assert(Tok.is(tok::at) && "Not an at!");
+  assert(NextToken().is(tok::less) && "Not a less!");
+
+  ATLoc = ConsumeToken();
+  LAngleLoc = ConsumeToken();
+
+  while (Tok.isNot(tok::greater)) {
+    if (TryConsumeToken(tok::colon))
+      continue;
+
+    if (Tok.getKind() != tok::identifier) {
+      Diag(Tok, diag::err_widberg_spoils_type);
+      SkipUntil(tok::greater);
+      return false;
+    }
+
+    RegisterIdentifiers.push_back(ParseIdentifierLoc());
+  }
+
+  RAngleLoc = ConsumeToken();
+
+  return true;
 }
 
 void Parser::DiagnoseAndSkipExtendedMicrosoftTypeAttributes() {
@@ -868,6 +958,33 @@ SourceLocation Parser::SkipExtendedMicrosoftTypeAttributes() {
     case tok::kw___unaligned:
     case tok::kw___sptr:
     case tok::kw___uptr:
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
+      EndLoc = ConsumeToken();
+      break;
+    default:
+      return EndLoc;
+    }
+  }
+}
+
+void Parser::DiagnoseAndSkipExtendedWidbergTypeAttributes() {
+  SourceLocation StartLoc = Tok.getLocation();
+  SourceLocation EndLoc = SkipExtendedWidbergTypeAttributes();
+
+  if (EndLoc.isValid()) {
+    SourceRange Range(StartLoc, EndLoc);
+    Diag(StartLoc, diag::warn_microsoft_qualifiers_ignored) << Range;
+  }
+}
+
+SourceLocation Parser::SkipExtendedWidbergTypeAttributes() {
+  SourceLocation EndLoc;
+
+  while (true) {
+    switch (Tok.getKind()) {
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
       EndLoc = ConsumeToken();
       break;
     default:
@@ -2233,6 +2350,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     // MSVC parses but ignores qualifiers after the comma as an extension.
     if (getLangOpts().MicrosoftExt)
       DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
+
+    // Widberg parses but ignores qualifiers after the comma as an extension.
+    if (getLangOpts().WidbergExt)
+      DiagnoseAndSkipExtendedWidbergTypeAttributes();
 
     ParseDeclarator(D);
 
@@ -3811,6 +3932,16 @@ void Parser::ParseDeclarationSpecifiers(
       ParseMicrosoftTypeAttributes(DS.getAttributes());
       continue;
 
+    // Widberg
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
+      ParseWidbergTypeAttributes(DS.getAttributes());
+      continue;
+
+    case tok::kw___spoils:
+      MaybeParseWidbergSpoils(DS.getAttributes());
+      continue;
+
     // Borland single token adornments.
     case tok::kw___pascal:
       ParseBorlandTypeAttributes(DS.getAttributes());
@@ -5354,6 +5485,10 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___pascal:
   case tok::kw___unaligned:
 
+  case tok::kw___usercall:
+  case tok::kw___userpurge:
+  case tok::kw___spoils:
+
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
   case tok::kw__Nullable_result:
@@ -5613,6 +5748,10 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___forceinline:
   case tok::kw___pascal:
   case tok::kw___unaligned:
+
+  case tok::kw___usercall:
+  case tok::kw___userpurge:
+  case tok::kw___spoils:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -5890,6 +6029,19 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___vectorcall:
       if (AttrReqs & AR_DeclspecAttributesParsed) {
         ParseMicrosoftTypeAttributes(DS.getAttributes());
+        continue;
+      }
+      goto DoneWithTypeQuals;
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
+      if (AttrReqs & AR_DeclspecAttributesParsed) {
+        ParseWidbergTypeAttributes(DS.getAttributes());
+        continue;
+      }
+      goto DoneWithTypeQuals;
+    case tok::kw___spoils:
+      if (AttrReqs & AR_DeclspecAttributesParsed) {
+        MaybeParseWidbergSpoils(DS.getAttributes());
         continue;
       }
       goto DoneWithTypeQuals;
@@ -6510,6 +6662,15 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   assert(D.isPastIdentifier() &&
          "Haven't past the location of the identifier yet?");
 
+  if (Tok.is(tok::at) && NextToken().is(tok::less) && getLangOpts().WidbergExt) {
+    SourceLocation ATLoc;
+    SourceLocation LAngleLoc, RAngleLoc;
+    SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
+    if (TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc)) {
+      Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+    }
+  }
+
   // Don't parse attributes unless we have parsed an unparenthesized name.
   if (D.hasName() && !D.getNumTypeObjects())
     MaybeParseCXX11Attributes(D);
@@ -6564,6 +6725,17 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       if (IsFunctionDeclaration)
         Actions.ActOnFinishFunctionDeclarationDeclarator(D);
       PrototypeScope.Exit();
+
+      D.setWidbergReturnLocation(D.getWidbergLocation());
+      D.setWidbergLocation(nullptr);
+
+      if (Tok.is(tok::at) && getLangOpts().WidbergExt) {
+        SourceLocation ATLoc;
+        SourceLocation LAngleLoc, RAngleLoc;
+        SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
+        TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+        Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+      }
     } else if (Tok.is(tok::l_square)) {
       ParseBracketDeclarator(D);
     } else if (Tok.is(tok::kw_requires) && D.hasGroupingParens()) {

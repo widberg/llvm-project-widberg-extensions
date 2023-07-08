@@ -1704,6 +1704,10 @@ CallingConv Demangler::demangleCallingConvention(StringView &MangledName) {
     return CallingConv::Swift;
   case 'W':
     return CallingConv::SwiftAsync;
+  case 'r':
+    return CallingConv::UserCall;
+  case 'R':
+    return CallingConv::UserPurge;
   }
 
   return CallingConv::None;

@@ -241,6 +241,12 @@ namespace CallingConv {
     /// Preserve X2-X15, X19-X29, SP, Z0-Z31, P0-P15.
     AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 = 103,
 
+    /// UserCall
+    UserCall = 104,
+
+    /// UserPurge
+    UserPurge = 105,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

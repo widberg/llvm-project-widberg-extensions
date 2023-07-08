@@ -304,7 +304,15 @@ bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
   return getParent()->hasParamAttribute(getArgNo(), Kind);
 }
 
+bool Argument::hasAttribute(StringRef Kind) const {
+  return getParent()->hasParamAttribute(getArgNo(), Kind);
+}
+
 Attribute Argument::getAttribute(Attribute::AttrKind Kind) const {
+  return getParent()->getParamAttribute(getArgNo(), Kind);
+}
+
+Attribute Argument::getAttribute(StringRef Kind) const {
   return getParent()->getParamAttribute(getArgNo(), Kind);
 }
 
@@ -571,6 +579,10 @@ void Function::addRetAttr(Attribute Attr) {
   AttributeSets = AttributeSets.addRetAttribute(getContext(), Attr);
 }
 
+void Function::addRetAttr(StringRef Attr, StringRef Val) {
+  AttributeSets = AttributeSets.addRetAttribute(getContext(), Attr, Val);
+}
+
 void Function::addRetAttrs(const AttrBuilder &Attrs) {
   AttributeSets = AttributeSets.addRetAttributes(getContext(), Attrs);
 }
@@ -581,6 +593,10 @@ void Function::addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
 
 void Function::addParamAttr(unsigned ArgNo, Attribute Attr) {
   AttributeSets = AttributeSets.addParamAttribute(getContext(), ArgNo, Attr);
+}
+
+void Function::addParamAttr(unsigned ArgNo, StringRef Attr, StringRef Val) {
+  AttributeSets = AttributeSets.addParamAttribute(getContext(), ArgNo, Attr, Val);
 }
 
 void Function::addParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
@@ -649,8 +665,17 @@ bool Function::hasRetAttribute(Attribute::AttrKind Kind) const {
   return AttributeSets.hasRetAttr(Kind);
 }
 
+bool Function::hasRetAttribute(StringRef Kind) const {
+  return AttributeSets.hasRetAttr(Kind);
+}
+
 bool Function::hasParamAttribute(unsigned ArgNo,
                                  Attribute::AttrKind Kind) const {
+  return AttributeSets.hasParamAttr(ArgNo, Kind);
+}
+
+bool Function::hasParamAttribute(unsigned ArgNo,
+                                 StringRef Kind) const {
   return AttributeSets.hasParamAttr(ArgNo, Kind);
 }
 
@@ -684,9 +709,18 @@ uint64_t Function::getFnAttributeAsParsedInteger(StringRef Name,
   return Result;
 }
 
+Attribute Function::getRetAttribute(StringRef Kind) const {
+  return AttributeSets.getRetAttr(Kind);
+}
+
 /// gets the specified attribute from the list of attributes.
 Attribute Function::getParamAttribute(unsigned ArgNo,
                                       Attribute::AttrKind Kind) const {
+  return AttributeSets.getParamAttr(ArgNo, Kind);
+}
+
+Attribute Function::getParamAttribute(unsigned ArgNo,
+                                      StringRef Kind) const {
   return AttributeSets.getParamAttr(ArgNo, Kind);
 }
 

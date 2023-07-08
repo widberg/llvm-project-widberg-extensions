@@ -11467,7 +11467,7 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
   bool Variadic = (TypeStr[0] == '.');
 
   FunctionType::ExtInfo EI(getDefaultCallingConvention(
-      Variadic, /*IsCXXMethod=*/false, /*IsBuiltin=*/true));
+      Variadic, /*IsCXXMethod=*/false, /*IsBuiltin=*/true), nullptr);
   if (BuiltinInfo.isNoReturn(Id)) EI = EI.withNoReturn(true);
 
 

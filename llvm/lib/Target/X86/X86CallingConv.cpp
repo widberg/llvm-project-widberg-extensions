@@ -15,6 +15,7 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/CallingConv.h"
 
 using namespace llvm;
@@ -338,6 +339,44 @@ static bool CC_X86_64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     LocInfo = CCValAssign::ZExt;
   }
   return false;
+}
+
+static bool CC_X86_XX_UserCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                              CCValAssign::LocInfo &LocInfo,
+                              ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  SmallVector<llvm::MCRegister, 2> MCRegisters = ArgFlags.getLocation();
+
+  if (MCRegisters.empty())
+    return false;
+
+  unsigned Reg = State.AllocateReg(MCRegisters[ArgFlags.getSplitRegIndex()]);
+
+  // Since we previously made sure that 2 registers are available
+  // we expect that a real register number will be returned.
+  assert(Reg && "Expecting a register will be available");
+
+  // Assign the value to the allocated register
+  State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+
+  return true;
+}
+
+static bool RetCC_X86_XX_UserCall(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                      CCValAssign::LocInfo LocInfo,
+                                      ISD::ArgFlagsTy ArgFlags,
+                                      CCState &State) {
+  SmallVector<llvm::MCRegister, 2> MCRegisters = ArgFlags.getLocation();
+
+  unsigned Reg = State.AllocateReg(MCRegisters[ValNo]);
+
+  // Since we previously made sure that 2 registers are available
+  // we expect that a real register number will be returned.
+  assert(Reg && "Expecting a register will be available");
+
+  // Assign the value to the allocated register
+  State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+
+  return true;
 }
 
 // Provides entry points of CC_X86 and RetCC_X86.

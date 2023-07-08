@@ -1979,6 +1979,8 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'intel_ocl_bicc'
 ///   ::= 'coldcc'
 ///   ::= 'cfguard_checkcc'
+///   ::= 'usercall'
+///   ::= 'userpurge'
 ///   ::= 'x86_stdcallcc'
 ///   ::= 'x86_fastcallcc'
 ///   ::= 'x86_thiscallcc'
@@ -2028,6 +2030,8 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_fastcc:         CC = CallingConv::Fast; break;
   case lltok::kw_coldcc:         CC = CallingConv::Cold; break;
   case lltok::kw_cfguard_checkcc: CC = CallingConv::CFGuard_Check; break;
+  case lltok::kw_usercallcc:     CC = CallingConv::UserCall; break;
+  case lltok::kw_userpurgecc:    CC = CallingConv::UserPurge; break;
   case lltok::kw_x86_stdcallcc:  CC = CallingConv::X86_StdCall; break;
   case lltok::kw_x86_fastcallcc: CC = CallingConv::X86_FastCall; break;
   case lltok::kw_x86_regcallcc:  CC = CallingConv::X86_RegCall; break;

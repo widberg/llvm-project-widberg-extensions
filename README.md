@@ -1,3 +1,104 @@
+# The LLVM Compiler Infrastructure With Widberg Extensions
+
+This repository is a fork of LLVM intended to implement C/C++ language
+features in LLVM/Clang to aid in reverse engineering. Currently, the
+scope of this project covers a subset of the IDA Pro __usercall
+syntax. An example of the syntax that is currently supported is as follows:
+
+```cpp
+long long __usercall __spoils<eax,esi>
+square@<ebx:ecx>(long long num@<eax:edx>) {
+    return num * num;
+}
+
+bool __usercall is_even@<al>(int num) {
+    return num % 2 == 0;
+}
+
+void __userpurge is_odd(int num, bool &result@<eax>) {
+    result = num % 2 == 1;
+}
+
+auto is_odd_also = is_odd;
+
+int *__usercall call_fn_ptr@<ebx>(int *(__usercall *x)@<eax>(long @<ecx>)@<edx>) {
+    return x(1337);
+}
+```
+
+The first thing most people coming from MSVC say to me when I tell them
+about this project is, "I won't have to do the __fastcall/__thiscall trick
+anymore." What they don't know is that Clang already allows __thiscall on
+non-member functions without this fork. For example the following is
+acceptable in mainline Clang as well as this fork and produces the correct
+output (_this in ecx, other args on the stack):
+
+```cpp
+int __thiscall square(void *_this, int num) {
+    return num * num;
+}
+```
+
+The project is functional but lacks polish. Correct syntax will be accepted
+and generate correct code; however, incorrect syntax is handled largely by
+asserts and internal compiler errors. More work needs to be done to take
+advantage of Clang's diagnostics infrastructure and produce pretty errors
+rather than compiler stack traces. Additionally, some incorrect syntax is
+accepted and ignored rather than reported.
+
+Currently, only the X86_32 and X86_64 backends are supported in an
+effort to limit the scope of the project while it is early in development.
+As things stabilize more backends will be suppoerted. This limitation is
+entirely self-imposed and can be easily removed when the time is right.
+
+Next steps are to improve the diagnostics reporting as described above
+and add unit tests.
+
+Pull requests and issues are encouraged.
+
+## Enable and Disable the Extensions
+
+By default, the extensions are enabled. They can be disabled using the
+Clang option `-fno-widberg-extensions`.
+
+## Verify Widberg Extensions Are Present
+
+The following construct can be used in source files to verify that the
+widberg extensions are present:
+
+```cpp
+#ifndef __has_feature
+#  define __has_feature(x) 0  // Compatibility with non-clang compilers.
+#endif
+#ifndef __has_extension
+#  define __has_extension __has_feature // Compatibility with pre-3.0 compilers.
+#endif
+
+#if !__has_extension(widberg)
+#  error "This file requires a compiler that implements the widberg extensions."
+#endif
+```
+
+## Compiler Explorer
+
+The compiler is available on the [Compiler Explorer website](https://godbolt.org/z/j4dPsE8rq).
+
+The companion repository [widberg/compiler-explorer-widberg](
+https://github.com/widberg/compiler-explorer-widberg) contains a
+compiler-explorer configuration for this Clang driver as well as a
+`run.sh` script to quickly launch the local compiler-explorer instance
+with the correct options. This is useful for quickly prototyping the
+compiler.
+
+# Affiliation with LLVM (Or Lack Thereof)
+
+This project is not affiliated with the LLVM project in any way.
+This project, like the LLVM project, is under the Apache License
+v2.0 with LLVM Exceptions. I have no intention of upstreaming any
+of the changes made in this repository as I believe they are not
+useful to most people. The original LLVM project README.md begins
+below.
+
 # The LLVM Compiler Infrastructure
 
 This directory and its sub-directories contain the source code for LLVM,

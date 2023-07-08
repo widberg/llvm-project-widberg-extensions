@@ -4201,6 +4201,8 @@ public:
     SmallVector<SDValue, 4> InVals;
     const ConstantInt *CFIType = nullptr;
 
+    StringRef ReturnLocation;
+
     CallLoweringInfo(SelectionDAG &DAG)
         : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
           DoesNotReturn(false), IsReturnValueUsed(true), IsConvergent(false),
@@ -4233,6 +4235,7 @@ public:
 
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultType,
                                 SDValue Target, ArgListTy &&ArgsList) {
+      ReturnLocation = "";
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
@@ -4244,6 +4247,7 @@ public:
     CallLoweringInfo &setCallee(Type *ResultType, FunctionType *FTy,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 const CallBase &Call) {
+      ReturnLocation = Call.hasRetAttr("widberg_location") ? Call.getRetAttr("widberg_location").getValueAsString() : "";
       RetTy = ResultType;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);

@@ -1006,6 +1006,12 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_PreserveAll:
       OS << " __attribute__((preserve_all))";
       break;
+    case CC_UserCall:
+      OS << "__attribute__((usercall))";
+      break;
+    case CC_UserPurge:
+      OS << "__attribute__((userpurge))";
+      break;
     }
   }
 
@@ -1020,6 +1026,8 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
        << Info.getRegParm() << ")))";
   if (Info.getNoCallerSavedRegs())
     OS << " __attribute__((no_caller_saved_registers))";
+  if (Info.getNoCalleeSavedRegs())
+    OS << " __attribute__((no_callee_saved_registers))";
   if (Info.getNoCfCheck())
     OS << " __attribute__((nocf_check))";
 }
@@ -1804,6 +1812,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
+    break;
+  case attr::UserCall:
+    OS << "usercall";
+    break;
+  case attr::UserPurge:
+    OS << "userpurge";
     break;
   }
   OS << "))";
