@@ -1,9 +1,17 @@
 # The LLVM Compiler Infrastructure With Widberg Extensions
 
-This repository is a fork of LLVM intended to implement C/C++ language
+This repository is a fork of LLVM (16.0.6) intended to implement C/C++ language
 features in LLVM/Clang to aid in reverse engineering. Currently, the
 scope of this project covers a subset of the IDA Pro __usercall
-syntax. An example of the syntax that is currently supported is as follows:
+syntax. This is a research project and not production ready.
+
+[![Build Status](https://github.com/widberg/llvm-project-widberg-extensions/actions/workflows/widberg-build.yml/badge.svg?branch=main)](https://github.com/widberg/llvm-project-widberg-extensions/actions/workflows/widberg-build.yml)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/widberg/llvm-project-widberg-extensions)](https://github.com/widberg/llvm-project-widberg-extensions/releases)
+[![Release Nightly](https://img.shields.io/badge/release-nightly-5e025f?labelColor=301934)](https://nightly.link/widberg/llvm-project-widberg-extensions/workflows/widberg-build/main)
+
+## Example
+
+An example of the syntax that is currently supported is as follows:
 
 ```cpp
 long long __usercall __spoils<eax,esi>
@@ -39,22 +47,19 @@ int __thiscall square(void *_this, int num) {
 }
 ```
 
-The project is functional but lacks polish. Correct syntax will be accepted
-and generate correct code; however, incorrect syntax is handled largely by
-asserts and internal compiler errors. More work needs to be done to take
-advantage of Clang's diagnostics infrastructure and produce pretty errors
-rather than compiler stack traces. Additionally, some incorrect syntax is
-accepted and ignored rather than reported.
+## Status
 
-Currently, only the X86_32 and X86_64 backends are supported in an
-effort to limit the scope of the project while it is early in development.
-As things stabilize more backends will be suppoerted. This limitation is
-entirely self-imposed and can be easily removed when the time is right.
+The project is semi-functional but lacks polish. Correct syntax will be accepted
+and generate correct code in most cases; however, incorrect syntax is handled
+largely by asserts and internal compiler errors, especially in X86_64. More work
+needs to be done to take advantage of Clang's diagnostics infrastructure and
+produce pretty errors rather than compiler stack traces. Additionally, some
+incorrect syntax is accepted and ignored rather than reported. Currently, only
+the X86_32 and X86_64 backends are supported.
 
-Next steps are to improve the diagnostics reporting as described above
-and add unit tests.
-
-Pull requests and issues are encouraged.
+Next steps are to improve the diagnostics reporting as described above and fix
+the bugs. Pull requests and issues are encouraged; especially pull requests
+adding tests.
 
 ## Enable and Disable the Extensions
 
@@ -83,12 +88,14 @@ widberg extensions are present:
 
 The compiler is available on the [Compiler Explorer website](https://godbolt.org/z/j4dPsE8rq).
 
-The companion repository [widberg/compiler-explorer-widberg](
-https://github.com/widberg/compiler-explorer-widberg) contains a
-compiler-explorer configuration for this Clang driver as well as a
-`run.sh` script to quickly launch the local compiler-explorer instance
-with the correct options. This is useful for quickly prototyping the
-compiler.
+## Build
+
+Use `x64 Native Tools Command Prompt`
+
+```sh
+cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86"
+cmake --build build --config RelWithDebInfo --target clang
+```
 
 # Affiliation with LLVM (Or Lack Thereof)
 
