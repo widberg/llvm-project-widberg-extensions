@@ -88,6 +88,10 @@ widberg extensions are present:
 
 The compiler is available on the [Compiler Explorer website](https://godbolt.org/z/j4dPsE8rq).
 
+## defs.h
+
+A clean-room implementation of defs.h from the Hex-Rays decompiler sdk intended to be used with this project can be found at https://github.com/widberg/widberg-defs.
+
 ## Build
 
 Use `x64 Native Tools Command Prompt`
