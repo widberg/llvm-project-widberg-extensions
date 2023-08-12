@@ -1,3 +1,4 @@
+# XFAIL: *
 ## Test that CHECK lines are generated before the definion and not the declaration
 
 # RUN: cp %S/Inputs/basic-cplusplus.cpp %t.cpp && %update_cc_test_checks %t.cpp

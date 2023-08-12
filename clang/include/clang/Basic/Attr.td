@@ -4152,7 +4152,7 @@ def Spoils : DeclOrTypeAttr {
   let Documentation = [Undocumented];
 }
 
-def Shifted : DeclOrTypeAttr {
+def Shifted : TypeAttr {
   let Spellings = [GCC<"shifted">, Keyword<"__shifted">, Keyword<"_shifted">];
   let Args = [TypeArgument<"Parent">, ExprArgument<"Delta">];
   let Documentation = [Undocumented];

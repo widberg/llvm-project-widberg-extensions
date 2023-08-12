@@ -1312,6 +1312,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     break;
   case tok::kw___builtin_va_arg:
   case tok::kw___builtin_offsetof:
+  case tok::kw___builtin_deltaof:
   case tok::kw___builtin_choose_expr:
   case tok::kw___builtin_astype: // primary-expression: [OCL] as_type()
   case tok::kw___builtin_convertvector:
@@ -2592,6 +2593,96 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     break;
   }
   case tok::kw___builtin_offsetof: {
+    SourceLocation TypeLoc = Tok.getLocation();
+    auto OOK = Sema::OffsetOfKind::OOK_Builtin;
+    if (Tok.getLocation().isMacroID()) {
+      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
+          Tok.getLocation(), PP.getSourceManager(), getLangOpts());
+      if (MacroName == "offsetof")
+        OOK = Sema::OffsetOfKind::OOK_Macro;
+    }
+    TypeResult Ty;
+    {
+      OffsetOfStateRAIIObject InOffsetof(*this, OOK);
+      Ty = ParseTypeName();
+      if (Ty.isInvalid()) {
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return ExprError();
+      }
+    }
+
+    if (ExpectAndConsume(tok::comma)) {
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    // We must have at least one identifier here.
+    if (Tok.isNot(tok::identifier)) {
+      Diag(Tok, diag::err_expected) << tok::identifier;
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    // Keep track of the various subcomponents we see.
+    SmallVector<Sema::OffsetOfComponent, 4> Comps;
+
+    Comps.push_back(Sema::OffsetOfComponent());
+    Comps.back().isBrackets = false;
+    Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
+    Comps.back().LocStart = Comps.back().LocEnd = ConsumeToken();
+
+    // FIXME: This loop leaks the index expressions on error.
+    while (true) {
+      if (Tok.is(tok::period)) {
+        // offsetof-member-designator: offsetof-member-designator '.' identifier
+        Comps.push_back(Sema::OffsetOfComponent());
+        Comps.back().isBrackets = false;
+        Comps.back().LocStart = ConsumeToken();
+
+        if (Tok.isNot(tok::identifier)) {
+          Diag(Tok, diag::err_expected) << tok::identifier;
+          SkipUntil(tok::r_paren, StopAtSemi);
+          return ExprError();
+        }
+        Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
+        Comps.back().LocEnd = ConsumeToken();
+      } else if (Tok.is(tok::l_square)) {
+        if (CheckProhibitedCXX11Attribute())
+          return ExprError();
+
+        // offsetof-member-designator: offsetof-member-design '[' expression ']'
+        Comps.push_back(Sema::OffsetOfComponent());
+        Comps.back().isBrackets = true;
+        BalancedDelimiterTracker ST(*this, tok::l_square);
+        ST.consumeOpen();
+        Comps.back().LocStart = ST.getOpenLocation();
+        Res = ParseExpression();
+        if (Res.isInvalid()) {
+          SkipUntil(tok::r_paren, StopAtSemi);
+          return Res;
+        }
+        Comps.back().U.E = Res.get();
+
+        ST.consumeClose();
+        Comps.back().LocEnd = ST.getCloseLocation();
+      } else {
+        if (Tok.isNot(tok::r_paren)) {
+          PT.consumeClose();
+          Res = ExprError();
+        } else if (Ty.isInvalid()) {
+          Res = ExprError();
+        } else {
+          PT.consumeClose();
+          Res = Actions.ActOnBuiltinOffsetOf(getCurScope(), StartLoc, TypeLoc,
+                                             Ty.get(), Comps,
+                                             PT.getCloseLocation());
+        }
+        break;
+      }
+    }
+    break;
+  }
+  case tok::kw___builtin_deltaof: {
     SourceLocation TypeLoc = Tok.getLocation();
     auto OOK = Sema::OffsetOfKind::OOK_Builtin;
     if (Tok.getLocation().isMacroID()) {

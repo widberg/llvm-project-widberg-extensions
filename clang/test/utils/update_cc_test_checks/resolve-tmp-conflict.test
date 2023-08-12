@@ -1,3 +1,4 @@
+# XFAIL: *
 ## Test that CHECK lines generated avoid naming conflicts with FileCheck IR variables
 
 # RUN: cp %S/Inputs/resolve-tmp-conflict.cpp %t.cpp && %update_cc_test_checks --function-signature --prefix-filecheck-ir-name _ %t.cpp

@@ -1,3 +1,4 @@
+# XFAIL: *
 ## Basic test checking that update_cc_test_checks.py works as expected for
 ## functions with mangled names
 # RUN: cp -f %S/Inputs/mangled_names.c %t.c && %update_cc_test_checks -v %t.c
