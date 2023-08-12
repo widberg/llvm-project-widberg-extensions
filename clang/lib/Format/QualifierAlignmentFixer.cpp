@@ -489,7 +489,7 @@ void QualifierAlignmentFixer::PrepareLeftRightOrdering(
 
     tok::TokenKind QualifierToken =
         LeftRightQualifierAlignmentFixer::getTokenFromQualifier(s);
-    if (QualifierToken != tok::kw_typeof && QualifierToken != tok::identifier)
+    if (QualifierToken != tok::kw_typeof && QualifierToken != tok::kw___parentof && QualifierToken != tok::identifier)
       Qualifiers.push_back(QualifierToken);
 
     if (left) {

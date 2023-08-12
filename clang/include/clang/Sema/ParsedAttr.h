@@ -403,6 +403,21 @@ private:
     ExtraData.MustBeNull = mustBeNull;
   }
 
+  // Constructor for shifted attribute.
+  ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
+             IdentifierInfo *scopeName, SourceLocation scopeLoc,
+             ParsedType parent, Expr *delta, Syntax syntaxUsed)
+      : AttributeCommonInfo(attrName, scopeName, attrRange, scopeLoc,
+                            syntaxUsed),
+        NumArgs(1), Invalid(false), UsedAsTypeAttr(false),
+        IsAvailability(false), IsTypeTagForDatatype(true), IsProperty(false),
+        HasParsedType(true), HasProcessingCache(false),
+        IsPragmaClangAttribute(false), Info(ParsedAttrInfo::get(*this)) {
+    ArgsUnion PVal(delta);
+    memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
+    new (&getTypeBuffer()) ParsedType(parent);
+  }
+
   /// Constructor for attributes with a single type argument.
   ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
              IdentifierInfo *scopeName, SourceLocation scopeLoc,
@@ -561,6 +576,18 @@ public:
     assert(getParsedKind() == AT_Availability &&
            "Not an availability attribute");
     return MessageExpr;
+  }
+
+  Expr *getDelta() const {
+    assert(getParsedKind() == AT_Shifted &&
+           "Not a shifted attribute");
+    return getArgAsExpr(0);
+  }
+
+  const ParsedType &getParent() const {
+    assert(getParsedKind() == AT_Shifted &&
+           "Not a shifted attribute");
+    return getTypeBuffer();
   }
 
   const Expr *getReplacementExpr() const {
@@ -761,6 +788,10 @@ public:
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
                                      detail::PropertyData>(1, 0, 1, 0, 0),
+    ShiftedAllocSize =
+        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                                     detail::TypeTagForDatatypeData, ParsedType,
+                                     detail::PropertyData>(1, 0, 0, 1, 0),
     PropertyAllocSize =
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
@@ -906,6 +937,15 @@ public:
     return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
                                        argumentKind, matchingCType,
                                        layoutCompatible, mustBeNull, syntax));
+  }
+
+  ParsedAttr *
+  createShifted(IdentifierInfo *attrName, SourceRange attrRange,
+                           IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                           ParsedType parent, Expr *delta, ParsedAttr::Syntax syntax) {
+    void *memory = allocate(AttributeFactory::ShiftedAllocSize);
+    return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
+                                       parent, delta, syntax));
   }
 
   ParsedAttr *createTypeAttribute(IdentifierInfo *attrName,
@@ -1114,6 +1154,17 @@ public:
     ParsedAttr *attr = pool.createTypeTagForDatatype(
         attrName, attrRange, scopeName, scopeLoc, argumentKind, matchingCType,
         layoutCompatible, mustBeNull, syntax);
+    addAtEnd(attr);
+    return attr;
+  }
+
+  /// Add shifted attribute.
+  ParsedAttr *
+  addNewShifted(IdentifierInfo *attrName, SourceRange attrRange,
+                           IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                           ParsedType parent, Expr *delta, ParsedAttr::Syntax syntax) {
+    ParsedAttr *attr = pool.createShifted(
+        attrName, attrRange, scopeName, scopeLoc, parent, delta, syntax);
     addAtEnd(attr);
     return attr;
   }

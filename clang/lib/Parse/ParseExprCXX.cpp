@@ -2352,6 +2352,11 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     ParseTypeofSpecifier(DS);
     DS.Finish(Actions, Policy);
     return;
+
+  case tok::kw___parentof:
+    ParseParentofSpecifier(DS);
+    DS.Finish(Actions, Policy);
+    return;
   }
   ConsumeAnyToken();
   DS.SetRangeEnd(PrevTokLocation);

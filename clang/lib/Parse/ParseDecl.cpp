@@ -828,9 +828,7 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
     case tok::kw___w64:
     case tok::kw___ptr32:
     case tok::kw___sptr:
-    case tok::kw___uptr:
-    case tok::kw___usercall:
-    case tok::kw___userpurge: {
+    case tok::kw___uptr: {
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
       SourceLocation AttrNameLoc = ConsumeToken();
       attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
@@ -902,6 +900,41 @@ void Parser::ParseWidbergSpoils(ParsedAttributes &Attrs,
                    ParsedAttr::AS_Keyword);
 
     }
+}
+
+void Parser::ParseWidbergShifted(ParsedAttributes &Attrs,
+                                     SourceLocation *EndLoc) {
+
+  assert(getLangOpts().WidbergExt && "__shifted keyword is not enabled");
+  assert(Tok.is(tok::kw___shifted) && "Not a spoils!");
+
+  IdentifierInfo *KWName = Tok.getIdentifierInfo();
+  SourceLocation KWLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return;
+
+  TypeResult ParentName = ParseTypeName();
+  if (ParentName.isInvalid()) {
+    T.skipToEnd();
+    return;
+  }
+
+  ExpectAndConsume(tok::comma);
+
+  ExprResult DeltaExpr = ParseConstantExpression();
+  if (DeltaExpr.isInvalid()) {
+    T.skipToEnd();
+    return;
+  }
+
+  T.consumeClose();
+  if (EndLoc)
+    *EndLoc = T.getCloseLocation();
+
+  Attrs.addNewShifted(KWName, KWLoc, nullptr, KWLoc, ParentName.get(), DeltaExpr.get(),
+               ParsedAttr::AS_Keyword);
 }
 
 bool Parser::TryParseWidbergLocation(SourceLocation &ATLoc, SourceLocation &LAngleLoc, SmallVector<IdentifierLoc*, 2> &RegisterIdentifiers, SourceLocation &RAngleLoc) {
@@ -3941,6 +3974,10 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw___spoils:
       MaybeParseWidbergSpoils(DS.getAttributes());
       continue;
+    
+    case tok::kw___shifted:
+      MaybeParseWidbergShifted(DS.getAttributes());
+      continue;
 
     // Borland single token adornments.
     case tok::kw___pascal:
@@ -4394,6 +4431,10 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw_typeof:
     case tok::kw_typeof_unqual:
       ParseTypeofSpecifier(DS);
+      continue;
+
+    case tok::kw___parentof:
+      ParseParentofSpecifier(DS);
       continue;
 
     case tok::annot_decltype:
@@ -5412,6 +5453,8 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_typeof:
   case tok::kw_typeof_unqual:
 
+  case tok::kw___parentof:
+
     // type-specifiers
   case tok::kw_short:
   case tok::kw_long:
@@ -5488,6 +5531,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___usercall:
   case tok::kw___userpurge:
   case tok::kw___spoils:
+  case tok::kw___shifted:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -5683,6 +5727,8 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_typeof:
   case tok::kw_typeof_unqual:
 
+  case tok::kw___parentof:
+
     // GNU attributes.
   case tok::kw___attribute:
 
@@ -5752,6 +5798,7 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___usercall:
   case tok::kw___userpurge:
   case tok::kw___spoils:
+  case tok::kw___shifted:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -6042,6 +6089,12 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___spoils:
       if (AttrReqs & AR_DeclspecAttributesParsed) {
         MaybeParseWidbergSpoils(DS.getAttributes());
+        continue;
+      }
+      goto DoneWithTypeQuals;
+    case tok::kw___shifted:
+      if (AttrReqs & AR_DeclspecAttributesParsed) {
+        MaybeParseWidbergShifted(DS.getAttributes());
         continue;
       }
       goto DoneWithTypeQuals;
@@ -6865,6 +6918,9 @@ void Parser::ParseParenDeclarator(Declarator &D) {
 
   // Eat any Microsoft extensions.
   ParseMicrosoftTypeAttributes(attrs);
+
+  // Eat any Widberg extensions.
+  ParseWidbergTypeAttributes(attrs);
 
   // Eat any Borland extensions.
   if  (Tok.is(tok::kw___pascal))
@@ -7783,6 +7839,80 @@ void Parser::ParseMisplacedBracketDeclarator(Declarator &D) {
 void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
   assert(Tok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual) &&
          "Not a typeof specifier");
+
+  bool IsUnqual = Tok.is(tok::kw_typeof_unqual);
+  const IdentifierInfo *II = Tok.getIdentifierInfo();
+  if (getLangOpts().C2x && !II->getName().startswith("__"))
+    Diag(Tok.getLocation(), diag::warn_c2x_compat_typeof_type_specifier)
+        << IsUnqual;
+
+  Token OpTok = Tok;
+  SourceLocation StartLoc = ConsumeToken();
+  bool HasParens = Tok.is(tok::l_paren);
+
+  EnterExpressionEvaluationContext Unevaluated(
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
+
+  bool isCastExpr;
+  ParsedType CastTy;
+  SourceRange CastRange;
+  ExprResult Operand = Actions.CorrectDelayedTyposInExpr(
+      ParseExprAfterUnaryExprOrTypeTrait(OpTok, isCastExpr, CastTy, CastRange));
+  if (HasParens)
+    DS.setTypeArgumentRange(CastRange);
+
+  if (CastRange.getEnd().isInvalid())
+    // FIXME: Not accurate, the range gets one token more than it should.
+    DS.SetRangeEnd(Tok.getLocation());
+  else
+    DS.SetRangeEnd(CastRange.getEnd());
+
+  if (isCastExpr) {
+    if (!CastTy) {
+      DS.SetTypeSpecError();
+      return;
+    }
+
+    const char *PrevSpec = nullptr;
+    unsigned DiagID;
+    // Check for duplicate type specifiers (e.g. "int typeof(int)").
+    if (DS.SetTypeSpecType(IsUnqual ? DeclSpec::TST_typeof_unqualType
+                                    : DeclSpec::TST_typeofType,
+                           StartLoc, PrevSpec,
+                           DiagID, CastTy,
+                           Actions.getASTContext().getPrintingPolicy()))
+      Diag(StartLoc, DiagID) << PrevSpec;
+    return;
+  }
+
+  // If we get here, the operand to the typeof was an expression.
+  if (Operand.isInvalid()) {
+    DS.SetTypeSpecError();
+    return;
+  }
+
+  // We might need to transform the operand if it is potentially evaluated.
+  Operand = Actions.HandleExprEvaluationContextForTypeof(Operand.get());
+  if (Operand.isInvalid()) {
+    DS.SetTypeSpecError();
+    return;
+  }
+
+  const char *PrevSpec = nullptr;
+  unsigned DiagID;
+  // Check for duplicate type specifiers (e.g. "int typeof(int)").
+  if (DS.SetTypeSpecType(IsUnqual ? DeclSpec::TST_typeof_unqualExpr
+                                  : DeclSpec::TST_typeofExpr,
+                         StartLoc, PrevSpec,
+                         DiagID, Operand.get(),
+                         Actions.getASTContext().getPrintingPolicy()))
+    Diag(StartLoc, DiagID) << PrevSpec;
+}
+
+void Parser::ParseParentofSpecifier(DeclSpec &DS) {
+  assert(Tok.is(tok::kw___parentof) &&
+         "Not a __parentof specifier");
 
   bool IsUnqual = Tok.is(tok::kw_typeof_unqual);
   const IdentifierInfo *II = Tok.getIdentifierInfo();

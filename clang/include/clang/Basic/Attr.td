@@ -4147,7 +4147,13 @@ def UserPurge : DeclOrTypeAttr {
 }
 
 def Spoils : DeclOrTypeAttr {
-  let Spellings = [GCC<"__spoils">, Keyword<"__spoils">, Keyword<"_spoils">];
+  let Spellings = [GCC<"spoils">, Keyword<"__spoils">, Keyword<"_spoils">];
   let Args = [VariadicIdentifierArgument<"SpoilsList">];
+  let Documentation = [Undocumented];
+}
+
+def Shifted : DeclOrTypeAttr {
+  let Spellings = [GCC<"shifted">, Keyword<"__shifted">, Keyword<"_shifted">];
+  let Args = [TypeArgument<"Parent">, ExprArgument<"Delta">];
   let Documentation = [Undocumented];
 }

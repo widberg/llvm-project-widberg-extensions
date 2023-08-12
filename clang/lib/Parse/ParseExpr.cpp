@@ -1547,6 +1547,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw_auto:
   case tok::kw_typename:
   case tok::kw_typeof:
+  case tok::kw___parentof:
   case tok::kw___vector:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -2311,8 +2312,8 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
   assert(OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual, tok::kw_sizeof,
                        tok::kw___alignof, tok::kw_alignof, tok::kw__Alignof,
                        tok::kw_vec_step,
-                       tok::kw___builtin_omp_required_simd_align) &&
-         "Not a typeof/sizeof/alignof/vec_step expression!");
+                       tok::kw___builtin_omp_required_simd_align, tok::kw___parentof) &&
+         "Not a typeof/sizeof/alignof/vec_step/__parentof expression!");
 
   ExprResult Operand;
 

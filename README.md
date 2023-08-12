@@ -84,6 +84,8 @@ widberg extensions are present:
 #endif
 ```
 
+Also, the preprocessor macro `__widberg__` is predefined if the extensions are present.
+
 ## Compiler Explorer
 
 The compiler is available on the [Compiler Explorer website](https://godbolt.org/z/j4dPsE8rq).

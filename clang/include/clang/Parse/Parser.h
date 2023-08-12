@@ -2648,6 +2648,7 @@ private:
 
   TPResult TryParseSimpleDeclaration(bool AllowForRangeDecl);
   TPResult TryParseTypeofSpecifier();
+  TPResult TryParseParentofSpecifier();
   TPResult TryParseProtocolQualifiers();
   TPResult TryParsePtrOperatorSeq();
   TPResult TryParseOperatorId();
@@ -2941,6 +2942,17 @@ private:
   }
   void ParseWidbergSpoils(ParsedAttributes &Attrs,
                           SourceLocation *End = nullptr);
+  bool MaybeParseWidbergShifted(ParsedAttributes &Attrs,
+                               SourceLocation *End = nullptr) {
+    const auto &LO = getLangOpts();
+    if (LO.WidbergExt && Tok.is(tok::kw___shifted)) {
+      ParseWidbergShifted(Attrs, End);
+      return true;
+    }
+    return false;
+  }
+  void ParseWidbergShifted(ParsedAttributes &Attrs,
+                          SourceLocation *End = nullptr);
   bool TryParseWidbergLocation(SourceLocation &ATLoc, SourceLocation &LAngleLoc, SmallVector<IdentifierLoc*, 2> &RegisterIdentifiers, SourceLocation &RAngleLoc);
   void DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
   SourceLocation SkipExtendedMicrosoftTypeAttributes();
@@ -3007,6 +3019,7 @@ private:
                                  ParsedAttr::Syntax Syntax);
 
   void ParseTypeofSpecifier(DeclSpec &DS);
+  void ParseParentofSpecifier(DeclSpec &DS);
   SourceLocation ParseDecltypeSpecifier(DeclSpec &DS);
   void AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
                                          SourceLocation StartLoc,
