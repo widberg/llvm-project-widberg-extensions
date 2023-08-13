@@ -4665,6 +4665,10 @@ recurse:
       Out << 's';
       MangleAlignofSizeofArg();
       break;
+    case UETT_DeltaOf:
+      Out << 'd';
+      MangleAlignofSizeofArg();
+      break;
     case UETT_PreferredAlignOf:
       // As of clang 12, we mangle __alignof__ differently than alignof. (They
       // have acted differently since Clang 8, but were previously mangled the

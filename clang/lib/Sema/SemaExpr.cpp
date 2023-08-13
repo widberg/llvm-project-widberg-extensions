@@ -4266,7 +4266,7 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
 
   bool IsUnevaluatedOperand =
       (ExprKind == UETT_SizeOf || ExprKind == UETT_AlignOf ||
-       ExprKind == UETT_PreferredAlignOf || ExprKind == UETT_VecStep);
+       ExprKind == UETT_PreferredAlignOf || ExprKind == UETT_VecStep || ExprKind == UETT_DeltaOf);
   if (IsUnevaluatedOperand) {
     ExprResult Result = CheckUnevaluatedOperand(E);
     if (Result.isInvalid())
@@ -4325,7 +4325,7 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
                                        E->getSourceRange(), ExprKind))
     return true;
 
-  if (ExprKind == UETT_SizeOf) {
+  if (ExprKind == UETT_SizeOf || ExprKind == UETT_DeltaOf) {
     if (DeclRefExpr *DeclRef = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
       if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(DeclRef->getFoundDecl())) {
         QualType OType = PVD->getOriginalType();
@@ -4663,6 +4663,8 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
   } else if (ExprKind == UETT_OpenMPRequiredSimdAlign) {
       Diag(E->getExprLoc(), diag::err_openmp_default_simd_align_expr);
       isInvalid = true;
+  } else if (ExprKind == UETT_DeltaOf) {
+      isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_DeltaOf);
   } else if (E->refersToBitField()) {  // C99 6.5.3.4p1.
     Diag(E->getExprLoc(), diag::err_sizeof_alignof_typeof_bitfield) << 0;
     isInvalid = true;

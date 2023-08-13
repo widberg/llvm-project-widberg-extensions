@@ -3,7 +3,7 @@
 This repository is a fork of LLVM (16.0.6) intended to implement C/C++ language
 features in LLVM/Clang to aid in reverse engineering. Currently, the
 scope of this project covers a subset of the IDA Pro __usercall
-syntax. This is a research project and not production ready.
+syntax and shifted pointers. This is a research project and not production ready.
 
 [![Build Status](https://github.com/widberg/llvm-project-widberg-extensions/actions/workflows/widberg-build.yml/badge.svg?branch=main)](https://github.com/widberg/llvm-project-widberg-extensions/actions/workflows/widberg-build.yml)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/widberg/llvm-project-widberg-extensions)](https://github.com/widberg/llvm-project-widberg-extensions/releases)
@@ -14,6 +14,8 @@ syntax. This is a research project and not production ready.
 An example of the syntax that is currently supported is as follows:
 
 ```cpp
+// __usercall
+// https://www.hex-rays.com/products/ida/support/idadoc/1361.shtml
 long long __usercall __spoils<eax,esi>
 square@<ebx:ecx>(long long num@<eax:edx>) {
     return num * num;
@@ -32,6 +34,26 @@ auto is_odd_also = is_odd;
 int *__usercall call_fn_ptr@<ebx>(int *(__usercall *x)@<eax>(long @<ecx>)@<edx>) {
     return x(1337);
 }
+
+// __shifted
+// https://hex-rays.com/products/ida/support/idadoc/1695.shtml
+typedef struct vec3f {
+    float x;
+    float y;
+    float z;
+} vec3f_t;
+
+typedef struct player {
+    char name[16];
+    int health;
+    int armor;
+    int ammo;
+    vec3f_t pos;
+} player_t;
+
+const char *get_player_name_from_shifted_pos_pointer(const vec3f_t *__shifted(player_t, 0x1C) pos) {
+    return ADJ(pos)->name;
+}
 ```
 
 The first thing most people coming from MSVC say to me when I tell them
@@ -46,6 +68,14 @@ int __thiscall square(void *_this, int num) {
     return num * num;
 }
 ```
+
+## Compiler Explorer
+
+The compiler is available on the [Compiler Explorer website](https://godbolt.org/z/j4dPsE8rq).
+
+## Motivation
+
+The goal of the project is not to recompile decomplied code in all cases, but rather to provide a familiar syntax for common patterns and reduce the amount of inline assembly and fiddling required when writing high-level patch code. However, by providing this syntax it is possible to recompile decompiled code in some cases. With the addition of [defs.h](#defs.h) most individual functions can be recompiled with little to no modification. Recompiling an entire binary will still require great effort, but is made easier by this project.
 
 ## Status
 
@@ -86,13 +116,9 @@ widberg extensions are present:
 
 Also, the preprocessor macro `__widberg__` is predefined if the extensions are present.
 
-## Compiler Explorer
-
-The compiler is available on the [Compiler Explorer website](https://godbolt.org/z/j4dPsE8rq).
-
 ## defs.h
 
-A clean-room implementation of defs.h from the Hex-Rays decompiler sdk intended to be used with this project can be found at https://github.com/widberg/widberg-defs.
+An alternative implementation of defs.h from the Hex-Rays decompiler sdk intended to be used with this project can be found at https://github.com/widberg/widberg-defs. A lot of the stuff in there is overkill for writing patch code, but it is useful for recompiling decompiled code.
 
 ## Build
 

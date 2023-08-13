@@ -1303,7 +1303,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   if (LangOpts.WidbergExt) {
     Builder.defineMacro("__widberg__");
-    Builder.defineMacro("ADJ(value)", "(__parentof(value) *)((char *)(value) - __deltaof(value))");
+    Builder.defineMacro("ADJ(value)", "((__parentof(value) *)((char *)(value) - __deltaof(value)))");
   }
 
   // Get other target #defines.

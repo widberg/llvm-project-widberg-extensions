@@ -1312,7 +1312,6 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     break;
   case tok::kw___builtin_va_arg:
   case tok::kw___builtin_offsetof:
-  case tok::kw___builtin_deltaof:
   case tok::kw___builtin_choose_expr:
   case tok::kw___builtin_astype: // primary-expression: [OCL] as_type()
   case tok::kw___builtin_convertvector:
@@ -1436,6 +1435,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                            // unary-expression: '__alignof' '(' type-name ')'
   case tok::kw_sizeof:     // unary-expression: 'sizeof' unary-expression
                            // unary-expression: 'sizeof' '(' type-name ')'
+  case tok::kw___deltaof:
   case tok::kw_vec_step:   // unary-expression: OpenCL 'vec_step' expression
   // unary-expression: '__builtin_omp_required_simd_align' '(' type-name ')'
   case tok::kw___builtin_omp_required_simd_align:
@@ -2313,7 +2313,7 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
   assert(OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual, tok::kw_sizeof,
                        tok::kw___alignof, tok::kw_alignof, tok::kw__Alignof,
                        tok::kw_vec_step,
-                       tok::kw___builtin_omp_required_simd_align, tok::kw___parentof) &&
+                       tok::kw___builtin_omp_required_simd_align, tok::kw___parentof, tok::kw___deltaof) &&
          "Not a typeof/sizeof/alignof/vec_step/__parentof expression!");
 
   ExprResult Operand;
@@ -2323,7 +2323,7 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     // If construct allows a form without parenthesis, user may forget to put
     // pathenthesis around type name.
     if (OpTok.isOneOf(tok::kw_sizeof, tok::kw___alignof, tok::kw_alignof,
-                      tok::kw__Alignof)) {
+                      tok::kw__Alignof, tok::kw___deltaof)) {
       if (isTypeIdUnambiguously()) {
         DeclSpec DS(AttrFactory);
         ParseSpecifierQualifierList(DS);
@@ -2434,7 +2434,7 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
 ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___alignof, tok::kw_alignof,
                      tok::kw__Alignof, tok::kw_vec_step,
-                     tok::kw___builtin_omp_required_simd_align) &&
+                     tok::kw___builtin_omp_required_simd_align, tok::kw___deltaof) &&
          "Not a sizeof/alignof/vec_step expression!");
   Token OpTok = Tok;
   ConsumeToken();
@@ -2510,6 +2510,8 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     ExprKind = UETT_VecStep;
   else if (OpTok.is(tok::kw___builtin_omp_required_simd_align))
     ExprKind = UETT_OpenMPRequiredSimdAlign;
+  else if (OpTok.is(tok::kw___deltaof))
+    ExprKind = UETT_DeltaOf;
 
   if (isCastExpr)
     return Actions.ActOnUnaryExprOrTypeTraitExpr(OpTok.getLocation(),
@@ -2593,96 +2595,6 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     break;
   }
   case tok::kw___builtin_offsetof: {
-    SourceLocation TypeLoc = Tok.getLocation();
-    auto OOK = Sema::OffsetOfKind::OOK_Builtin;
-    if (Tok.getLocation().isMacroID()) {
-      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
-          Tok.getLocation(), PP.getSourceManager(), getLangOpts());
-      if (MacroName == "offsetof")
-        OOK = Sema::OffsetOfKind::OOK_Macro;
-    }
-    TypeResult Ty;
-    {
-      OffsetOfStateRAIIObject InOffsetof(*this, OOK);
-      Ty = ParseTypeName();
-      if (Ty.isInvalid()) {
-        SkipUntil(tok::r_paren, StopAtSemi);
-        return ExprError();
-      }
-    }
-
-    if (ExpectAndConsume(tok::comma)) {
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    // We must have at least one identifier here.
-    if (Tok.isNot(tok::identifier)) {
-      Diag(Tok, diag::err_expected) << tok::identifier;
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    // Keep track of the various subcomponents we see.
-    SmallVector<Sema::OffsetOfComponent, 4> Comps;
-
-    Comps.push_back(Sema::OffsetOfComponent());
-    Comps.back().isBrackets = false;
-    Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-    Comps.back().LocStart = Comps.back().LocEnd = ConsumeToken();
-
-    // FIXME: This loop leaks the index expressions on error.
-    while (true) {
-      if (Tok.is(tok::period)) {
-        // offsetof-member-designator: offsetof-member-designator '.' identifier
-        Comps.push_back(Sema::OffsetOfComponent());
-        Comps.back().isBrackets = false;
-        Comps.back().LocStart = ConsumeToken();
-
-        if (Tok.isNot(tok::identifier)) {
-          Diag(Tok, diag::err_expected) << tok::identifier;
-          SkipUntil(tok::r_paren, StopAtSemi);
-          return ExprError();
-        }
-        Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-        Comps.back().LocEnd = ConsumeToken();
-      } else if (Tok.is(tok::l_square)) {
-        if (CheckProhibitedCXX11Attribute())
-          return ExprError();
-
-        // offsetof-member-designator: offsetof-member-design '[' expression ']'
-        Comps.push_back(Sema::OffsetOfComponent());
-        Comps.back().isBrackets = true;
-        BalancedDelimiterTracker ST(*this, tok::l_square);
-        ST.consumeOpen();
-        Comps.back().LocStart = ST.getOpenLocation();
-        Res = ParseExpression();
-        if (Res.isInvalid()) {
-          SkipUntil(tok::r_paren, StopAtSemi);
-          return Res;
-        }
-        Comps.back().U.E = Res.get();
-
-        ST.consumeClose();
-        Comps.back().LocEnd = ST.getCloseLocation();
-      } else {
-        if (Tok.isNot(tok::r_paren)) {
-          PT.consumeClose();
-          Res = ExprError();
-        } else if (Ty.isInvalid()) {
-          Res = ExprError();
-        } else {
-          PT.consumeClose();
-          Res = Actions.ActOnBuiltinOffsetOf(getCurScope(), StartLoc, TypeLoc,
-                                             Ty.get(), Comps,
-                                             PT.getCloseLocation());
-        }
-        break;
-      }
-    }
-    break;
-  }
-  case tok::kw___builtin_deltaof: {
     SourceLocation TypeLoc = Tok.getLocation();
     auto OOK = Sema::OffsetOfKind::OOK_Builtin;
     if (Tok.getLocation().isMacroID()) {
