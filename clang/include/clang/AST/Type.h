@@ -3476,6 +3476,40 @@ public:
                       VectorType::VectorKind VecKind);
 };
 
+// class ShiftedType : public Type, public llvm::FoldingSetNode {
+//   friend class ASTContext;
+
+//   const ASTContext &Context;
+//   QualType Parent;
+//   Expr *Delta;
+//   SourceLocation Loc;
+
+//   ShiftedType(const ASTContext &Context, QualType CannonType,
+//                            QualType Parent, Expr *Delta,
+//                            SourceLocation Loc) :
+//     Type(Shifted, CannonType, Parent->getDependence()),
+//     Context(Context), Parent(Parent), Delta(Delta), Loc(Loc) {}
+
+// public:
+//   Expr *getDelta() const { return Delta; }
+//   QualType getParent() const { return Parent; }
+//   SourceLocation getAttributeLoc() const { return Loc; }
+
+//   bool isSugared() const { return false; }
+//   QualType desugar() const { return QualType(this, 0); }
+
+//   static bool classof(const Type *T) {
+//     return T->getTypeClass() == Shifted;
+//   }
+
+//   void Profile(llvm::FoldingSetNodeID &ID) {
+//     Profile(ID, Context, getParent(), getDelta());
+//   }
+
+//   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+//                       QualType Parent, Expr *Delta);
+// };
+
 /// ExtVectorType - Extended vector type. This type is created using
 /// __attribute__((ext_vector_type(n)), where "n" is the number of elements.
 /// Unlike vector_size, ext_vector_type is only allowed on typedef's. This

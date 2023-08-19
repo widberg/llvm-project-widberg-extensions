@@ -152,6 +152,10 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_SPtr:                                                    \
   case ParsedAttr::AT_UPtr
 
+// Widberg-specific type qualifiers.
+#define WIDBERG_TYPE_ATTRS_CASELIST                                            \
+  case ParsedAttr::AT_Shifted
+
 // Nullability qualifiers.
 #define NULLABILITY_TYPE_ATTRS_CASELIST                                        \
   case ParsedAttr::AT_TypeNonNull:                                             \
@@ -369,6 +373,9 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                    QualType &type);
 
 static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &state,
+                                             ParsedAttr &attr, QualType &type);
+
+static bool handleWidbergPointerTypeQualifierAttr(TypeProcessingState &state,
                                              ParsedAttr &attr, QualType &type);
 
 static bool handleObjCGCTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
@@ -698,6 +705,10 @@ static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
       break;
 
     MS_TYPE_ATTRS_CASELIST:
+      // Microsoft type attributes cannot go after the declarator-id.
+      continue;
+
+    WIDBERG_TYPE_ATTRS_CASELIST:
       // Microsoft type attributes cannot go after the declarator-id.
       continue;
 
@@ -7339,6 +7350,11 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   return false;
 }
 
+static bool handleWidbergPointerTypeQualifierAttr(TypeProcessingState &State,
+                                             ParsedAttr &PAttr, QualType &Type) {
+  return true;
+}
+
 /// Map a nullability attribute kind to a nullability kind.
 static NullabilityKind mapNullabilityAttrKind(ParsedAttr::Kind kind) {
   switch (kind) {
@@ -8533,6 +8549,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         attr.setUsedAsTypeAttr();
       break;
 
+    WIDBERG_TYPE_ATTRS_CASELIST:
+      if (!handleWidbergPointerTypeQualifierAttr(state, attr, type))
+        attr.setUsedAsTypeAttr();
+      break;
 
     NULLABILITY_TYPE_ATTRS_CASELIST:
       // Either add nullability here or try to distribute it.  We
