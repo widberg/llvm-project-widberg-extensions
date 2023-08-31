@@ -152,10 +152,6 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_SPtr:                                                    \
   case ParsedAttr::AT_UPtr
 
-// Widberg-specific type qualifiers.
-#define WIDBERG_TYPE_ATTRS_CASELIST                                            \
-  case ParsedAttr::AT_Shifted
-
 // Nullability qualifiers.
 #define NULLABILITY_TYPE_ATTRS_CASELIST                                        \
   case ParsedAttr::AT_TypeNonNull:                                             \
@@ -275,6 +271,11 @@ namespace {
       return sema.Context.getBTFTagAttributedType(BTFAttr, WrappedType);
     }
 
+    QualType getShiftedType(const ShiftedAttr *SAttr,
+                                     QualType WrappedType) {
+      return sema.Context.getShiftedType(SAttr, WrappedType);
+    }
+
     /// Completely replace the \c auto in \p TypeWithAuto by
     /// \p Replacement. Also replace \p TypeWithAuto in \c TypeAttrPair if
     /// necessary.
@@ -375,9 +376,6 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
 static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &state,
                                              ParsedAttr &attr, QualType &type);
 
-static bool handleWidbergPointerTypeQualifierAttr(TypeProcessingState &state,
-                                             ParsedAttr &attr, QualType &type);
-
 static bool handleObjCGCTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                  QualType &type);
 
@@ -390,6 +388,14 @@ static bool handleObjCPointerTypeAttr(TypeProcessingState &state,
     return handleObjCGCTypeAttr(state, attr, type);
   assert(attr.getKind() == ParsedAttr::AT_ObjCOwnership);
   return handleObjCOwnershipTypeAttr(state, attr, type);
+}
+
+static void HandleShiftedAttr(TypeProcessingState &state,
+                                      ParsedAttr &attr, QualType &type) {
+  Sema &S = state.getSema();
+  TypeSourceInfo *ParentTSInfo;
+  S.GetTypeFromParser(attr.getParent(), &ParentTSInfo);
+  type = state.getShiftedType(::new (S.Context) ShiftedAttr(S.Context, attr, ParentTSInfo, attr.getDelta()), type);
 }
 
 /// Given the index of a declarator chunk, check whether that chunk
@@ -705,10 +711,6 @@ static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
       break;
 
     MS_TYPE_ATTRS_CASELIST:
-      // Microsoft type attributes cannot go after the declarator-id.
-      continue;
-
-    WIDBERG_TYPE_ATTRS_CASELIST:
       // Microsoft type attributes cannot go after the declarator-id.
       continue;
 
@@ -6106,6 +6108,9 @@ namespace {
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       Visit(TL.getWrappedLoc());
     }
+    void VisitShiftedTypeLoc(ShiftedTypeLoc TL) {
+      Visit(TL.getWrappedLoc());
+    }
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       Visit(TL.getInnerLoc());
       TL.setExpansionLoc(
@@ -6334,6 +6339,9 @@ namespace {
       fillAttributedTypeLoc(TL, State);
     }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
+      // nothing
+    }
+    void VisitShiftedTypeLoc(ShiftedTypeLoc TL) {
       // nothing
     }
     void VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
@@ -7348,11 +7356,6 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
         S.Context.removeAddrSpaceQualType(Pointee), ASIdx);
   Type = State.getAttributedType(A, Type, S.Context.getPointerType(Pointee));
   return false;
-}
-
-static bool handleWidbergPointerTypeQualifierAttr(TypeProcessingState &State,
-                                             ParsedAttr &PAttr, QualType &Type) {
-  return true;
 }
 
 /// Map a nullability attribute kind to a nullability kind.
@@ -8549,9 +8552,9 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         attr.setUsedAsTypeAttr();
       break;
 
-    WIDBERG_TYPE_ATTRS_CASELIST:
-      if (!handleWidbergPointerTypeQualifierAttr(state, attr, type))
-        attr.setUsedAsTypeAttr();
+    case ParsedAttr::AT_Shifted:
+      HandleShiftedAttr(state, attr, type);
+      attr.setUsedAsTypeAttr();
       break;
 
     NULLABILITY_TYPE_ATTRS_CASELIST:

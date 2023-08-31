@@ -389,6 +389,9 @@ public:
   void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
     Visit(T->getWrappedType());
   }
+  void VisitShiftedType(const ShiftedType *T) {
+    Visit(T->getWrappedType());
+  }
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *) {}
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T) {

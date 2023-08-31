@@ -64,6 +64,7 @@ class TagDecl;
 class TemplateParameterList;
 class Type;
 class WidbergLocation;
+class ShiftedAttr;
 
 enum {
   TypeAlignmentInBits = 4,
@@ -3476,40 +3477,6 @@ public:
                       VectorType::VectorKind VecKind);
 };
 
-// class ShiftedType : public Type, public llvm::FoldingSetNode {
-//   friend class ASTContext;
-
-//   const ASTContext &Context;
-//   QualType Parent;
-//   Expr *Delta;
-//   SourceLocation Loc;
-
-//   ShiftedType(const ASTContext &Context, QualType CannonType,
-//                            QualType Parent, Expr *Delta,
-//                            SourceLocation Loc) :
-//     Type(Shifted, CannonType, Parent->getDependence()),
-//     Context(Context), Parent(Parent), Delta(Delta), Loc(Loc) {}
-
-// public:
-//   Expr *getDelta() const { return Delta; }
-//   QualType getParent() const { return Parent; }
-//   SourceLocation getAttributeLoc() const { return Loc; }
-
-//   bool isSugared() const { return false; }
-//   QualType desugar() const { return QualType(this, 0); }
-
-//   static bool classof(const Type *T) {
-//     return T->getTypeClass() == Shifted;
-//   }
-
-//   void Profile(llvm::FoldingSetNodeID &ID) {
-//     Profile(ID, Context, getParent(), getDelta());
-//   }
-
-//   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-//                       QualType Parent, Expr *Delta);
-// };
-
 /// ExtVectorType - Extended vector type. This type is created using
 /// __attribute__((ext_vector_type(n)), where "n" is the number of elements.
 /// Unlike vector_size, ext_vector_type is only allowed on typedef's. This
@@ -5073,6 +5040,40 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == BTFTagAttributed;
+  }
+};
+
+class ShiftedType : public Type, public llvm::FoldingSetNode {
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType WrappedType;
+  const ShiftedAttr *SAttr;
+
+  ShiftedType(QualType Canon, QualType Wrapped,
+                       const ShiftedAttr *SAttr)
+      : Type(Shifted, Canon, Wrapped->getDependence()),
+        WrappedType(Wrapped), SAttr(SAttr) {}
+
+public:
+  QualType getWrappedType() const { return WrappedType; }
+  const ShiftedAttr *getAttr() const { return SAttr; }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return getWrappedType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, WrappedType, SAttr);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
+                      const ShiftedAttr *SAttr) {
+    ID.AddPointer(Wrapped.getAsOpaquePtr());
+    ID.AddPointer(SAttr);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == Shifted;
   }
 };
 
@@ -7501,6 +7502,8 @@ template <typename T> const T *Type::getAsAdjusted() const {
     if (const auto *A = dyn_cast<AttributedType>(Ty))
       Ty = A->getModifiedType().getTypePtr();
     else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
+      Ty = A->getWrappedType().getTypePtr();
+    else if (const auto *A = dyn_cast<ShiftedType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
     else if (const auto *E = dyn_cast<ElaboratedType>(Ty))
       Ty = E->desugar().getTypePtr();

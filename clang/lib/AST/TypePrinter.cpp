@@ -247,6 +247,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::BitInt:
     case Type::DependentBitInt:
     case Type::BTFTagAttributed:
+    case Type::Shifted:
       CanPrefixQualifiers = true;
       break;
 
@@ -1735,6 +1736,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::BTFTypeTag:
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
+  case attr::Shifted:
+    llvm_unreachable("Shifted attribute handled separately");
+
   case attr::OpenCLPrivateAddressSpace:
   case attr::OpenCLGlobalAddressSpace:
   case attr::OpenCLGlobalDeviceAddressSpace:
@@ -1830,6 +1834,17 @@ void TypePrinter::printBTFTagAttributedBefore(const BTFTagAttributedType *T,
 }
 
 void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
+                                             raw_ostream &OS) {
+  printAfter(T->getWrappedType(), OS);
+}
+
+void TypePrinter::printShiftedBefore(const ShiftedType *T,
+                                              raw_ostream &OS) {
+  printBefore(T->getWrappedType(), OS);
+  OS << " __attribute__((shifted(...)))";
+}
+
+void TypePrinter::printShiftedAfter(const ShiftedType *T,
                                              raw_ostream &OS) {
   printAfter(T->getWrappedType(), OS);
 }

@@ -2405,6 +2405,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     return getTypeInfo(
         cast<BTFTagAttributedType>(T)->getWrappedType().getTypePtr());
 
+  case Type::Shifted:
+    return getTypeInfo(
+        cast<ShiftedType>(T)->getWrappedType().getTypePtr());
+
   case Type::Atomic: {
     // Start with the base type information.
     TypeInfo Info = getTypeInfo(cast<AtomicType>(T)->getValueType());
@@ -4801,6 +4805,26 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
 
   Types.push_back(Ty);
   BTFTagAttributedTypes.InsertNode(Ty, InsertPos);
+
+  return QualType(Ty, 0);
+}
+
+QualType ASTContext::getShiftedType(const ShiftedAttr *SAttr,
+                                             QualType Wrapped) {
+  llvm::FoldingSetNodeID ID;
+  ShiftedType::Profile(ID, Wrapped, SAttr);
+
+  void *InsertPos = nullptr;
+  ShiftedType *Ty =
+      ShiftedTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (Ty)
+    return QualType(Ty, 0);
+
+  QualType Canon = getCanonicalType(Wrapped);
+  Ty = new (*this, TypeAlignment) ShiftedType(Canon, Wrapped, SAttr);
+
+  Types.push_back(Ty);
+  ShiftedTypes.InsertNode(Ty, InsertPos);
 
   return QualType(Ty, 0);
 }
@@ -12908,6 +12932,12 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
         cast<BTFTagAttributedType>(Y)->getAttr()->getBTFTypeTag())
       return QualType();
     return Ctx.getBTFTagAttributedType(AX, Ctx.getQualifiedType(Underlying));
+  }
+  case Type::Shifted: {
+    const ShiftedAttr *AX = cast<ShiftedType>(X)->getAttr(), *AY = cast<ShiftedType>(Y)->getAttr();
+    if (!Ctx.hasSameType(AX->getParent(), AY->getParent()) || !Ctx.hasSameExpr(AX->getDelta(), AY->getDelta()))
+      return QualType();
+    return Ctx.getShiftedType(AX, Ctx.getQualifiedType(Underlying));
   }
   case Type::Auto: {
     const auto *AX = cast<AutoType>(X), *AY = cast<AutoType>(Y);

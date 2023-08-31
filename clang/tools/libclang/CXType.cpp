@@ -118,6 +118,7 @@ static CXTypeKind GetTypeKind(QualType T) {
     TKCASE(Pipe);
     TKCASE(Attributed);
     TKCASE(BTFTagAttributed);
+    TKCASE(Shifted);
     TKCASE(Atomic);
     default:
       return CXType_Unexposed;
@@ -139,6 +140,10 @@ CXType cxtype::MakeCXType(QualType T, CXTranslationUnit TU) {
       }
     }
     if (auto *ATT = T->getAs<BTFTagAttributedType>()) {
+      if (!(TU->ParsingOptions & CXTranslationUnit_IncludeAttributedTypes))
+        return MakeCXType(ATT->getWrappedType(), TU);
+    }
+    if (auto *ATT = T->getAs<ShiftedType>()) {
       if (!(TU->ParsingOptions & CXTranslationUnit_IncludeAttributedTypes))
         return MakeCXType(ATT->getWrappedType(), TU);
     }
@@ -626,6 +631,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(Pipe);
     TKIND(Attributed);
     TKIND(BTFTagAttributed);
+    TKIND(Shifted);
     TKIND(BFloat16);
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -1072,6 +1078,9 @@ CXType clang_Type_getModifiedType(CXType CT) {
     return MakeCXType(ATT->getModifiedType(), GetTU(CT));
 
   if (auto *ATT = T->getAs<BTFTagAttributedType>())
+    return MakeCXType(ATT->getWrappedType(), GetTU(CT));
+
+  if (auto *ATT = T->getAs<ShiftedType>())
     return MakeCXType(ATT->getWrappedType(), GetTU(CT));
 
   return MakeCXType(QualType(), GetTU(CT));

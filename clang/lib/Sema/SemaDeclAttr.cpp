@@ -8565,15 +8565,6 @@ static void handleSpoilsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  SpoilsAttr(S.Context, AL, SpoilsList.data(), SpoilsList.size()));
 }
 
-static void handleShiftedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  TypeSourceInfo *ParentLoc = nullptr;
-  S.GetTypeFromParser(AL.getParent(), &ParentLoc);
-  assert(ParentLoc && "no type source info for attribute argument");
-
-  D->addAttr(::new (S.Context)
-                 ShiftedAttr(S.Context, AL, ParentLoc, AL.getDelta()));
-}
-
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -9392,10 +9383,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_Spoils:
     handleSpoilsAttr(S, D, AL);
-    break;
-
-  case ParsedAttr::AT_Shifted:
-    handleShiftedAttr(S, D, AL);
     break;
   }
 }

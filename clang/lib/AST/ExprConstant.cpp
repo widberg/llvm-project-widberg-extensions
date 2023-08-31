@@ -13403,15 +13403,15 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
 
   case UETT_DeltaOf: {
     QualType SrcTy = E->getTypeOfArgument();
-    // C++ [expr.sizeof]p2: "When applied to a reference or a reference type,
-    //   the result is the size of the referenced type."
-    if (const ReferenceType *Ref = SrcTy->getAs<ReferenceType>())
-      SrcTy = Ref->getPointeeType();
 
-    CharUnits Sizeof;
-    if (!HandleSizeof(Info, E->getExprLoc(), SrcTy, Sizeof))
+    const ShiftedType *Shi = SrcTy->getAs<ShiftedType>();
+    if (!Shi)
       return false;
-    return Success(Sizeof, E);
+
+    APSInt Result;
+    if (!EvaluateInteger(Shi->getAttr()->getDelta(), Result, Info))
+      return false;
+    return Success(Result.getSExtValue(), E);
   }
 
   case UETT_OpenMPRequiredSimdAlign:

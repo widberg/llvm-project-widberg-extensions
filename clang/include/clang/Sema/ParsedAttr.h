@@ -409,8 +409,8 @@ private:
              ParsedType parent, Expr *delta, Syntax syntaxUsed)
       : AttributeCommonInfo(attrName, scopeName, attrRange, scopeLoc,
                             syntaxUsed),
-        NumArgs(1), Invalid(false), UsedAsTypeAttr(false),
-        IsAvailability(false), IsTypeTagForDatatype(true), IsProperty(false),
+        NumArgs(1), Invalid(false), UsedAsTypeAttr(true),
+        IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(false),
         HasParsedType(true), HasProcessingCache(false),
         IsPragmaClangAttribute(false), Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion PVal(delta);
