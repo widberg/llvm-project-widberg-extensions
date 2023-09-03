@@ -1104,6 +1104,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_object);
           REVERTIBLE_TYPE_TRAIT(__is_pod);
           REVERTIBLE_TYPE_TRAIT(__is_pointer);
+          REVERTIBLE_TYPE_TRAIT(__is_shifted);
           REVERTIBLE_TYPE_TRAIT(__is_polymorphic);
           REVERTIBLE_TYPE_TRAIT(__is_reference);
           REVERTIBLE_TYPE_TRAIT(__is_referenceable);

@@ -7948,13 +7948,21 @@ void Parser::ParseParentofSpecifier(DeclSpec &DS) {
       return;
     }
 
+    const ShiftedType *Shi = CastTy.get().getTypePtr()->getAs<ShiftedType>();
+    if (!Shi) {
+      DS.SetTypeSpecError();
+      return;
+    }
+
+    ParsedType ParentTy = Actions.CreateParsedType(Shi->getAttr()->getParent(), Shi->getAttr()->getParentLoc());
+
     const char *PrevSpec = nullptr;
     unsigned DiagID;
     // Check for duplicate type specifiers (e.g. "int typeof(int)").
     if (DS.SetTypeSpecType(IsUnqual ? DeclSpec::TST_typeof_unqualType
                                     : DeclSpec::TST_typeofType,
                            StartLoc, PrevSpec,
-                           DiagID, CastTy,
+                           DiagID, ParentTy,
                            Actions.getASTContext().getPrintingPolicy()))
       Diag(StartLoc, DiagID) << PrevSpec;
     return;
@@ -7973,13 +7981,23 @@ void Parser::ParseParentofSpecifier(DeclSpec &DS) {
     return;
   }
 
+  // TODO: Gotta do something about this
+  // getType doesn't do what I thought it did
+  const ShiftedType *Shi = Operand.get()->getType().getTypePtr()->getAs<ShiftedType>();
+  if (!Shi) {
+    DS.SetTypeSpecError();
+    return;
+  }
+
+  ParsedType ParentTy = Actions.CreateParsedType(Shi->getAttr()->getParent(), Shi->getAttr()->getParentLoc());
+
   const char *PrevSpec = nullptr;
   unsigned DiagID;
   // Check for duplicate type specifiers (e.g. "int typeof(int)").
   if (DS.SetTypeSpecType(IsUnqual ? DeclSpec::TST_typeof_unqualExpr
                                   : DeclSpec::TST_typeofExpr,
                          StartLoc, PrevSpec,
-                         DiagID, Operand.get(),
+                         DiagID, ParentTy,
                          Actions.getASTContext().getPrintingPolicy()))
     Diag(StartLoc, DiagID) << PrevSpec;
 }

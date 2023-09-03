@@ -4813,6 +4813,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsArray:
   case UTT_IsBoundedArray:
   case UTT_IsPointer:
+  case UTT_IsShifted:
   case UTT_IsNullPointer:
   case UTT_IsReferenceable:
   case UTT_IsLvalueReference:
@@ -4986,6 +4987,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return false;
   case UTT_IsPointer:
     return T->isAnyPointerType();
+  case UTT_IsShifted:
+    return T->isShiftedType();
   case UTT_IsNullPointer:
     return T->isNullPtrType();
   case UTT_IsLvalueReference:

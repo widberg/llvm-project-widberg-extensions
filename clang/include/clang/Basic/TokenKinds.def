@@ -561,6 +561,8 @@ ARRAY_TYPE_TRAIT(__array_extent, ArrayExtent, KEYCXX)
 // Name for GCC 6 compatibility.
 ALIAS("__is_same_as", __is_same, KEYCXX)
 
+TYPE_TRAIT_1(__is_shifted, IsShifted, KEYWIDBERG)
+
 // Apple Extension.
 KEYWORD(__private_extern__          , KEYALL)
 KEYWORD(__module_private__          , KEYALL)

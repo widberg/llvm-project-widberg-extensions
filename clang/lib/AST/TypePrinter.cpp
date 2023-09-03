@@ -1841,7 +1841,7 @@ void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
 void TypePrinter::printShiftedBefore(const ShiftedType *T,
                                               raw_ostream &OS) {
   printBefore(T->getWrappedType(), OS);
-  OS << " __attribute__((shifted(...)))";
+  T->getAttr()->printPretty(OS, Policy);
 }
 
 void TypePrinter::printShiftedAfter(const ShiftedType *T,

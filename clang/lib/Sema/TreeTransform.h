@@ -7015,6 +7015,7 @@ QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
 template <typename Derived>
 QualType TreeTransform<Derived>::TransformShiftedType(
     TypeLocBuilder &TLB, ShiftedTypeLoc TL) {
+  // TODO: Implement this.
   llvm_unreachable("TreeTransform for ShiftedTypeLoc unimplemented");
 }
 
