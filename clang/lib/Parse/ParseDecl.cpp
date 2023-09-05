@@ -7981,8 +7981,6 @@ void Parser::ParseParentofSpecifier(DeclSpec &DS) {
     return;
   }
 
-  // TODO: Gotta do something about this
-  // getType doesn't do what I thought it did
   const ShiftedType *Shi = Operand.get()->getType().getTypePtr()->getAs<ShiftedType>();
   if (!Shi) {
     DS.SetTypeSpecError();
@@ -7994,8 +7992,8 @@ void Parser::ParseParentofSpecifier(DeclSpec &DS) {
   const char *PrevSpec = nullptr;
   unsigned DiagID;
   // Check for duplicate type specifiers (e.g. "int typeof(int)").
-  if (DS.SetTypeSpecType(IsUnqual ? DeclSpec::TST_typeof_unqualExpr
-                                  : DeclSpec::TST_typeofExpr,
+  if (DS.SetTypeSpecType(IsUnqual ? DeclSpec::TST_typeof_unqualType
+                                  : DeclSpec::TST_typeofType,
                          StartLoc, PrevSpec,
                          DiagID, ParentTy,
                          Actions.getASTContext().getPrintingPolicy()))
