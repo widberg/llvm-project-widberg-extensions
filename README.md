@@ -1,9 +1,9 @@
 # The LLVM Compiler Infrastructure With Widberg Extensions
 
-This repository is a fork of LLVM (16.0.6) intended to implement C/C++ language
+The LLVM Compiler Infrastructure With Widberg Extensions, affectionately called the Widpiler (a portmanteau of Widberg and compiler), is a fork of LLVM (16.0.6) intended to implement C/C++ language
 features in LLVM/Clang to aid in reverse engineering. Currently, the
-scope of this project covers a subset of the IDA Pro __usercall
-syntax and shifted pointers. This is a research project and not production ready.
+scope of this project covers a subset of the IDA Pro [__usercall
+syntax](wiki/User‐Defined-Calling-Conventions) and [shifted pointers](wiki/Shifted-Pointers). This is a research project and not production ready.
 
 [![Build Status](https://github.com/widberg/llvm-project-widberg-extensions/actions/workflows/widberg-build.yml/badge.svg?branch=main)](https://github.com/widberg/llvm-project-widberg-extensions/actions/workflows/widberg-build.yml)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/widberg/llvm-project-widberg-extensions)](https://github.com/widberg/llvm-project-widberg-extensions/releases)
