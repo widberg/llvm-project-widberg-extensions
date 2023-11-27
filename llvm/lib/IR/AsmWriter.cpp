@@ -298,6 +298,8 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::GHC:           Out << "ghccc"; break;
   case CallingConv::Tail:          Out << "tailcc"; break;
   case CallingConv::CFGuard_Check: Out << "cfguard_checkcc"; break;
+  case CallingConv::UserCall:      Out << "usercallcc"; break;
+  case CallingConv::UserPurge:     Out << "userpurgecc"; break;
   case CallingConv::X86_StdCall:   Out << "x86_stdcallcc"; break;
   case CallingConv::X86_FastCall:  Out << "x86_fastcallcc"; break;
   case CallingConv::X86_ThisCall:  Out << "x86_thiscallcc"; break;

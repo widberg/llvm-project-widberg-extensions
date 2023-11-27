@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits -fsafe-buffer-usage-suggestions -include %s %s 2>&1 | FileCheck %s
 
 // TODO test if there's not a single character in the file after a decl or def

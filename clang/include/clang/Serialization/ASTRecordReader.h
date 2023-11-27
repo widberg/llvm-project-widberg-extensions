@@ -332,6 +332,11 @@ public:
     return cast<BTFTypeTagAttr>(readAttr());
   }
 
+  /// Read an ShiftedAttr object.
+  ShiftedAttr *readShiftedAttr() {
+    return cast<ShiftedAttr>(readAttr());
+  }
+
   /// Reads a token out of a record, advancing Idx.
   Token readToken() {
     return Reader->ReadToken(*F, Record, Idx);

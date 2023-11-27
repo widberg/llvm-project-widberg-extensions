@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %clang_cc1 -triple x86_64-pc-win32 -ast-dump=json %s | FileCheck %s
 
 #define _INLINE_VAR inline

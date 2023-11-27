@@ -1123,6 +1123,7 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
   case tok::kw_short:
   case tok::kw_signed:
   case tok::kw_sizeof:
+  case tok::kw___deltaof:
   case tok::kw_static:
   case tok::kw_static_cast:
   case tok::kw_struct:
@@ -1136,6 +1137,7 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
   case tok::kw_typeid:
   case tok::kw_typename:
   case tok::kw_typeof:
+  case tok::kw___parentof:
   case tok::kw_union:
   case tok::kw_unsigned:
   case tok::kw_using:

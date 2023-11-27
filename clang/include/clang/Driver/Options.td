@@ -2397,6 +2397,9 @@ def frandomize_layout_seed_EQ : Joined<["-"], "frandomize-layout-seed=">,
 def frandomize_layout_seed_file_EQ : Joined<["-"], "frandomize-layout-seed-file=">,
   MetaVarName<"<file>">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"File holding the seed used by the randomize structure layout feature">;
+defm widberg_extensions : BoolFOption<"widberg-extensions",
+  LangOpts<"WidbergExt">, DefaultTrue,
+  PosFlag<SetTrue, [], "Allow">, NegFlag<SetFalse, [], "Disallow">, BothFlags<[CC1Option, CoreOption], " some experimental reverse engineering oriented syntax">>;
 def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Enable full Microsoft Visual C++ compatibility">,
   MarshallingInfoFlag<LangOpts<"MSVCCompat">>;

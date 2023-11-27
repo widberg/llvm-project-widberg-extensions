@@ -171,7 +171,12 @@ public:
   /// Check if an argument has a given attribute.
   bool hasAttribute(Attribute::AttrKind Kind) const;
 
+  /// Check if an argument has a given attribute.
+  bool hasAttribute(StringRef Kind) const;
+
   Attribute getAttribute(Attribute::AttrKind Kind) const;
+
+  Attribute getAttribute(StringRef Kind) const;
 
   /// Method for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {

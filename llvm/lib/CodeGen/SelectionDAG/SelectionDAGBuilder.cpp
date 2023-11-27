@@ -2122,6 +2122,33 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
           Flags.setSExt();
         else if (ExtendKind == ISD::ZERO_EXTEND)
           Flags.setZExt();
+        
+        if (CC == CallingConv::UserCall || CC == CallingConv::UserPurge) {
+          if (F->getAttributes().hasRetAttr("widberg_location")) {
+            StringRef regs = F->getAttributes().getRetAttr("widberg_location").getValueAsString();
+
+            SmallVector<StringRef, 2> Registers;
+            regs.split(Registers, ',');
+
+            SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+            for (StringRef reg : Registers) {
+              std::optional<MCRegister> PhysReg = TLI.getTargetMachine().getMCRegisterInfo()
+                                                 ->getRegNo(reg);
+
+              if (PhysReg) {
+                MCRegisters.push_back(*PhysReg);
+              }
+              else
+              {
+                llvm_unreachable("Target lowering: Bad register");
+              }
+            }
+            Flags.setLocation(MCRegisters);
+          } else {
+            llvm_unreachable("usercall no return reg");
+          }
+        }
 
         for (unsigned i = 0; i < NumParts; ++i) {
           Outs.push_back(ISD::OutputArg(Flags,
@@ -10043,8 +10070,14 @@ static AttributeList getReturnAttrs(TargetLowering::CallLoweringInfo &CLI) {
   if (CLI.IsInReg)
     Attrs.push_back(Attribute::InReg);
 
-  return AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
-                            Attrs);
+  auto ret = AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
+                                Attrs);
+  if (!CLI.ReturnLocation.empty()) {
+    ret = ret.addRetAttribute(CLI.RetTy->getContext(), "widberg_location",
+                              CLI.ReturnLocation);
+  }
+
+  return ret;
 }
 
 /// TargetLowering::LowerCallTo - This is the default LowerCallTo
@@ -10333,6 +10366,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
           if (j == NumParts - 1)
             MyFlags.Flags.setSplitEnd();
         }
+
+        MyFlags.Flags.setSplitRegIndex(j);
 
         CLI.Outs.push_back(MyFlags);
         CLI.OutVals.push_back(Parts[j]);
@@ -10801,6 +10836,31 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         Flags.setByVal();
       }
 
+      if (F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge) {
+        if (Arg.hasAttribute("widberg_location")) {
+          StringRef regs = Arg.getAttribute("widberg_location").getValueAsString();
+
+          SmallVector<StringRef, 2> Registers;
+          regs.split(Registers, ',');
+
+          SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+          for (StringRef reg : Registers) {
+            std::optional<MCRegister> PhysReg = TLI->getTargetMachine().getMCRegisterInfo()
+                                               ->getRegNo(reg);
+
+            if (PhysReg) {
+              MCRegisters.push_back(*PhysReg);
+            }
+            else
+            {
+              llvm_unreachable("Target lowering: Bad register");
+            }
+          }
+          Flags.setLocation(MCRegisters);
+        }
+      }
+
       // Certain targets (such as MIPS), may have a different ABI alignment
       // for a type depending on the context. Give the target a chance to
       // specify the alignment it wants.
@@ -10865,6 +10925,9 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           if (i == NumRegs - 1)
             MyFlags.Flags.setSplitEnd();
         }
+
+        MyFlags.Flags.setSplitRegIndex(i);
+
         Ins.push_back(MyFlags);
       }
       if (NeedsRegBlock && Value == NumValues - 1)

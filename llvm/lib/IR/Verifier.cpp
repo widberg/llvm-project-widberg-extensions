@@ -63,6 +63,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
@@ -2739,6 +2741,19 @@ void Verifier::visitFunction(const Function &F) {
           &F);
     break;
   }
+  
+  if (Attrs.hasRetAttr("widberg_location")) {
+    Check(F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge,
+           "Attribute 'widberg_location' requires 'usercall' or 'userpurge' calling convention", F);
+  }
+
+  for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
+    AttributeSet ArgAttrs = Attrs.getParamAttrs(i);
+    if (ArgAttrs.hasAttribute("widberg_location")) {
+      Check(F.getCallingConv() == CallingConv::UserCall || F.getCallingConv() == CallingConv::UserPurge,
+            "Attribute 'widberg_location' requires 'usercall' or 'userpurge' calling convention", F);
+    }
+  }
 
   // Check that the argument values match the function type for this function...
   unsigned i = 0;
@@ -3483,8 +3498,14 @@ void Verifier::visitCallBase(CallBase &Call) {
             Call);
     }
 
+    if (Callee && Callee->hasParamAttribute(i, "widberg_location")) {
+      Check(Attrs.hasParamAttr(i, "widberg_location"),
+             "parameter-register may not apply only to definition",
+             Call.getArgOperand(i), Call);
+    }
+
     if (Attrs.hasParamAttr(i, Attribute::ImmArg)) {
-      // Don't allow immarg on call sites, unless the underlying declaration
+      // Don't allow immarg distributionon call sites, unless the underlying declaration
       // also has the matching immarg.
       Check(Callee && Callee->hasParamAttribute(i, Attribute::ImmArg),
             "immarg may not apply only to call sites", Call.getArgOperand(i),

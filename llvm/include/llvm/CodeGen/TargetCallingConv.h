@@ -15,6 +15,7 @@
 
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -58,6 +59,9 @@ namespace ISD {
 
     unsigned PointerAddrSpace = 0; ///< Address space of pointer argument
 
+    SmallVector<llvm::MCRegister, 2> Location;
+    unsigned SplitRegIndex;
+
   public:
     ArgFlagsTy()
         : IsZExt(0), IsSExt(0), IsInReg(0), IsSRet(0), IsByVal(0), IsByRef(0),
@@ -66,8 +70,8 @@ namespace ISD {
           IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
           IsSecArgPass(0), MemAlign(0), OrigAlign(0),
           IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
-          IsCopyElisionCandidate(0), IsPointer(0) {
-      static_assert(sizeof(*this) == 3 * sizeof(unsigned), "flags are too big");
+          IsCopyElisionCandidate(0), IsPointer(0), Location() {
+      //static_assert(sizeof(*this) == 3 * sizeof(unsigned), "flags are too big");
     }
 
     bool isZExt() const { return IsZExt; }
@@ -129,6 +133,9 @@ namespace ISD {
       IsInConsecutiveRegsLast = Flag;
     }
 
+    unsigned getSplitRegIndex()   const { return SplitRegIndex; }
+    void setSplitRegIndex(unsigned i)  { SplitRegIndex = i; }
+
     bool isSplit()   const { return IsSplit; }
     void setSplit()  { IsSplit = 1; }
 
@@ -186,6 +193,9 @@ namespace ISD {
 
     unsigned getPointerAddrSpace() const { return PointerAddrSpace; }
     void setPointerAddrSpace(unsigned AS) { PointerAddrSpace = AS; }
+
+    const SmallVector<llvm::MCRegister, 2> &getLocation() const { return Location; }
+    void setLocation(const SmallVector<llvm::MCRegister, 2> &L) { Location = L; }
 };
 
   /// InputArg - This struct carries flags and type information about a

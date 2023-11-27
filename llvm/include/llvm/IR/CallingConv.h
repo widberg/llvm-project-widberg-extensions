@@ -245,6 +245,12 @@ namespace CallingConv {
     /// placement. Preserves active lane values for input VGPRs.
     AMDGPU_CS_ChainPreserve = 105,
 
+    /// UserCall
+    UserCall = 106,
+
+    /// UserPurge
+    UserPurge = 107,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

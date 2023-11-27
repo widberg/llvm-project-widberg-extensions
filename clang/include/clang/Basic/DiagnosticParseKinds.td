@@ -777,6 +777,9 @@ def err_ms_property_expected_comma_or_rparen : Error<
 def err_ms_property_initializer : Error<
   "property declaration cannot have a default member initializer">;
 
+def err_widberg_spoils_type : Error<
+  "__spoils arguments must be an identifier">;
+
 def warn_cxx20_compat_explicit_bool : Warning<
   "this expression will be parsed as explicit(bool) in C++20">,
   InGroup<CXX20Compat>, DefaultIgnore;

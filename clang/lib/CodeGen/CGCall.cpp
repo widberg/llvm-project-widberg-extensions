@@ -23,6 +23,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclWidberg.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/CodeGenOptions.h"
@@ -72,6 +73,8 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_PreserveAll: return llvm::CallingConv::PreserveAll;
   case CC_Swift: return llvm::CallingConv::Swift;
   case CC_SwiftAsync: return llvm::CallingConv::SwiftTail;
+  case CC_UserCall: return llvm::CallingConv::UserCall;
+  case CC_UserPurge: return llvm::CallingConv::UserPurge;
   }
 }
 
@@ -251,6 +254,12 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<PreserveAllAttr>())
     return CC_PreserveAll;
+
+  if (D->hasAttr<UserCallAttr>())
+    return CC_UserCall;
+
+  if (D->hasAttr<UserPurgeAttr>())
+    return CC_UserPurge;
 
   return CC_C;
 }
@@ -567,7 +576,7 @@ CodeGenTypes::arrangeMSCtorClosure(const CXXConstructorDecl *CD,
   CallingConv CC = Context.getDefaultCallingConvention(
       /*IsVariadic=*/false, /*IsCXXMethod=*/true);
   return arrangeLLVMFunctionInfo(Context.VoidTy, FnInfoOpts::IsInstanceMethod,
-                                 ArgTys, FunctionType::ExtInfo(CC), {},
+                                 ArgTys, FunctionType::ExtInfo(CC, CD->getWidbergReturnLocation()), {},
                                  RequiredArgs::All);
 }
 
@@ -846,6 +855,8 @@ CGFunctionInfo *CGFunctionInfo::create(unsigned llvmCC, bool instanceMethod,
   FI->ArgStructAlign = 0;
   FI->NumArgs = argTypes.size();
   FI->HasExtParameterInfos = !paramInfos.empty();
+  FI->WidLoc = info.getWidbergLocation();
+  FI->getReturnInfo().setWidbergLocation(FI->WidLoc);
   FI->getArgsBuffer()[0].type = resultType;
   FI->MaxVectorWidth = 0;
   for (unsigned i = 0, e = argTypes.size(); i != e; ++i)
@@ -2374,6 +2385,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
     if (TargetDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>())
       FuncAttrs.addAttribute("no_caller_saved_registers");
+    if (TargetDecl->hasAttr<AnyX86NoCalleeSavedRegistersAttr>())
+      FuncAttrs.addAttribute("no_callee_saved_registers");
     if (TargetDecl->hasAttr<AnyX86NoCfCheckAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::NoCfCheck);
     if (TargetDecl->hasAttr<LeafAttr>())
@@ -2401,6 +2414,21 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         FuncAttrs.addAttribute("uniform-work-group-size",
                                llvm::toStringRef(CodeGenOpts.UniformWGSize));
       }
+    }
+
+    if (TargetDecl->hasAttr<SpoilsAttr>()) {
+      std::string spoils;
+
+      auto *attr = TargetDecl->getAttr<SpoilsAttr>();
+      for (auto *it = attr->spoilsList_begin();
+           it != attr->spoilsList_end();
+           ++it) {
+        if (it != attr->spoilsList_begin())
+          spoils += ',';
+        spoils += (*it)->getName();
+      }
+
+      FuncAttrs.addAttribute("spoils", spoils);
     }
   }
 
@@ -2498,6 +2526,28 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   QualType RetTy = FI.getReturnType();
   const ABIArgInfo &RetAI = FI.getReturnInfo();
   const llvm::DataLayout &DL = getDataLayout();
+
+  if (RetAI.getWidbergLocation() || FI.getWidbergLocation() || FI.getExtInfo().getWidbergLocation()) {
+    WidbergLocation *WidLoc;
+    if (RetAI.getWidbergLocation()) {
+      WidLoc = RetAI.getWidbergLocation();
+    } else if (FI.getWidbergLocation()) {
+      WidLoc = FI.getWidbergLocation();
+    } else {
+      WidLoc = FI.getExtInfo().getWidbergLocation();
+    }
+    std::string regs;
+
+    for (auto *it = WidLoc->begin();
+         it != WidLoc->end();
+         ++it) {
+      if (it != WidLoc->begin())
+        regs += ',';
+      regs += (*it)->Ident->getName();
+    }
+
+    RetAttrs.addAttribute("widberg_location", regs);
+  }
 
   // Determine if the return type could be partially undef
   if (CodeGenOpts.EnableNoundefAttrs &&
@@ -2789,6 +2839,18 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (FI.getExtParameterInfo(ArgNo).isNoEscape())
       Attrs.addAttribute(llvm::Attribute::NoCapture);
+
+    if (WidbergLocation *WidLoc = FI.getExtParameterInfo(ArgNo).getWidbergLocation()) {
+      std::string regs;
+
+      for (auto *it = WidLoc->begin(); it != WidLoc->end(); ++it) {
+        if (it != WidLoc->begin())
+          regs += ',';
+        regs += (*it)->Ident->getName();
+      }
+
+      Attrs.addAttribute("widberg_location", regs);
+    }
 
     if (Attrs.hasAttributes()) {
       unsigned FirstIRArg, NumIRArgs;

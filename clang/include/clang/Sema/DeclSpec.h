@@ -23,6 +23,7 @@
 #define LLVM_CLANG_SEMA_DECLSPEC_H
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclWidberg.h"
 #include "clang/AST/DeclObjCCommon.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
@@ -1919,6 +1920,9 @@ private:
   /// parameters (if any).
   TemplateParameterList *InventedTemplateParameterList;
 
+  WidbergLocation *WidLoc = nullptr;
+  WidbergLocation *WidRetLoc = nullptr;
+
 #ifndef _MSC_VER
   union {
 #endif
@@ -1969,7 +1973,7 @@ public:
         HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
         DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
         TrailingRequiresClause(nullptr),
-        InventedTemplateParameterList(nullptr) {
+        InventedTemplateParameterList(nullptr), WidLoc(nullptr), WidRetLoc(nullptr) {
     assert(llvm::all_of(DeclarationAttrs,
                         [](const ParsedAttr &AL) {
                           return (AL.isStandardAttributeSyntax() ||
@@ -2063,6 +2067,7 @@ public:
     ObjCWeakProperty = false;
     CommaLoc = SourceLocation();
     EllipsisLoc = SourceLocation();
+    WidRetLoc = nullptr;
   }
 
   /// mayOmitIdentifier - Return true if the identifier is either optional or
@@ -2584,6 +2589,20 @@ public:
   /// placeholder-typed parameters, if there were any such parameters.
   TemplateParameterList * getInventedTemplateParameterList() const {
     return InventedTemplateParameterList;
+  }
+
+  void setWidbergLocation(WidbergLocation *WL) { WidLoc = WL;
+  }
+
+  WidbergLocation *getWidbergLocation() {
+    return WidLoc;
+  }
+
+  void setWidbergReturnLocation(WidbergLocation *WL) { WidRetLoc = WL;
+  }
+
+  WidbergLocation *getWidbergReturnLocation() {
+    return WidRetLoc;
   }
 
   /// takeAttributes - Takes attributes from the given parsed-attributes

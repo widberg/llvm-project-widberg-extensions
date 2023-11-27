@@ -1617,6 +1617,8 @@ public:
   }
   /// Determine whether the return value has the given attribute.
   bool hasRetAttr(StringRef Kind) const { return hasRetAttrImpl(Kind); }
+  
+  Attribute getRetAttr(StringRef Kind) const { return getRetAttrImpl(Kind); }
 
   /// Determine whether the argument or parameter has the given attribute.
   bool paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const;
@@ -2307,6 +2309,16 @@ private:
     if (const Function *F = getCalledFunction())
       return F->getAttributes().hasRetAttr(Kind);
     return false;
+  }
+
+  template <typename AttrKind> Attribute getRetAttrImpl(AttrKind Kind) const {
+    if (Attrs.hasRetAttr(Kind))
+      return Attrs.getRetAttr(Kind);
+
+    // Look at the callee, if available.
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getRetAttr(Kind);
+    return Attribute();
   }
 };
 

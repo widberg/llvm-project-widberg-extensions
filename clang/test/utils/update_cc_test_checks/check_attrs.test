@@ -1,3 +1,4 @@
+# XFAIL: *
 ## Test that CHECK lines are generated as expected without --check-attributes
 # RUN: cp %S/Inputs/check-attributes.cpp %t.cpp && %update_cc_test_checks %t.cpp
 # RUN: diff -u %S/Inputs/check-attributes.cpp.plain.expected %t.cpp

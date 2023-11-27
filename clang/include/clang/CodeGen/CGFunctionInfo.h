@@ -116,6 +116,7 @@ private:
   bool InReg : 1;           // isDirect() || isExtend() || isIndirect()
   bool CanBeFlattened: 1;   // isDirect()
   bool SignExt : 1;         // isExtend()
+  WidbergLocation *WidLoc = nullptr;
 
   bool canHavePaddingType() const {
     return isDirect() || isExtend() || isIndirect() || isIndirectAliased() ||
@@ -137,7 +138,15 @@ public:
         PaddingInReg(false), InAllocaSRet(false),
         InAllocaIndirect(false), IndirectByVal(false), IndirectRealign(false),
         SRetAfterThis(false), InReg(false), CanBeFlattened(false),
-        SignExt(false) {}
+        SignExt(false), WidLoc(nullptr) {}
+
+  WidbergLocation *getWidbergLocation() const {
+    return WidLoc;
+  }
+
+  void setWidbergLocation(WidbergLocation *WidLoc_) {
+    WidLoc = WidLoc_;
+  }
 
   static ABIArgInfo getDirect(llvm::Type *T = nullptr, unsigned Offset = 0,
                               llvm::Type *Padding = nullptr,
@@ -602,6 +611,7 @@ class CGFunctionInfo final
   unsigned HasExtParameterInfos : 1;
 
   unsigned NumArgs;
+  WidbergLocation *WidLoc = nullptr;
 
   ArgInfo *getArgsBuffer() {
     return getTrailingObjects<ArgInfo>();
@@ -702,11 +712,14 @@ public:
   bool getHasRegParm() const { return HasRegParm; }
   unsigned getRegParm() const { return RegParm; }
 
+  WidbergLocation *getWidbergLocation() const { return WidLoc; }
+  void setWidbergLocation(WidbergLocation *WL) { WidLoc = WL; }
+
   FunctionType::ExtInfo getExtInfo() const {
     return FunctionType::ExtInfo(isNoReturn(), getHasRegParm(), getRegParm(),
                                  getASTCallingConvention(), isReturnsRetained(),
                                  isNoCallerSavedRegs(), isNoCfCheck(),
-                                 isCmseNSCall());
+                                 isCmseNSCall(), getWidbergLocation());
   }
 
   CanQualType getReturnType() const { return getArgsBuffer()[0].type; }

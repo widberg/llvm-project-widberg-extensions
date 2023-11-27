@@ -2853,6 +2853,8 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
   //                      ::= T # __attribute__((__swiftasynccall__))
   //                            // Clang-only
   //                      ::= w # __regcall
+  //                      ::= r # __usercall
+  //                      ::= R # __userpurge
   // The 'export' calling conventions are from a bygone era
   // (*cough*Win16*cough*) when functions were declared for export with
   // that keyword. (It didn't actually export them, it just made them so
@@ -2874,6 +2876,8 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
     case CC_SwiftAsync: Out << 'W'; break;
     case CC_PreserveMost: Out << 'U'; break;
     case CC_X86RegCall: Out << 'w'; break;
+    case CC_UserCall: Out << 'r'; break;
+    case CC_UserPurge: Out << 'R'; break;
   }
 }
 void MicrosoftCXXNameMangler::mangleCallingConvention(const FunctionType *T) {

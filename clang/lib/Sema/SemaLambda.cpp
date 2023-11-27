@@ -21,6 +21,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "llvm/ADT/STLExtras.h"
+#include <cstddef>
 #include <optional>
 using namespace clang;
 using namespace sema;
@@ -818,7 +819,8 @@ getDummyLambdaType(Sema &S, SourceLocation Loc = SourceLocation()) {
   //   If a lambda-expression does not include a lambda-declarator, it is as
   //   if the lambda-declarator were ().
   FunctionProtoType::ExtProtoInfo EPI(S.Context.getDefaultCallingConvention(
-      /*IsVariadic=*/false, /*IsCXXMethod=*/true));
+      /*IsVariadic=*/false, /*IsCXXMethod=*/true), nullptr);
+        // S.getCurFunctionDecl(true).getWidbergReturnLocation());
   EPI.HasTrailingReturn = true;
   EPI.TypeQuals.addConst();
   LangAS AS = S.getDefaultCXXMethodAddrSpace();
@@ -1474,7 +1476,7 @@ static void repeatForLambdaConversionFunctionCallingConvs(
   if (S.getLangOpts().MSVCCompat) {
     CallingConv Convs[] = {
         CC_C,        CC_X86StdCall, CC_X86FastCall, CC_X86VectorCall,
-        DefaultFree, DefaultMember, CallOpCC};
+        DefaultFree, DefaultMember, CallOpCC, CC_UserCall, CC_UserPurge};
     llvm::sort(Convs);
     llvm::iterator_range<CallingConv *> Range(
         std::begin(Convs), std::unique(std::begin(Convs), std::end(Convs)));
@@ -1547,7 +1549,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   // Create the type of the conversion function.
   FunctionProtoType::ExtProtoInfo ConvExtInfo(
       S.Context.getDefaultCallingConvention(
-      /*IsVariadic=*/false, /*IsCXXMethod=*/true));
+      /*IsVariadic=*/false, /*IsCXXMethod=*/true), CallOperator->getWidbergReturnLocation());
   // The conversion function is always const and noexcept.
   ConvExtInfo.TypeQuals = Qualifiers();
   ConvExtInfo.TypeQuals.addConst();
@@ -1732,7 +1734,7 @@ static void addBlockPointerConversion(Sema &S,
 
   FunctionProtoType::ExtProtoInfo ConversionEPI(
       S.Context.getDefaultCallingConvention(
-          /*IsVariadic=*/false, /*IsCXXMethod=*/true));
+          /*IsVariadic=*/false, /*IsCXXMethod=*/true), CallOpProto->getExtInfo().getWidbergLocation());
   ConversionEPI.TypeQuals = Qualifiers();
   ConversionEPI.TypeQuals.addConst();
   QualType ConvTy =

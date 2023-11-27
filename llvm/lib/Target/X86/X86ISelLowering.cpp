@@ -3191,7 +3191,11 @@ bool X86TargetLowering::CanLowerReturn(
   return CCInfo.CheckReturn(Outs, RetCC_X86);
 }
 
-const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID) const {
+const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID CC) const {
+  static const MCPhysReg UserCallScratchRegs[] = { 0 };
+  if (CC == CallingConv::UserCall || CC == CallingConv::UserPurge)
+    return UserCallScratchRegs;
+
   static const MCPhysReg ScratchRegs[] = { X86::R11, 0 };
   return ScratchRegs;
 }
@@ -3789,6 +3793,8 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::X86_StdCall:
   case CallingConv::X86_VectorCall:
   case CallingConv::X86_FastCall:
+  case CallingConv::UserCall:
+  case CallingConv::UserPurge:
   // Swift:
   case CallingConv::Swift:
     return true;
@@ -4532,6 +4538,27 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const Module *M = MF.getMMI().getModule();
   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
 
+  for (auto& f : Ins) {
+    if (CallConv == CallingConv::UserCall || CallConv == CallingConv::UserPurge) {
+      SmallVector<StringRef, 2> Registers;
+      CLI.ReturnLocation.split(Registers, ',');
+
+      SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+      for (StringRef reg : Registers) {
+        std::optional<MCRegister> PhysReg =
+            MF.getMMI().getTarget().getMCRegisterInfo()->getRegNo(reg);
+
+        if (PhysReg) {
+          MCRegisters.push_back(*PhysReg);
+        } else {
+          llvm_unreachable("Target lowering: Bad register");
+        }
+      }
+      f.Flags.setLocation(MCRegisters);
+    }
+  }
+
   MachineFunction::CallSiteInfo CSInfo;
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
@@ -4579,6 +4606,29 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (IsWin64)
     CCInfo.AllocateStack(32, Align(8));
 
+  for (auto& f : Outs) {
+    if (CallConv == CallingConv::UserCall || CallConv == CallingConv::UserPurge) {
+      if (CLI.CB->getAttributes().hasParamAttr(f.OrigArgIndex, "widberg_location")) {
+        SmallVector<StringRef, 2> Registers;
+        CLI.CB->getAttributes().getParamAttr(f.OrigArgIndex, "widberg_location")
+            .getValueAsString().split(Registers, ',');
+
+        SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+        for (StringRef reg : Registers) {
+          std::optional<MCRegister> PhysReg =
+              MF.getMMI().getTarget().getMCRegisterInfo()->getRegNo(reg);
+
+          if (PhysReg) {
+            MCRegisters.push_back(*PhysReg);
+          } else {
+            llvm_unreachable("Target lowering: Bad register");
+          }
+        }
+        f.Flags.setLocation(MCRegisters);
+      }
+    }
+  }
   CCInfo.AnalyzeArguments(Outs, CC_X86);
 
   // In vectorcall calling convention a second pass is required for the HVA
@@ -4961,6 +5011,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (CB && CB->hasFnAttr("no_callee_saved_registers"))
       AdaptedCC = (CallingConv::ID)CallingConv::GHC;
     return RegInfo->getCallPreservedMask(MF, AdaptedCC);
+
+    // spoils
   }();
   assert(Mask && "Missing call preserved mask for calling convention");
 
@@ -5603,6 +5655,7 @@ bool X86::isCalleePop(CallingConv::ID CallingConv,
   case CallingConv::X86_FastCall:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_VectorCall:
+  case CallingConv::UserCall:
     return !is64Bit;
   }
 }
@@ -29949,7 +30002,9 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
     default:
       llvm_unreachable("Unsupported calling convention");
     case CallingConv::C:
-    case CallingConv::X86_StdCall: {
+    case CallingConv::X86_StdCall:
+    case CallingConv::UserCall:
+    case CallingConv::UserPurge: {
       // Pass 'nest' parameter in ECX.
       // Must be kept in sync with X86CallingConv.td
       NestReg = X86::ECX;
@@ -29968,6 +30023,9 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
             const DataLayout &DL = DAG.getDataLayout();
             // FIXME: should only count parameters that are lowered to integers.
             InRegCount += (DL.getTypeSizeInBits(*I) + 31) / 32;
+          } else if (Attrs.hasParamAttr(Idx, "widberg_location")) {
+            report_fatal_error("Nest register in use - dont use ecx"
+                               " parameter-register!");
           }
 
         if (InRegCount > 2) {

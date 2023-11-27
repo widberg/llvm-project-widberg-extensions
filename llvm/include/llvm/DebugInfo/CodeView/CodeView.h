@@ -199,7 +199,9 @@ enum class CallingConvention : uint8_t {
   ClrCall = 0x16,     // clr call
   Inline =
       0x17, // Marker for routines always inlined and thus lacking a convention
-  NearVector = 0x18 // near left to right push with regs, callee pops stack
+  NearVector = 0x18, // near left to right push with regs, callee pops stack
+  UserCall = 0x19,
+  UserPurge = 0x1a,
 };
 
 enum class ClassOptions : uint16_t {

@@ -761,7 +761,7 @@ static void GetOpenCLBuiltinFctOverloads(
     std::vector<QualType> &FunctionList, SmallVector<QualType, 1> &RetTypes,
     SmallVector<SmallVector<QualType, 1>, 5> &ArgTypes) {
   FunctionProtoType::ExtProtoInfo PI(
-      Context.getDefaultCallingConvention(false, false, true));
+      Context.getDefaultCallingConvention(false, false, true), nullptr);
   PI.Variadic = false;
 
   // Do not attempt to create any FunctionTypes if there are no return types,

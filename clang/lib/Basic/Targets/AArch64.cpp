@@ -1442,6 +1442,8 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86ThisCall:
   case CC_X86FastCall:
   case CC_X86VectorCall:
+  case CC_UserCall:
+  case CC_UserPurge:
     return CCCR_Ignore;
   case CC_C:
   case CC_OpenCLKernel:

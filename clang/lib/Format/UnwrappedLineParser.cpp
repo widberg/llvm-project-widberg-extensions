@@ -3555,6 +3555,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
       break;
 
     case tok::kw_sizeof:
+    case tok::kw___deltaof:
     case tok::greater:
     case tok::greaterequal:
     case tok::greatergreater:

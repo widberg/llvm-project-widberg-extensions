@@ -2678,6 +2678,7 @@ private:
 
   TPResult TryParseSimpleDeclaration(bool AllowForRangeDecl);
   TPResult TryParseTypeofSpecifier();
+  TPResult TryParseParentofSpecifier();
   TPResult TryParseProtocolQualifiers();
   TPResult TryParsePtrOperatorSeq();
   TPResult TryParseOperatorId();
@@ -2965,9 +2966,35 @@ private:
                                   SourceLocation AttrNameLoc,
                                   ParsedAttributes &Attrs);
   void ParseMicrosoftTypeAttributes(ParsedAttributes &attrs);
+  void ParseWidbergTypeAttributes(ParsedAttributes &attrs);
+  bool MaybeParseWidbergSpoils(ParsedAttributes &Attrs,
+                               SourceLocation *End = nullptr) {
+    const auto &LO = getLangOpts();
+    if (LO.WidbergExt && Tok.is(tok::kw___spoils)) {
+      ParseWidbergSpoils(Attrs, End);
+      return true;
+    }
+    return false;
+  }
+  void ParseWidbergSpoils(ParsedAttributes &Attrs,
+                          SourceLocation *End = nullptr);
+  bool MaybeParseWidbergShifted(ParsedAttributes &Attrs,
+                               SourceLocation *End = nullptr) {
+    const auto &LO = getLangOpts();
+    if (LO.WidbergExt && Tok.is(tok::kw___shifted)) {
+      ParseWidbergShifted(Attrs, End);
+      return true;
+    }
+    return false;
+  }
+  void ParseWidbergShifted(ParsedAttributes &Attrs,
+                          SourceLocation *End = nullptr);
+  bool TryParseWidbergLocation(SourceLocation &ATLoc, SourceLocation &LAngleLoc, SmallVector<IdentifierLoc*, 2> &RegisterIdentifiers, SourceLocation &RAngleLoc);
   void ParseWebAssemblyFuncrefTypeAttribute(ParsedAttributes &Attrs);
   void DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
   SourceLocation SkipExtendedMicrosoftTypeAttributes();
+  void DiagnoseAndSkipExtendedWidbergTypeAttributes();
+  SourceLocation SkipExtendedWidbergTypeAttributes();
   void ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs);
   void ParseBorlandTypeAttributes(ParsedAttributes &attrs);
   void ParseOpenCLKernelAttributes(ParsedAttributes &attrs);
@@ -3029,6 +3056,7 @@ private:
                                  ParsedAttr::Form Form);
 
   void ParseTypeofSpecifier(DeclSpec &DS);
+  void ParseParentofSpecifier(DeclSpec &DS);
   SourceLocation ParseDecltypeSpecifier(DeclSpec &DS);
   void AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
                                          SourceLocation StartLoc,

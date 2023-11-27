@@ -127,6 +127,8 @@ static std::string formatCallingConvention(CallingConvention Convention) {
     RETURN_CASE(CallingConvention, SH5Call, "sh5call");
     RETURN_CASE(CallingConvention, ThisCall, "thiscall");
     RETURN_CASE(CallingConvention, TriCall, "tricall");
+    RETURN_CASE(CallingConvention, UserCall, "usercall");
+    RETURN_CASE(CallingConvention, UserPurge, "userpurge");
   }
   return formatUnknownEnum(Convention);
 }

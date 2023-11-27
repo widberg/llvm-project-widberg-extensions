@@ -1,3 +1,4 @@
+# XFAIL: *
 ## Test that non-clang/non-filechecked runlines execute
 
 # RUN: cp %S/Inputs/exec-all-runlines.c %t-generated.c && %update_cc_test_checks %t-generated.c

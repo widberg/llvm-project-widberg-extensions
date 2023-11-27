@@ -681,6 +681,7 @@ public:
     case tok::exclaim:
     case tok::tilde:
     case tok::kw_sizeof:
+    case tok::kw___deltaof:
     case tok::kw_alignof:
       return true;
     default:
@@ -706,6 +707,7 @@ public:
     case tok::kw_typeid:
     case tok::kw_return:
     case tok::kw_sizeof:
+    case tok::kw___deltaof:
     case tok::kw_alignof:
     case tok::kw_alignas:
     case tok::kw_decltype:
@@ -1636,6 +1638,7 @@ struct AdditionalKeywords {
     case tok::kw_return:
     case tok::kw_short:
     case tok::kw_sizeof:
+    case tok::kw___deltaof:
     case tok::kw_static:
     case tok::kw_struct:
     case tok::kw_switch:

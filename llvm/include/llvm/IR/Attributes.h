@@ -556,6 +556,15 @@ public:
   /// Add a return value attribute to the list. Returns a new list because
   /// attribute lists are immutable.
   [[nodiscard]] AttributeList addRetAttribute(LLVMContext &C,
+                                               StringRef Kind,
+                                               StringRef Value = 
+                                               StringRef()) const {
+    return addAttributeAtIndex(C, ReturnIndex, Kind, Value);
+  }
+
+  /// Add a return value attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  [[nodiscard]] AttributeList addRetAttribute(LLVMContext &C,
                                               Attribute Attr) const {
     return addAttributeAtIndex(C, ReturnIndex, Attr);
   }
@@ -830,6 +839,11 @@ public:
   /// Return the attribute object that exists for the function.
   Attribute getFnAttr(StringRef Kind) const {
     return getAttributeAtIndex(FunctionIndex, Kind);
+  }
+
+  /// Return the attribute object that exists for the function.
+  Attribute getRetAttr(StringRef Kind) const {
+    return getAttributeAtIndex(ReturnIndex, Kind);
   }
 
   /// Return the alignment of the return value.

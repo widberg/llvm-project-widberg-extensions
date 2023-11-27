@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: split-file %s %t

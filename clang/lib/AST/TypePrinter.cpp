@@ -247,6 +247,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::BitInt:
     case Type::DependentBitInt:
     case Type::BTFTagAttributed:
+    case Type::Shifted:
       CanPrefixQualifiers = true;
       break;
 
@@ -1035,6 +1036,12 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_PreserveAll:
       OS << " __attribute__((preserve_all))";
       break;
+    case CC_UserCall:
+      OS << "__attribute__((usercall))";
+      break;
+    case CC_UserPurge:
+      OS << "__attribute__((userpurge))";
+      break;
     }
   }
 
@@ -1049,6 +1056,8 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
        << Info.getRegParm() << ")))";
   if (Info.getNoCallerSavedRegs())
     OS << " __attribute__((no_caller_saved_registers))";
+  if (Info.getNoCalleeSavedRegs())
+    OS << " __attribute__((no_callee_saved_registers))";
   if (Info.getNoCfCheck())
     OS << " __attribute__((nocf_check))";
 }
@@ -1784,6 +1793,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::BTFTypeTag:
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
+  case attr::Shifted:
+    llvm_unreachable("Shifted attribute handled separately");
+
   case attr::OpenCLPrivateAddressSpace:
   case attr::OpenCLGlobalAddressSpace:
   case attr::OpenCLGlobalDeviceAddressSpace:
@@ -1864,6 +1876,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
     break;
+  case attr::UserCall:
+    OS << "usercall";
+    break;
+  case attr::UserPurge:
+    OS << "userpurge";
+    break;
   }
   OS << "))";
 }
@@ -1875,6 +1893,17 @@ void TypePrinter::printBTFTagAttributedBefore(const BTFTagAttributedType *T,
 }
 
 void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
+                                             raw_ostream &OS) {
+  printAfter(T->getWrappedType(), OS);
+}
+
+void TypePrinter::printShiftedBefore(const ShiftedType *T,
+                                              raw_ostream &OS) {
+  printBefore(T->getWrappedType(), OS);
+  T->getAttr()->printPretty(OS, Policy);
+}
+
+void TypePrinter::printShiftedAfter(const ShiftedType *T,
                                              raw_ostream &OS) {
   printAfter(T->getWrappedType(), OS);
 }
