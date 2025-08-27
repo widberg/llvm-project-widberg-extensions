@@ -7347,6 +7347,11 @@ void TypeLocReader::VisitHLSLInlineSpirvTypeLoc(HLSLInlineSpirvTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocReader::VisitShiftedTypeLoc(ShiftedTypeLoc TL) {
+  // Nothing to do.
+}
+
+
 void TypeLocReader::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }

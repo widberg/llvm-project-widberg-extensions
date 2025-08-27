@@ -259,6 +259,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
+  mutable llvm::FoldingSet<ShiftedType> ShiftedTypes;
   llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
 
@@ -1841,6 +1842,9 @@ public:
                              QualType equivalentType);
 
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
+                                   QualType Wrapped) const;
+
+  QualType getShiftedType(const ShiftedAttr *SAttr,
                                    QualType Wrapped) const;
 
   QualType getHLSLAttributedResourceType(

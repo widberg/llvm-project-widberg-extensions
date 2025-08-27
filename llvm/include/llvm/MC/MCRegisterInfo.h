@@ -397,6 +397,19 @@ public:
     return RegStrings + get(RegNo).Name;
   }
 
+  /// Return the physical register for the specified human-readable 
+  /// symbolic target-specific name.
+  std::optional<MCRegister> getRegNo(StringRef Name) const {
+    for (unsigned RegNo = 0, e = getNumRegs(); RegNo < e; ++RegNo) {
+      const char *RegNoName = getName(RegNo);
+      if (Name.compare_insensitive(RegNoName) == 0) {
+        return MCRegister(RegNo);
+      }
+    }
+
+    return {};
+  }
+
   /// Returns true if the given register is constant.
   bool isConstant(MCRegister RegNo) const { return get(RegNo).IsConstant; }
 

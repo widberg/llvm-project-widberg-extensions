@@ -1717,6 +1717,10 @@ static unsigned getDwarfCC(CallingConv CC) {
     CC_VLS_CASE(65536)
 #undef CC_VLS_CASE
     return llvm::dwarf::DW_CC_LLVM_RISCVVLSCall;
+  case CC_UserCall:
+    return llvm::dwarf::DW_CC_LLVM_UserCall;
+  case CC_UserPurge:
+    return llvm::dwarf::DW_CC_LLVM_UserPurge;
   }
   return 0;
 }
@@ -3850,6 +3854,9 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::BTFTagAttributed:
       T = cast<BTFTagAttributedType>(T)->getWrappedType();
       break;
+    case Type::Shifted:
+      T = cast<ShiftedType>(T)->getWrappedType();
+      break;
     case Type::CountAttributed:
       T = cast<CountAttributedType>(T)->desugar();
       break;
@@ -4057,6 +4064,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:
+  case Type::Shifted:
   case Type::Adjusted:
   case Type::Decayed:
   case Type::DeducedTemplateSpecialization:
@@ -4357,7 +4365,7 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
 
   CallingConv CC = FD->getType()->castAs<FunctionType>()->getCallConv();
   QualType FnType = CGM.getContext().getFunctionType(
-      FD->getReturnType(), ArgTypes, FunctionProtoType::ExtProtoInfo(CC));
+      FD->getReturnType(), ArgTypes, FunctionProtoType::ExtProtoInfo(CC, FD->getWidbergReturnLocation()));
   if (!FD->isExternallyVisible())
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
   if (CGM.getLangOpts().Optimize)
@@ -4617,7 +4625,7 @@ CGDebugInfo::getFunctionType(const FunctionDecl *FD, QualType RetTy,
   for (const VarDecl *VD : Args)
     ArgTypes.push_back(VD->getType());
   return CGM.getContext().getFunctionType(RetTy, ArgTypes,
-                                          FunctionProtoType::ExtProtoInfo(CC));
+                                          FunctionProtoType::ExtProtoInfo(CC, FD ? FD->getWidbergReturnLocation() : nullptr));
 }
 
 void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,

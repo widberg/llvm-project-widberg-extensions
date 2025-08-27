@@ -1799,6 +1799,10 @@ bool CursorVisitor::VisitHLSLInlineSpirvTypeLoc(HLSLInlineSpirvTypeLoc TL) {
   return false;
 }
 
+bool CursorVisitor::VisitShiftedTypeLoc(ShiftedTypeLoc TL) {
+  return Visit(TL.getWrappedLoc());
+}
+
 bool CursorVisitor::VisitFunctionTypeLoc(FunctionTypeLoc TL,
                                          bool SkipResultType) {
   if (!SkipResultType && Visit(TL.getReturnLoc()))

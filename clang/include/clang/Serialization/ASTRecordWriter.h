@@ -141,6 +141,9 @@ public:
   /// Write an BTFTypeTagAttr object.
   void writeBTFTypeTagAttr(const BTFTypeTagAttr *A) { AddAttr(A); }
 
+  /// Write an ShiftedAttr object.
+  void writeShiftedAttr(const ShiftedAttr *A) { AddAttr(A); }
+
   /// Add a definition for the given function to the queue of statements
   /// to emit.
   void AddFunctionDefinition(const FunctionDecl *FD);

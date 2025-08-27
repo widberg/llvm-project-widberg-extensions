@@ -1594,6 +1594,8 @@ public:
   /// Determine whether the return value has the given attribute.
   bool hasRetAttr(StringRef Kind) const { return hasRetAttrImpl(Kind); }
 
+  Attribute getRetAttr(StringRef Kind) const { return getRetAttrImpl(Kind); }
+
   /// Return the attribute for the given attribute kind for the return value.
   Attribute getRetAttr(Attribute::AttrKind Kind) const {
     Attribute RetAttr = Attrs.getRetAttr(Kind);
@@ -2344,6 +2346,16 @@ private:
     if (const Function *F = getCalledFunction())
       return F->getAttributes().hasRetAttr(Kind);
     return false;
+  }
+
+  template <typename AttrKind> Attribute getRetAttrImpl(AttrKind Kind) const {
+    if (Attrs.hasRetAttr(Kind))
+      return Attrs.getRetAttr(Kind);
+
+    // Look at the callee, if available.
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getRetAttr(Kind);
+    return Attribute();
   }
 };
 

@@ -4717,6 +4717,8 @@ public:
     const ConstantInt *CFIType = nullptr;
     SDValue ConvergenceControlToken;
 
+    StringRef ReturnLocation;
+
     std::optional<PtrAuthInfo> PAI;
 
     CallLoweringInfo(SelectionDAG &DAG)
@@ -4752,6 +4754,7 @@ public:
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultType,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 AttributeSet ResultAttrs = {}) {
+      ReturnLocation = "";
       RetTy = ResultType;
       IsInReg = ResultAttrs.hasAttribute(Attribute::InReg);
       RetSExt = ResultAttrs.hasAttribute(Attribute::SExt);
@@ -4768,6 +4771,7 @@ public:
     CallLoweringInfo &setCallee(Type *ResultType, FunctionType *FTy,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 const CallBase &Call) {
+      ReturnLocation = Call.hasRetAttr("widberg_location") ? Call.getRetAttr("widberg_location").getValueAsString() : "";
       RetTy = ResultType;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);

@@ -312,6 +312,9 @@ namespace clang {
     CC_RISCVVLSCall_16384, // __attribute__((riscv_vls_cc(16384)))
     CC_RISCVVLSCall_32768, // __attribute__((riscv_vls_cc(32768)))
     CC_RISCVVLSCall_65536, // __attribute__((riscv_vls_cc(65536)))
+
+    CC_UserCall, // __attribute__((usercall))
+    CC_UserPurge, // __attribute__((userpurge))
   };
 
   /// Checks whether the given calling convention supports variadic
@@ -329,6 +332,7 @@ namespace clang {
     case CC_Swift:
     case CC_SwiftAsync:
     case CC_M68kRTD:
+    case CC_UserPurge:
       return false;
     default:
       return true;

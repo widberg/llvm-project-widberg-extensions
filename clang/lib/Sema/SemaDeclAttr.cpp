@@ -5374,6 +5374,12 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(::new (S.Context) RISCVVLSCCAttr(S.Context, AL, VectorLength));
     return;
   }
+  case ParsedAttr::AT_UserCall:
+    D->addAttr(::new (S.Context) UserCallAttr(S.Context, AL));
+    return;
+  case ParsedAttr::AT_UserPurge:
+    D->addAttr(::new (S.Context) UserPurgeAttr(S.Context, AL));
+    return;
   default:
     llvm_unreachable("unexpected attribute kind");
   }
@@ -5644,6 +5650,12 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     CC = CC_DeviceKernel;
     break;
   }
+  case ParsedAttr::AT_UserCall:
+    CC = CC_UserCall;
+    break;
+  case ParsedAttr::AT_UserPurge:
+    CC = CC_UserPurge;
+    break;
   default: llvm_unreachable("unexpected attribute kind");
   }
 
@@ -6958,6 +6970,25 @@ static void handleVTablePointerAuthentication(Sema &S, Decl *D,
       CustomDiscriminationValue));
 }
 
+static void handleSpoilsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  SmallVector<IdentifierInfo *, 4> SpoilsList;
+  for (unsigned ArgNo = 0; ArgNo < getNumAttributeArgs(AL); ++ArgNo) {
+    if (!AL.isArgIdent(ArgNo)) {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+      return;
+    }
+
+    IdentifierLoc *RegisterArg = AL.getArgAsIdent(ArgNo);
+    // StringRef CPUName = RegisterArg->Ident->getName().trim();
+
+    SpoilsList.push_back(RegisterArg->getIdentifierInfo());
+  }
+
+  D->addAttr(::new (S.Context)
+                 SpoilsAttr(S.Context, AL, SpoilsList.data(), SpoilsList.size()));
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -7558,6 +7589,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_PreserveNone:
   case ParsedAttr::AT_RISCVVectorCC:
   case ParsedAttr::AT_RISCVVLSCC:
+  case ParsedAttr::AT_UserCall:
+  case ParsedAttr::AT_UserPurge:
     handleCallConvAttr(S, D, AL);
     break;
   case ParsedAttr::AT_DeviceKernel:
@@ -7881,6 +7914,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_VTablePointerAuthentication:
     handleVTablePointerAuthentication(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_Spoils:
+    handleSpoilsAttr(S, D, AL);
     break;
   }
 }

@@ -28478,7 +28478,9 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
     default:
       llvm_unreachable("Unsupported calling convention");
     case CallingConv::C:
-    case CallingConv::X86_StdCall: {
+    case CallingConv::X86_StdCall:
+    case CallingConv::UserCall:
+    case CallingConv::UserPurge: {
       // Pass 'nest' parameter in ECX.
       // Must be kept in sync with X86CallingConv.td
       NestReg = X86::ECX;
@@ -28497,6 +28499,9 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
             const DataLayout &DL = DAG.getDataLayout();
             // FIXME: should only count parameters that are lowered to integers.
             InRegCount += (DL.getTypeSizeInBits(*I) + 31) / 32;
+          } else if (Attrs.hasParamAttr(Idx, "widberg_location")) {
+            report_fatal_error("Nest register in use - dont use ecx"
+                               " parameter-register!");
           }
 
         if (InRegCount > 2) {

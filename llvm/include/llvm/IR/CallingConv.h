@@ -284,6 +284,12 @@ namespace CallingConv {
     RISCV_VLSCall_32768 = 122,
     RISCV_VLSCall_65536 = 123,
 
+    /// UserCall
+    UserCall = 125,
+
+    /// UserPurge
+    UserPurge = 126,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };
