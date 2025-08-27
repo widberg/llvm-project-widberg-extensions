@@ -682,6 +682,7 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_object);
     REVERTIBLE_TYPE_TRAIT(__is_pod);
     REVERTIBLE_TYPE_TRAIT(__is_pointer);
+    REVERTIBLE_TYPE_TRAIT(__is_shifted);
     REVERTIBLE_TYPE_TRAIT(__is_polymorphic);
     REVERTIBLE_TYPE_TRAIT(__is_reference);
     REVERTIBLE_TYPE_TRAIT(__is_rvalue_expr);
@@ -1219,6 +1220,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   // unary-expression: '__datasizeof' unary-expression
   // unary-expression: '__datasizeof' '(' type-name ')'
   case tok::kw___datasizeof:
+  case tok::kw___deltaof:
   case tok::kw_vec_step:   // unary-expression: OpenCL 'vec_step' expression
   // unary-expression: '__builtin_omp_required_simd_align' '(' type-name ')'
   case tok::kw___builtin_omp_required_simd_align:
@@ -1346,6 +1348,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw_auto:
   case tok::kw_typename:
   case tok::kw_typeof:
+  case tok::kw___parentof:
   case tok::kw___vector:
   case tok::kw__Accum:
   case tok::kw__Fract:
@@ -2088,7 +2091,8 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
                        tok::kw___datasizeof, tok::kw___alignof, tok::kw_alignof,
                        tok::kw__Alignof, tok::kw_vec_step,
                        tok::kw___builtin_omp_required_simd_align,
-                       tok::kw___builtin_vectorelements, tok::kw__Countof) &&
+                       tok::kw___builtin_vectorelements, tok::kw__Countof,
+                       tok::kw___parentof, tok::kw___deltaof) &&
          "Not a typeof/sizeof/alignof/vec_step expression!");
 
   ExprResult Operand;
@@ -2098,7 +2102,7 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     // If construct allows a form without parenthesis, user may forget to put
     // pathenthesis around type name.
     if (OpTok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
-                      tok::kw_alignof, tok::kw__Alignof)) {
+                      tok::kw_alignof, tok::kw__Alignof, tok::kw___deltaof)) {
       if (isTypeIdUnambiguously()) {
         DeclSpec DS(AttrFactory);
         ParseSpecifierQualifierList(DS);
@@ -2223,7 +2227,8 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
                      tok::kw_alignof, tok::kw__Alignof, tok::kw_vec_step,
                      tok::kw___builtin_omp_required_simd_align,
-                     tok::kw___builtin_vectorelements, tok::kw__Countof) &&
+                     tok::kw___builtin_vectorelements, tok::kw__Countof,
+                     tok::kw___deltaof) &&
          "Not a sizeof/alignof/vec_step expression!");
   Token OpTok = Tok;
   ConsumeToken();
@@ -2321,6 +2326,9 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     assert(!getLangOpts().CPlusPlus && "_Countof in C++ mode?");
     if (!getLangOpts().C2y)
       Diag(OpTok, diag::ext_c2y_feature) << OpTok.getName();
+    break;
+  case tok::kw___deltaof:
+    ExprKind = UETT_DeltaOf;
     break;
   default:
     break;

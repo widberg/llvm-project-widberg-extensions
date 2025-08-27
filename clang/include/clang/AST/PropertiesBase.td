@@ -84,6 +84,7 @@ def BuiltinTypeKind : EnumPropertyType<"BuiltinType::Kind">;
 def BTFTypeTagAttr : PropertyType<"const BTFTypeTagAttr *">;
 def OverflowBehaviorKind
     : EnumPropertyType<"OverflowBehaviorType::OverflowBehaviorKind">;
+def ShiftedAttr : PropertyType<"const ShiftedAttr *">;
 def CallingConv : EnumPropertyType;
 def DeclarationName : PropertyType;
 def DeclarationNameKind : EnumPropertyType<"DeclarationName::NameKind">;

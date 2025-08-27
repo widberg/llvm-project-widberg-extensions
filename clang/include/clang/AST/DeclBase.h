@@ -64,6 +64,7 @@ class Stmt;
 class StoredDeclsMap;
 class TemplateDecl;
 class TemplateParameterList;
+class WidbergLocation;
 class TranslationUnitDecl;
 class UsingDirectiveDecl;
 
@@ -289,6 +290,9 @@ private:
   /// Loc - The location of this decl.
   SourceLocation Loc;
 
+  WidbergLocation *WidLoc = nullptr;
+  WidbergLocation *WidRetLoc = nullptr;
+
   /// DeclKind - This indicates which class this is.
   LLVM_PREFERRED_TYPE(Kind)
   unsigned DeclKind : 7;
@@ -399,7 +403,7 @@ public:
 protected:
   Decl(Kind DK, DeclContext *DC, SourceLocation L)
       : NextInContextAndBits(nullptr, getModuleOwnershipKindForChildOf(DC)),
-        DeclCtx(DC), Loc(L), DeclKind(DK), InvalidDecl(false), HasAttrs(false),
+        DeclCtx(DC), Loc(L), WidLoc(nullptr), WidRetLoc(nullptr), DeclKind(DK), InvalidDecl(false), HasAttrs(false),
         Implicit(false), Used(false), Referenced(false),
         TopLevelDeclInObjCContainer(false), Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
@@ -408,7 +412,7 @@ protected:
   }
 
   Decl(Kind DK, EmptyShell Empty)
-      : DeclKind(DK), InvalidDecl(false), HasAttrs(false), Implicit(false),
+      : WidLoc(nullptr), WidRetLoc(nullptr), DeclKind(DK), InvalidDecl(false), HasAttrs(false), Implicit(false),
         Used(false), Referenced(false), TopLevelDeclInObjCContainer(false),
         Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
@@ -446,6 +450,12 @@ public:
 
   SourceLocation getLocation() const { return Loc; }
   void setLocation(SourceLocation L) { Loc = L; }
+
+  WidbergLocation *getWidbergLocation() const { return WidLoc; };
+  void setWidbergLocation(WidbergLocation *WL) { WidLoc = WL; };
+
+  WidbergLocation *getWidbergReturnLocation() const { return WidRetLoc; };
+  void setWidbergReturnLocation(WidbergLocation *WL) { WidRetLoc = WL; };
 
   Kind getKind() const { return static_cast<Kind>(DeclKind); }
   const char *getDeclKindName() const;

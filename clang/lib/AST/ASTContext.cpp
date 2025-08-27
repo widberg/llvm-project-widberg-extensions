@@ -2523,6 +2523,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     return getTypeInfo(
         cast<OverflowBehaviorType>(T)->getUnderlyingType().getTypePtr());
 
+  case Type::Shifted:
+    return getTypeInfo(
+        cast<ShiftedType>(T)->getWrappedType().getTypePtr());
+
   case Type::HLSLAttributedResource:
     return getTypeInfo(
         cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr());
@@ -3707,6 +3711,12 @@ ASTContext::adjustType(QualType Orig,
     const auto *OB = dyn_cast<OverflowBehaviorType>(Orig);
     return getOverflowBehaviorType(OB->getBehaviorKind(),
                                    adjustType(OB->getUnderlyingType(), Adjust));
+  }
+
+  case Type::Shifted: {
+    const auto *Shifted = dyn_cast<ShiftedType>(Orig);
+    return getShiftedType(Shifted->getAttr(),
+                                   adjustType(Shifted->getWrappedType(), Adjust));
   }
 
   case Type::Paren:
@@ -5786,6 +5796,26 @@ QualType ASTContext::getOverflowBehaviorType(
 
   Types.push_back(Ty);
   OverflowBehaviorTypes.InsertNode(Ty, InsertPos);
+  return QualType(Ty, 0);
+}
+
+QualType ASTContext::getShiftedType(const ShiftedAttr *SAttr,
+                                             QualType Wrapped) const {
+  llvm::FoldingSetNodeID ID;
+  ShiftedType::Profile(ID, Wrapped, SAttr);
+
+  void *InsertPos = nullptr;
+  ShiftedType *Ty =
+      ShiftedTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (Ty)
+    return QualType(Ty, 0);
+
+  QualType Canon = getCanonicalType(Wrapped);
+  Ty = new (*this, alignof(ShiftedType)) ShiftedType(Canon, Wrapped, SAttr);
+
+  Types.push_back(Ty);
+  ShiftedTypes.InsertNode(Ty, InsertPos);
+
   return QualType(Ty, 0);
 }
 
@@ -12934,7 +12964,7 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
 
   bool Variadic = (TypeStr[0] == '.');
 
-  FunctionType::ExtInfo EI(Target->getDefaultCallingConv());
+  FunctionType::ExtInfo EI(Target->getDefaultCallingConv(), nullptr);
   if (BuiltinInfo.isNoReturn(Id))
     EI = EI.withNoReturn(true);
 
@@ -14663,6 +14693,12 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
         cast<BTFTagAttributedType>(Y)->getAttr()->getBTFTypeTag())
       return QualType();
     return Ctx.getBTFTagAttributedType(AX, Ctx.getQualifiedType(Underlying));
+  }
+  case Type::Shifted: {
+    const ShiftedAttr *AX = cast<ShiftedType>(X)->getAttr(), *AY = cast<ShiftedType>(Y)->getAttr();
+    if (!Ctx.hasSameType(AX->getParent(), AY->getParent()) || !Ctx.hasSameExpr(AX->getDelta(), AY->getDelta()))
+      return QualType();
+    return Ctx.getShiftedType(AX, Ctx.getQualifiedType(Underlying));
   }
   case Type::Auto: {
     const auto *AX = cast<AutoType>(X), *AY = cast<AutoType>(Y);

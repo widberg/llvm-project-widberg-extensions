@@ -1,0 +1,24 @@
+name: Widberg Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Build
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - uses: ilammy/msvc-dev-cmd@v1.12.0
+    - name: Build
+      run: |
+           cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86"
+           cmake --build build --config RelWithDebInfo --target vt_gen
+           cmake --build build --config RelWithDebInfo --target clang
+
+    - name: Archive Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: widberg-windows-x86_64-${{ github.sha }}
+        path: ./build/bin/clang-cl.exe

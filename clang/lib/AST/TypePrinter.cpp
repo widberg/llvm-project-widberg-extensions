@@ -243,6 +243,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::BitInt:
     case Type::DependentBitInt:
     case Type::BTFTagAttributed:
+    case Type::Shifted:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
     case Type::PredefinedSugar:
@@ -1196,6 +1197,12 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
       CC_VLS_CASE(32768)
       CC_VLS_CASE(65536)
 #undef CC_VLS_CASE
+    case CC_UserCall:
+      OS << "__attribute__((usercall))";
+      break;
+    case CC_UserPurge:
+      OS << "__attribute__((userpurge))";
+      break;
     }
   }
 
@@ -1210,6 +1217,8 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
        << Info.getRegParm() << ")))";
   if (Info.getNoCallerSavedRegs())
     OS << " __attribute__((no_caller_saved_registers))";
+  if (Info.getNoCalleeSavedRegs())
+    OS << " __attribute__((no_callee_saved_registers))";
   if (Info.getNoCfCheck())
     OS << " __attribute__((nocf_check))";
 }
@@ -1984,6 +1993,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::BTFTypeTag:
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
+  case attr::Shifted:
+    llvm_unreachable("Shifted attribute handled separately");
+
   case attr::HLSLResourceClass:
   case attr::HLSLROV:
   case attr::HLSLRawBuffer:
@@ -2043,6 +2055,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PreserveMost:
   case attr::PreserveNone:
   case attr::OverflowBehavior:
+  case attr::Spoils:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -2111,6 +2124,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PointerFieldProtection:
     OS << "pointer_field_protection";
     break;
+  case attr::UserCall:
+    OS << "usercall";
+    break;
+  case attr::UserPurge:
+    OS << "userpurge";
+    break;
   }
   OS << "))";
 }
@@ -2142,6 +2161,17 @@ void TypePrinter::printOverflowBehaviorBefore(const OverflowBehaviorType *T,
 void TypePrinter::printOverflowBehaviorAfter(const OverflowBehaviorType *T,
                                              raw_ostream &OS) {
   printAfter(T->getUnderlyingType(), OS);
+}
+
+void TypePrinter::printShiftedBefore(const ShiftedType *T,
+                                              raw_ostream &OS) {
+  printBefore(T->getWrappedType(), OS);
+  T->getAttr()->printPretty(OS, Policy);
+}
+
+void TypePrinter::printShiftedAfter(const ShiftedType *T,
+                                             raw_ostream &OS) {
+  printAfter(T->getWrappedType(), OS);
 }
 
 void TypePrinter::printHLSLAttributedResourceBefore(

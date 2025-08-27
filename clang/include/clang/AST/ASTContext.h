@@ -298,6 +298,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
+  mutable llvm::FoldingSet<ShiftedType> ShiftedTypes;
   llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
 
@@ -1961,6 +1962,9 @@ public:
 
   QualType
   getOverflowBehaviorType(OverflowBehaviorType::OverflowBehaviorKind Kind,
+                          QualType Wrapped) const;
+
+  QualType getShiftedType(const ShiftedAttr *SAttr,
                           QualType Wrapped) const;
 
   QualType getHLSLAttributedResourceType(

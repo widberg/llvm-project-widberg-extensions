@@ -451,6 +451,9 @@ public:
   void VisitOverflowBehaviorType(const OverflowBehaviorType *T) {
     Visit(T->getUnderlyingType());
   }
+  void VisitShiftedType(const ShiftedType *T) {
+    Visit(T->getWrappedType());
+  }
   void VisitHLSLAttributedResourceType(const HLSLAttributedResourceType *T) {
     QualType Contained = T->getContainedType();
     if (!Contained.isNull())

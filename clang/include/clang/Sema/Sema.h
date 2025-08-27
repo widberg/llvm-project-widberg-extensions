@@ -196,6 +196,7 @@ class TypoCorrectionConsumer;
 class UnresolvedSetImpl;
 class UnresolvedSetIterator;
 class VisibleDeclConsumer;
+class WidbergLocation;
 
 namespace sema {
 class BlockScopeInfo;
@@ -5608,6 +5609,8 @@ public:
       Decl *D, ExceptionSpecificationType EST, SourceRange SpecificationRange,
       ArrayRef<ParsedType> DynamicExceptions,
       ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr);
+
+  void ActOnWidbergLocation(Declarator &D, SourceLocation ATLoc, SourceLocation LAngleLoc, ArrayRef<IdentifierLoc *> RegisterIdentifiers, SourceLocation RAngleLoc);
 
   class InheritedConstructorInfo;
 

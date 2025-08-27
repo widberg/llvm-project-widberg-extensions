@@ -171,6 +171,7 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
     }
     [[fallthrough]];
   case tok::kw_typeof:
+  case tok::kw___parentof:
   case tok::kw___attribute:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
 #include "clang/Basic/TransformTypeTraits.def"
@@ -936,7 +937,8 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
       // '(' abstract-declarator ')'
       if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec, tok::kw___cdecl,
                       tok::kw___stdcall, tok::kw___fastcall, tok::kw___thiscall,
-                      tok::kw___regcall, tok::kw___vectorcall))
+                      tok::kw___regcall, tok::kw___vectorcall, tok::kw___usercall,
+                      tok::kw___userpurge))
         return TPResult::True; // attributes indicate declaration
       TPResult TPR = TryParseDeclarator(mayBeAbstract, mayHaveIdentifier);
       if (TPR != TPResult::Ambiguous)
@@ -1279,6 +1281,11 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw___kindof:
     return TPResult::True;
 
+    // Widberg
+  case tok::kw___usercall:
+  case tok::kw___userpurge:
+    return TPResult::True;
+
     // WebAssemblyFuncref
   case tok::kw___funcref:
     return TPResult::True;
@@ -1544,6 +1551,28 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     return TPResult::True;
   }
 
+  case tok::kw___parentof: {
+    if (NextToken().isNot(tok::l_paren))
+      return TPResult::True;
+
+    RevertingTentativeParsingAction PA(*this);
+
+    TPResult TPR = TryParseParentofSpecifier();
+    bool isFollowedByParen = Tok.is(tok::l_paren);
+    bool isFollowedByBrace = Tok.is(tok::l_brace);
+
+    if (TPR == TPResult::Error)
+      return TPResult::Error;
+
+    if (isFollowedByParen)
+      return TPResult::Ambiguous;
+
+    if (getLangOpts().CPlusPlus11 && isFollowedByBrace)
+      return BracedCastResult;
+
+    return TPResult::True;
+  }
+
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
 #include "clang/Basic/TransformTypeTraits.def"
     return TPResult::True;
@@ -1587,6 +1616,7 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   case tok::annot_template_id:
   case tok::annot_typename:
   case tok::kw_typeof:
+  case tok::kw___parentof:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
 #include "clang/Basic/TransformTypeTraits.def"
     return true;
@@ -1652,6 +1682,19 @@ Parser::TPResult Parser::TryParseTypeofSpecifier() {
 
   assert(Tok.is(tok::l_paren) && "Expected '('");
   // Parse through the parens after 'typeof'.
+  ConsumeParen();
+  if (!SkipUntil(tok::r_paren, StopAtSemi))
+    return TPResult::Error;
+
+  return TPResult::Ambiguous;
+}
+
+Parser::TPResult Parser::TryParseParentofSpecifier() {
+  assert(Tok.is(tok::kw___parentof) && "Expected '__parentof'!");
+  ConsumeToken();
+
+  assert(Tok.is(tok::l_paren) && "Expected '('");
+  // Parse through the parens after '__parentof'.
   ConsumeParen();
   if (!SkipUntil(tok::r_paren, StopAtSemi))
     return TPResult::Error;
