@@ -675,7 +675,11 @@ bool X86TargetLowering::CanLowerReturn(
   return CCInfo.CheckReturn(Outs, RetCC_X86);
 }
 
-const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID) const {
+const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID CC) const {
+  static const MCPhysReg UserCallScratchRegs[] = { 0 };
+  if (CC == CallingConv::UserCall || CC == CallingConv::UserPurge)
+    return UserCallScratchRegs;
+
   static const MCPhysReg ScratchRegs[] = { X86::R11, 0 };
   return ScratchRegs;
 }
@@ -1285,6 +1289,8 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::X86_StdCall:
   case CallingConv::X86_VectorCall:
   case CallingConv::X86_FastCall:
+  case CallingConv::UserCall:
+  case CallingConv::UserPurge:
   // Swift:
   case CallingConv::Swift:
     return true;
@@ -2047,6 +2053,27 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (IsNoTrackIndirectCall)
     isTailCall = false;
 
+  for (auto& f : Ins) {
+    if (CallConv == CallingConv::UserCall || CallConv == CallingConv::UserPurge) {
+      SmallVector<StringRef, 2> Registers;
+      CLI.ReturnLocation.split(Registers, ',');
+
+      SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+      for (StringRef reg : Registers) {
+        std::optional<MCRegister> PhysReg =
+            DAG.getMMI()->getTarget().getMCRegisterInfo()->getRegNo(reg);
+
+        if (PhysReg) {
+          MCRegisters.push_back(*PhysReg);
+        } else {
+          llvm_unreachable("Target lowering: Bad register");
+        }
+      }
+      f.Flags.setLocation(MCRegisters);
+    }
+  }
+
   MachineFunction::CallSiteInfo CSInfo;
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
@@ -2068,6 +2095,30 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Allocate shadow area for Win64.
   if (IsWin64)
     CCInfo.AllocateStack(32, Align(8));
+
+  for (auto& f : Outs) {
+    if (CallConv == CallingConv::UserCall || CallConv == CallingConv::UserPurge) {
+      if (CLI.CB->getAttributes().hasParamAttr(f.OrigArgIndex, "widberg_location")) {
+        SmallVector<StringRef, 2> Registers;
+        CLI.CB->getAttributes().getParamAttr(f.OrigArgIndex, "widberg_location")
+            .getValueAsString().split(Registers, ',');
+
+        SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+        for (StringRef reg : Registers) {
+          std::optional<MCRegister> PhysReg =
+              DAG.getMMI()->getTarget().getMCRegisterInfo()->getRegNo(reg);
+
+          if (PhysReg) {
+            MCRegisters.push_back(*PhysReg);
+          } else {
+            llvm_unreachable("Target lowering: Bad register");
+          }
+        }
+        f.Flags.setLocation(MCRegisters);
+      }
+    }
+  }
 
   CCInfo.AnalyzeArguments(Outs, CC_X86);
 
@@ -2482,6 +2533,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (CB && CB->hasFnAttr("no_callee_saved_registers"))
       AdaptedCC = (CallingConv::ID)CallingConv::GHC;
     return RegInfo->getCallPreservedMask(MF, AdaptedCC);
+
+    // spoils
   }();
   assert(Mask && "Missing call preserved mask for calling convention");
 
@@ -3021,6 +3074,7 @@ bool X86::isCalleePop(CallingConv::ID CallingConv,
   case CallingConv::X86_FastCall:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_VectorCall:
+  case CallingConv::UserCall:
     return !is64Bit;
   }
 }

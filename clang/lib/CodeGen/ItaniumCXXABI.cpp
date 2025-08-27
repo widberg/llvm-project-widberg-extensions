@@ -2946,7 +2946,7 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
 
   const auto &Context = CGF.CGM.getContext();
   FunctionProtoType::ExtProtoInfo EPI(Context.getDefaultCallingConvention(
-      /*IsVariadic=*/false, /*IsCXXMethod=*/false));
+      /*IsVariadic=*/false, /*IsCXXMethod=*/false), nullptr);
   QualType fnType =
       Context.getFunctionType(Context.VoidTy, {Context.VoidPtrTy}, EPI);
   llvm::Constant *dtorCallee = cast<llvm::Constant>(dtor.getCallee());

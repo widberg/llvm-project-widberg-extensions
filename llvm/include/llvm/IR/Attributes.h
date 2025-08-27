@@ -631,6 +631,15 @@ public:
   /// Add a return value attribute to the list. Returns a new list because
   /// attribute lists are immutable.
   [[nodiscard]] AttributeList addRetAttribute(LLVMContext &C,
+                                               StringRef Kind,
+                                               StringRef Value = 
+                                               StringRef()) const {
+    return addAttributeAtIndex(C, ReturnIndex, Kind, Value);
+  }
+
+  /// Add a return value attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  [[nodiscard]] AttributeList addRetAttribute(LLVMContext &C,
                                               Attribute Attr) const {
     return addAttributeAtIndex(C, ReturnIndex, Attr);
   }
@@ -917,6 +926,11 @@ public:
 
   /// Return the attribute for the given attribute kind for the return value.
   Attribute getRetAttr(Attribute::AttrKind Kind) const {
+    return getAttributeAtIndex(ReturnIndex, Kind);
+  }
+
+  /// Return the attribute for the given attribute kind for the return value.
+  Attribute getRetAttr(StringRef Kind) const {
     return getAttributeAtIndex(ReturnIndex, Kind);
   }
 

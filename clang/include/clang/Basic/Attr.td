@@ -424,6 +424,7 @@ class LangOpt<string name, code customCode = [{}]> {
   // "LangOpts" bound.
   code CustomCode = customCode;
 }
+def WidbergExt : LangOpt<"WidbergExt">;
 def MicrosoftExt : LangOpt<"MicrosoftExt">;
 def Borland : LangOpt<"Borland">;
 def CUDA : LangOpt<"CUDA">;
@@ -3885,6 +3886,13 @@ def AnyX86NoCallerSavedRegisters : InheritableAttr,
   let SimpleHandler = 1;
 }
 
+def AnyX86NoCalleeSavedRegisters : InheritableAttr,
+                                   TargetSpecificAttr<TargetAnyX86> {
+  let Spellings = [GCC<"no_callee_saved_registers">];
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}
+
 def AnyX86NoCfCheck : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86>{
   let Spellings = [GCC<"nocf_check">];
   let Subjects = SubjectList<[FunctionLike]>;
@@ -5252,4 +5260,26 @@ def NonString : InheritableAttr {
   let Spellings = [GCC<"nonstring">];
   let Subjects = SubjectList<[Var, Field]>;
   let Documentation = [NonStringDocs];
+}
+
+def UserCall : DeclOrTypeAttr {
+  let Spellings = [GCC<"usercall">, CustomKeyword<"__usercall">, CustomKeyword<"_usercall">];
+  let Documentation = [Undocumented];
+}
+
+def UserPurge : DeclOrTypeAttr {
+  let Spellings = [GCC<"userpurge">, CustomKeyword<"__userpurge">, CustomKeyword<"_userpurge">];
+  let Documentation = [Undocumented];
+}
+
+def Spoils : DeclOrTypeAttr {
+  let Spellings = [GCC<"spoils">, CustomKeyword<"__spoils">, CustomKeyword<"_spoils">];
+  let Args = [VariadicIdentifierArgument<"SpoilsList">];
+  let Documentation = [Undocumented];
+}
+
+def Shifted : TypeAttr {
+  let Spellings = [GCC<"shifted">, CustomKeyword<"__shifted">, CustomKeyword<"_shifted">];
+  let Args = [TypeArgument<"Parent">, ExprArgument<"Delta">];
+  let Documentation = [Undocumented];
 }

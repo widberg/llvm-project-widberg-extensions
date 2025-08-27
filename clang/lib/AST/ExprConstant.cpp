@@ -15574,6 +15574,20 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     }
     return Success(Sizeof, E);
   }
+
+  case UETT_DeltaOf: {
+    QualType SrcTy = E->getTypeOfArgument();
+
+    const ShiftedType *Shi = SrcTy->getAs<ShiftedType>();
+    if (!Shi)
+      return false;
+
+    APSInt Result;
+    if (!EvaluateInteger(Shi->getAttr()->getDelta(), Result, Info))
+      return false;
+    return Success(Result.getSExtValue(), E);
+  }
+
   case UETT_OpenMPRequiredSimdAlign:
     assert(E->isArgumentType());
     return Success(

@@ -980,6 +980,127 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
   }
 }
 
+void Parser::ParseWidbergTypeAttributes(ParsedAttributes &attrs) {
+  // Treat these like attributes
+  while (true) {
+    auto Kind = Tok.getKind();
+    switch (Kind) {
+    case tok::kw___usercall:
+    case tok::kw___userpurge: {
+      IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+      SourceLocation AttrNameLoc = ConsumeToken();
+      attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(nullptr, AttrNameLoc), nullptr, 0,
+                   Kind);
+      break;
+    }
+    default:
+      return;
+    }
+  }
+}
+
+void Parser::ParseWidbergSpoils(ParsedAttributes &Attrs,
+                                     SourceLocation *EndLoc) {
+
+    assert(getLangOpts().WidbergExt && "__spoils keyword is not enabled");
+    assert(Tok.is(tok::kw___spoils) && "Not a spoils!");
+
+    while (Tok.is(tok::kw___spoils)) {
+      IdentifierInfo *KWName = Tok.getIdentifierInfo();
+      SourceLocation KWLoc = ConsumeToken();
+
+      ArgsVector RegisterNames;
+
+      if (ExpectAndConsume(tok::less, diag::err_expected_less_after, KWName->getName()))
+        return;
+
+      while (Tok.isNot(tok::greater)) {
+        // Attribute not present.
+        if (TryConsumeToken(tok::comma))
+          continue;
+
+        if (Tok.getKind() != tok::identifier) {
+          Diag(Tok, diag::err_widberg_spoils_type);
+          SkipUntil(tok::greater);
+          return;
+        }
+
+        RegisterNames.push_back(ParseIdentifierLoc());
+      }
+
+      SourceLocation RAngleBracketLoc = Tok.getLocation();
+
+      if (ExpectAndConsume(tok::greater))
+        return;
+
+      if (EndLoc)
+        *EndLoc = RAngleBracketLoc;
+
+      Attrs.addNew(KWName, KWLoc, AttributeScopeInfo(nullptr, KWLoc), RegisterNames.data(), RegisterNames.size(), tok::kw___spoils);
+
+    }
+}
+
+void Parser::ParseWidbergShifted(ParsedAttributes &Attrs,
+                                     SourceLocation *EndLoc) {
+
+  assert(getLangOpts().WidbergExt && "__shifted keyword is not enabled");
+  assert(Tok.is(tok::kw___shifted) && "Not a spoils!");
+
+  IdentifierInfo *KWName = Tok.getIdentifierInfo();
+  SourceLocation KWLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return;
+
+  TypeResult ParentName = ParseTypeName();
+  if (ParentName.isInvalid()) {
+    T.skipToEnd();
+    return;
+  }
+
+  ExpectAndConsume(tok::comma);
+
+  ExprResult DeltaExpr = ParseConstantExpression();
+  if (DeltaExpr.isInvalid()) {
+    T.skipToEnd();
+    return;
+  }
+
+  T.consumeClose();
+  if (EndLoc)
+    *EndLoc = T.getCloseLocation();
+
+  Attrs.addNewShifted(KWName, KWLoc, AttributeScopeInfo(nullptr, KWLoc), ParentName.get(), DeltaExpr.get(), tok::kw___shifted);
+}
+
+bool Parser::TryParseWidbergLocation(SourceLocation &ATLoc, SourceLocation &LAngleLoc, SmallVector<IdentifierLoc*, 2> &RegisterIdentifiers, SourceLocation &RAngleLoc) {
+  assert(getLangOpts().WidbergExt && "registers not enabled");
+  assert(Tok.is(tok::at) && "Not an at!");
+  assert(NextToken().is(tok::less) && "Not a less!");
+
+  ATLoc = ConsumeToken();
+  LAngleLoc = ConsumeToken();
+
+  while (Tok.isNot(tok::greater)) {
+    if (TryConsumeToken(tok::colon))
+      continue;
+
+    if (Tok.getKind() != tok::identifier) {
+      Diag(Tok, diag::err_widberg_spoils_type);
+      SkipUntil(tok::greater);
+      return false;
+    }
+
+    RegisterIdentifiers.push_back(ParseIdentifierLoc());
+  }
+
+  RAngleLoc = ConsumeToken();
+
+  return true;
+}
+
 void Parser::ParseWebAssemblyFuncrefTypeAttribute(ParsedAttributes &attrs) {
   assert(Tok.is(tok::kw___funcref));
   SourceLocation StartLoc = Tok.getLocation();
@@ -1023,6 +1144,31 @@ SourceLocation Parser::SkipExtendedMicrosoftTypeAttributes() {
     case tok::kw___unaligned:
     case tok::kw___sptr:
     case tok::kw___uptr:
+      EndLoc = ConsumeToken();
+      break;
+    default:
+      return EndLoc;
+    }
+  }
+}
+
+void Parser::DiagnoseAndSkipExtendedWidbergTypeAttributes() {
+  SourceLocation StartLoc = Tok.getLocation();
+  SourceLocation EndLoc = SkipExtendedWidbergTypeAttributes();
+
+  if (EndLoc.isValid()) {
+    SourceRange Range(StartLoc, EndLoc);
+    Diag(StartLoc, diag::warn_microsoft_qualifiers_ignored) << Range;
+  }
+}
+
+SourceLocation Parser::SkipExtendedWidbergTypeAttributes() {
+  SourceLocation EndLoc;
+
+  while (true) {
+    switch (Tok.getKind()) {
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
       EndLoc = ConsumeToken();
       break;
     default:
@@ -2399,6 +2545,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     // MSVC parses but ignores qualifiers after the comma as an extension.
     if (getLangOpts().MicrosoftExt)
       DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
+
+    // Widberg parses but ignores qualifiers after the comma as an extension.
+    if (getLangOpts().WidbergExt)
+      DiagnoseAndSkipExtendedWidbergTypeAttributes();
 
     ParseDeclarator(D);
 
@@ -4029,6 +4179,20 @@ void Parser::ParseDeclarationSpecifiers(
       ParseMicrosoftTypeAttributes(DS.getAttributes());
       continue;
 
+    // Widberg
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
+      ParseWidbergTypeAttributes(DS.getAttributes());
+      continue;
+
+    case tok::kw___spoils:
+      MaybeParseWidbergSpoils(DS.getAttributes());
+      continue;
+    
+    case tok::kw___shifted:
+      MaybeParseWidbergShifted(DS.getAttributes());
+      continue;
+
     case tok::kw___funcref:
       ParseWebAssemblyFuncrefTypeAttribute(DS.getAttributes());
       continue;
@@ -4499,6 +4663,10 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw_typeof:
     case tok::kw_typeof_unqual:
       ParseTypeofSpecifier(DS);
+      continue;
+
+    case tok::kw___parentof:
+      ParseParentofSpecifier(DS);
       continue;
 
     case tok::annot_decltype:
@@ -5575,6 +5743,8 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_typeof:
   case tok::kw_typeof_unqual:
 
+  case tok::kw___parentof:
+
     // type-specifiers
   case tok::kw_short:
   case tok::kw_long:
@@ -5650,6 +5820,11 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___pascal:
   case tok::kw___unaligned:
   case tok::kw___ptrauth:
+
+  case tok::kw___usercall:
+  case tok::kw___userpurge:
+  case tok::kw___spoils:
+  case tok::kw___shifted:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -5860,6 +6035,8 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_typeof:
   case tok::kw_typeof_unqual:
 
+  case tok::kw___parentof:
+
     // GNU attributes.
   case tok::kw___attribute:
 
@@ -5932,6 +6109,11 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___pascal:
   case tok::kw___unaligned:
   case tok::kw___ptrauth:
+
+  case tok::kw___usercall:
+  case tok::kw___userpurge:
+  case tok::kw___spoils:
+  case tok::kw___shifted:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -6217,6 +6399,25 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___vectorcall:
       if (AttrReqs & AR_DeclspecAttributesParsed) {
         ParseMicrosoftTypeAttributes(DS.getAttributes());
+        continue;
+      }
+      goto DoneWithTypeQuals;
+    case tok::kw___usercall:
+    case tok::kw___userpurge:
+      if (AttrReqs & AR_DeclspecAttributesParsed) {
+        ParseWidbergTypeAttributes(DS.getAttributes());
+        continue;
+      }
+      goto DoneWithTypeQuals;
+    case tok::kw___spoils:
+      if (AttrReqs & AR_DeclspecAttributesParsed) {
+        MaybeParseWidbergSpoils(DS.getAttributes());
+        continue;
+      }
+      goto DoneWithTypeQuals;
+    case tok::kw___shifted:
+      if (AttrReqs & AR_DeclspecAttributesParsed) {
+        MaybeParseWidbergShifted(DS.getAttributes());
         continue;
       }
       goto DoneWithTypeQuals;
@@ -6805,6 +7006,15 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   assert(D.isPastIdentifier() &&
          "Haven't past the location of the identifier yet?");
 
+  if (Tok.is(tok::at) && NextToken().is(tok::less) && getLangOpts().WidbergExt) {
+    SourceLocation ATLoc;
+    SourceLocation LAngleLoc, RAngleLoc;
+    SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
+    if (TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc)) {
+      Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+    }
+  }
+
   // Don't parse attributes unless we have parsed an unparenthesized name.
   if (D.hasName() && !D.getNumTypeObjects())
     MaybeParseCXX11Attributes(D);
@@ -6859,6 +7069,17 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       if (IsFunctionDeclaration)
         Actions.ActOnFinishFunctionDeclarationDeclarator(D);
       PrototypeScope.Exit();
+
+      D.setWidbergReturnLocation(D.getWidbergLocation());
+      D.setWidbergLocation(nullptr);
+
+      if (Tok.is(tok::at) && getLangOpts().WidbergExt) {
+        SourceLocation ATLoc;
+        SourceLocation LAngleLoc, RAngleLoc;
+        SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
+        TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+        Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
+      }
     } else if (Tok.is(tok::l_square)) {
       ParseBracketDeclarator(D);
     } else if (Tok.isRegularKeywordAttribute()) {
@@ -7031,6 +7252,9 @@ void Parser::ParseParenDeclarator(Declarator &D) {
 
   // Eat any Microsoft extensions.
   ParseMicrosoftTypeAttributes(attrs);
+
+  // Eat any Widberg extensions.
+  ParseWidbergTypeAttributes(attrs);
 
   // Eat any Borland extensions.
   if  (Tok.is(tok::kw___pascal))
@@ -7975,6 +8199,88 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
                                   : DeclSpec::TST_typeofExpr,
                          StartLoc, PrevSpec,
                          DiagID, Operand.get(),
+                         Actions.getASTContext().getPrintingPolicy()))
+    Diag(StartLoc, DiagID) << PrevSpec;
+}
+
+void Parser::ParseParentofSpecifier(DeclSpec &DS) {
+  assert(Tok.is(tok::kw___parentof) &&
+         "Not a __parentof specifier");
+
+  Token OpTok = Tok;
+  SourceLocation StartLoc = ConsumeToken();
+  bool HasParens = Tok.is(tok::l_paren);
+
+  EnterExpressionEvaluationContext Unevaluated(
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
+
+  bool isCastExpr;
+  ParsedType CastTy;
+  SourceRange CastRange;
+  ExprResult Operand =
+      ParseExprAfterUnaryExprOrTypeTrait(OpTok, isCastExpr, CastTy, CastRange);
+  if (HasParens)
+    DS.setTypeArgumentRange(CastRange);
+
+  if (CastRange.getEnd().isInvalid())
+    // FIXME: Not accurate, the range gets one token more than it should.
+    DS.SetRangeEnd(Tok.getLocation());
+  else
+    DS.SetRangeEnd(CastRange.getEnd());
+
+  if (isCastExpr) {
+    if (!CastTy) {
+      DS.SetTypeSpecError();
+      return;
+    }
+
+    const ShiftedType *Shi = CastTy.get().getTypePtr()->getAs<ShiftedType>();
+    if (!Shi) {
+      DS.SetTypeSpecError();
+      return;
+    }
+
+    ParsedType ParentTy = Actions.CreateParsedType(Shi->getAttr()->getParent(), Shi->getAttr()->getParentLoc());
+
+    const char *PrevSpec = nullptr;
+    unsigned DiagID;
+    // Check for duplicate type specifiers (e.g. "int typeof(int)").
+    if (DS.SetTypeSpecType(DeclSpec::TST_typeofType,
+                           StartLoc, PrevSpec,
+                           DiagID, ParentTy,
+                           Actions.getASTContext().getPrintingPolicy()))
+      Diag(StartLoc, DiagID) << PrevSpec;
+    return;
+  }
+
+  // If we get here, the operand to the typeof was an expression.
+  if (Operand.isInvalid()) {
+    DS.SetTypeSpecError();
+    return;
+  }
+
+  // We might need to transform the operand if it is potentially evaluated.
+  Operand = Actions.HandleExprEvaluationContextForTypeof(Operand.get());
+  if (Operand.isInvalid()) {
+    DS.SetTypeSpecError();
+    return;
+  }
+
+  const ShiftedType *Shi = Operand.get()->getType().getTypePtr()->getAs<ShiftedType>();
+  if (!Shi) {
+    DS.SetTypeSpecError();
+    return;
+  }
+
+  ParsedType ParentTy = Actions.CreateParsedType(Shi->getAttr()->getParent(), Shi->getAttr()->getParentLoc());
+
+  const char *PrevSpec = nullptr;
+  unsigned DiagID;
+  // Check for duplicate type specifiers (e.g. "int typeof(int)").
+  if (DS.SetTypeSpecType(DeclSpec::TST_typeofType,
+                         StartLoc, PrevSpec,
+                         DiagID, ParentTy,
                          Actions.getASTContext().getPrintingPolicy()))
     Diag(StartLoc, DiagID) << PrevSpec;
 }

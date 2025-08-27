@@ -110,7 +110,8 @@ enum TokenKey : unsigned {
   KEYNOZOS = 0x4000000,
   KEYHLSL = 0x8000000,
   KEYFIXEDPOINT = 0x10000000,
-  KEYMAX = KEYFIXEDPOINT, // The maximum key
+  KEYWIDBERG    = 0x20000000,
+  KEYMAX = KEYWIDBERG, // The maximum key
   KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
   KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL &
            ~KEYNOZOS // KEYNOMS18, KEYNOOPENCL, KEYNOZOS are excluded.
@@ -204,6 +205,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     return LangOpts.ZOSExt ? KS_Enabled : KS_Unknown;
   case KEYHLSL:
     return LangOpts.HLSL ? KS_Enabled : KS_Unknown;
+  case KEYWIDBERG:
+    return LangOpts.WidbergExt ? KS_Extension : KS_Unknown;
   case KEYNOCXX:
     // This is enabled in all non-C++ modes, but might be enabled for other
     // reasons as well.

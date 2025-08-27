@@ -59,6 +59,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -1773,6 +1774,33 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
       Flags.setSExt();
     else if (attr.hasRetAttr(Attribute::ZExt))
       Flags.setZExt();
+
+    if (CC == CallingConv::UserCall || CC == CallingConv::UserPurge) {
+      if (attr.hasRetAttr("widberg_location")) {
+        StringRef regs = attr.getRetAttr("widberg_location").getValueAsString();
+
+        SmallVector<StringRef, 2> Registers;
+        regs.split(Registers, ',');
+
+        SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+        for (StringRef reg : Registers) {
+          std::optional<MCRegister> PhysReg = TLI.getTargetMachine().getMCRegisterInfo()
+              ->getRegNo(reg);
+
+          if (PhysReg) {
+            MCRegisters.push_back(*PhysReg);
+          }
+          else
+          {
+            llvm_unreachable("Target lowering: Bad register");
+          }
+        }
+        Flags.setLocation(MCRegisters);
+      } else {
+        llvm_unreachable("usercall no return reg");
+      }
+    }
 
     for (unsigned i = 0; i < NumParts; ++i)
       Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, Ty, 0, 0));

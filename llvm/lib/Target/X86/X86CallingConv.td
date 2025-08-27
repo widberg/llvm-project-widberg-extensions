@@ -462,6 +462,8 @@ def RetCC_X86_32 : CallingConv<[
   CCIfCC<"CallingConv::X86_RegCall",
     CCIfSubtarget<"isTargetWin32()", CCIfRegCallv4<CCDelegateTo<RetCC_X86_32_RegCallv4_Win>>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<RetCC_X86_32_RegCall>>,
+  CCIfCC<"CallingConv::UserCall", CCCustom<"RetCC_X86_XX_UserCall">>,
+  CCIfCC<"CallingConv::UserPurge", CCCustom<"RetCC_X86_XX_UserCall">>,
 
   // Otherwise, use RetCC_X86_32_C.
   CCDelegateTo<RetCC_X86_32_C>
@@ -493,6 +495,9 @@ def RetCC_X86_64 : CallingConv<[
           CCIfSubtarget<"isTargetWin64()",
                         CCDelegateTo<RetCC_X86_Win64_RegCall>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<RetCC_X86_SysV64_RegCall>>,
+
+  CCIfCC<"CallingConv::UserCall", CCCustom<"RetCC_X86_XX_UserCall">>,
+  CCIfCC<"CallingConv::UserPurge", CCCustom<"RetCC_X86_XX_UserCall">>,
           
   // Mingw64 and native Win64 use Win64 CC
   CCIfSubtarget<"isTargetWin64()", CCDelegateTo<RetCC_X86_Win64_C>>,
@@ -1072,6 +1077,8 @@ def CC_X86_32 : CallingConv<[
   CCIfCC<"CallingConv::X86_RegCall",
     CCIfSubtarget<"isTargetWin32()", CCIfRegCallv4<CCDelegateTo<CC_X86_32_RegCallv4_Win>>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_32_RegCall>>,
+  CCIfCC<"CallingConv::UserCall", CCCustom<"CC_X86_XX_UserCall">>,
+  CCIfCC<"CallingConv::UserPurge", CCCustom<"CC_X86_XX_UserCall">>,
 
   // Otherwise, drop to normal X86-32 CC
   CCDelegateTo<CC_X86_32_C>
@@ -1092,6 +1099,8 @@ def CC_X86_64 : CallingConv<[
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_SysV64_RegCall>>,
   CCIfCC<"CallingConv::PreserveNone", CCDelegateTo<CC_X86_64_Preserve_None>>,
   CCIfCC<"CallingConv::X86_INTR", CCCustom<"CC_X86_Intr">>,
+  CCIfCC<"CallingConv::UserCall", CCCustom<"CC_X86_XX_UserCall">>,
+  CCIfCC<"CallingConv::UserPurge", CCCustom<"CC_X86_XX_UserCall">>,
 
   // Mingw64 and native Win64 use Win64 CC
   CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_C>>,

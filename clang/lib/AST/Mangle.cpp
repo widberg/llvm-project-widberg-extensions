@@ -68,7 +68,9 @@ enum CCMangling {
   CCM_RegCall,
   CCM_Vector,
   CCM_Std,
-  CCM_WasmMainArgcArgv
+  CCM_WasmMainArgcArgv,
+  CCM_UserCall,
+  CCM_UserPurge
 };
 
 static bool isExternC(const NamedDecl *ND) {
@@ -115,6 +117,10 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
     return CCM_Std;
   case CC_X86VectorCall:
     return CCM_Vector;
+  case CC_UserCall:
+    return CCM_UserCall;
+  case CC_UserPurge:
+    return CCM_UserPurge;
   }
 }
 
