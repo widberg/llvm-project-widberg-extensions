@@ -1,0 +1,47 @@
+name: Widberg Release
+
+on:
+  push:
+    tags:
+      - 'widberg-*'
+
+jobs:
+  build:
+    name: Publish
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - uses: ilammy/msvc-dev-cmd@v1.12.0
+    - name: Build
+      run: |
+           cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86"
+           cmake --build build --config RelWithDebInfo --target vt_gen
+           cmake --build build --config RelWithDebInfo --target clang
+
+    - name: Package
+      run: |
+           cd build/bin/
+           7z a ../../bin.zip clang-cl.exe
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    
+    - name: Upload Archive to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_name: ${{ github.ref_name }}-windows-x86_64-${{ github.sha }}.zip
+        asset_path: bin.zip
+        asset_content_type: application/zip

@@ -2424,6 +2424,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Paren:
   case Type::Attributed:
   case Type::BTFTagAttributed:
+  case Type::Shifted:
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
   case Type::Auto:
@@ -3550,6 +3551,10 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
     return "swiftcall";
   case CC_SwiftAsync:
     return "swiftasynccall";
+  case CC_UserCall:
+    return "usercall";
+  case CC_UserPurge:
+    return "userpurge";
   }
   llvm_unreachable("bad calling convention");
 }
@@ -5412,6 +5417,10 @@ recurse:
     switch (SAE->getKind()) {
     case UETT_SizeOf:
       Out << 's';
+      MangleAlignofSizeofArg();
+      break;
+    case UETT_DeltaOf:
+      Out << 'd';
       MangleAlignofSizeofArg();
       break;
     case UETT_PreferredAlignOf:

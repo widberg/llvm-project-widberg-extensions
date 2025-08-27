@@ -3149,6 +3149,8 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
   //                            // Clang-only
   //                      ::= w # __regcall
   //                      ::= x # __regcall4
+  //                      ::= r # __usercall
+  //                      ::= R # __userpurge
   // The 'export' calling conventions are from a bygone era
   // (*cough*Win16*cough*) when functions were declared for export with
   // that keyword. (It didn't actually export them, it just made them so
@@ -3189,6 +3191,10 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
       return;
     case CC_PreserveNone:
       Out << 'V';
+      return;
+    case CC_UserCall: Out << 'r';
+      return;
+    case CC_UserPurge: Out << 'R';
       return;
     case CC_X86RegCall:
       if (getASTContext().getLangOpts().RegCall4)

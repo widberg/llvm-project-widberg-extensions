@@ -137,6 +137,8 @@ enum Kind {
   kw_coldcc,
   kw_intel_ocl_bicc,
   kw_cfguard_checkcc,
+  kw_usercallcc,
+  kw_userpurgecc,
   kw_x86_stdcallcc,
   kw_x86_fastcallcc,
   kw_x86_thiscallcc,

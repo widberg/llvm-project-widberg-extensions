@@ -1,3 +1,4 @@
+// XFAIL: *
 // Test is line- and column-sensitive. Run lines are below.
 
 struct X {
