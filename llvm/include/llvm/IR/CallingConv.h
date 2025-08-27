@@ -297,6 +297,12 @@ namespace CallingConv {
     /// stateless compartment.
     CHERIoT_LibraryCall = 127,
 
+    /// UserCall
+    UserCall = 128,
+
+    /// UserPurge
+    UserPurge = 129,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

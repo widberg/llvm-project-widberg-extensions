@@ -97,6 +97,8 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, Inline     , "inlinecall", OS)
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearVector , "vectorcall", OS)
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, Swift, "swiftcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, UserCall, "usercall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, UserPurge, "userpurge", OS)
   }
   return OS;
 }

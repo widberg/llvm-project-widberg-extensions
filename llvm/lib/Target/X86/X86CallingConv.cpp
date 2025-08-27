@@ -15,6 +15,7 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
 
 using namespace llvm;
@@ -402,6 +403,44 @@ static bool CC_X86_32_I128_FP128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   State.addLoc(PendingMembers[2]);
   State.addLoc(PendingMembers[3]);
   PendingMembers.clear();
+  return true;
+}
+
+static bool CC_X86_XX_UserCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                              CCValAssign::LocInfo &LocInfo,
+                              ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  SmallVector<llvm::MCRegister, 2> MCRegisters = ArgFlags.getLocation();
+
+  if (MCRegisters.empty())
+    return false;
+
+  unsigned Reg = State.AllocateReg(MCRegisters[ArgFlags.getSplitRegIndex()]);
+
+  // Since we previously made sure that 2 registers are available
+  // we expect that a real register number will be returned.
+  assert(Reg && "Expecting a register will be available");
+
+  // Assign the value to the allocated register
+  State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+
+  return true;
+}
+
+static bool RetCC_X86_XX_UserCall(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                      CCValAssign::LocInfo LocInfo,
+                                      ISD::ArgFlagsTy ArgFlags,
+                                      CCState &State) {
+  SmallVector<llvm::MCRegister, 2> MCRegisters = ArgFlags.getLocation();
+
+  unsigned Reg = State.AllocateReg(MCRegisters[ValNo]);
+
+  // Since we previously made sure that 2 registers are available
+  // we expect that a real register number will be returned.
+  assert(Reg && "Expecting a register will be available");
+
+  // Assign the value to the allocated register
+  State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+
   return true;
 }
 

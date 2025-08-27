@@ -129,6 +129,8 @@ OptCallingConv ::= + _ |
                  ccc |
                  fastcc |
                  coldcc |
+                 usercallcc |
+                 userpurgecc |
                  "x86_stdcallcc" |
                  "x86_fastcallcc" |
                  cc EUINT64VAL ;

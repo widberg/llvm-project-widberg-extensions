@@ -948,8 +948,14 @@ static AttributeList getReturnAttrs(FastISel::CallLoweringInfo &CLI) {
   if (CLI.IsInReg)
     Attrs.push_back(Attribute::InReg);
 
-  return AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
+  auto ret = AttributeList::get(CLI.RetTy->getContext(), AttributeList::ReturnIndex,
                             Attrs);
+  if (!CLI.ReturnLocation.empty()) {
+    ret = ret.addRetAttribute(CLI.RetTy->getContext(), "widberg_location",
+                              CLI.ReturnLocation);
+  }
+
+  return ret;
 }
 
 bool FastISel::lowerCallTo(const CallInst *CI, const char *SymName,

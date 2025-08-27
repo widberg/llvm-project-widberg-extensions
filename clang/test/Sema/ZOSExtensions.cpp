@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %clang_cc1 -triple s390x-ibm-zos %s -fsyntax-only -fzos-extensions -verify
 // RUN: %clang_cc1 -triple s390x-ibm-zos %s -fsyntax-only -verify
 

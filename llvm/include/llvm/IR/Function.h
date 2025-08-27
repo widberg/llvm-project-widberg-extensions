@@ -377,6 +377,9 @@ public:
   void addRetAttr(Attribute Attr);
 
   /// Add return value attributes to this function.
+  void addRetAttr(StringRef Attr, StringRef Val = StringRef());
+
+  /// Add return value attributes to this function.
   void addRetAttrs(const AttrBuilder &Attrs);
 
   /// adds the attribute to the list of attributes for the given arg.
@@ -384,6 +387,9 @@ public:
 
   /// adds the attribute to the list of attributes for the given arg.
   void addParamAttr(unsigned ArgNo, Attribute Attr);
+
+  /// adds the attribute to the list of attributes for the given arg.
+  void addParamAttr(unsigned ArgNo, StringRef Kind, StringRef Val = StringRef());
 
   /// adds the attributes to the list of attributes for the given arg.
   void addParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs);
@@ -429,6 +435,9 @@ public:
   /// check if an attribute is in the list of attributes for the return value.
   bool hasRetAttribute(Attribute::AttrKind Kind) const;
 
+  /// check if an attribute is in the list of attributes for the return value.
+  bool hasRetAttribute(StringRef Kind) const;
+
   /// check if an attributes is in the list of attributes.
   bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
@@ -462,8 +471,17 @@ public:
   uint64_t getFnAttributeAsParsedInteger(StringRef Kind,
                                          uint64_t Default = 0) const;
 
+  /// Return the attribute for the given attribute kind.
+  Attribute getRetAttribute(StringRef Kind) const;
+
   /// gets the specified attribute from the list of attributes.
   Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
+
+  Attribute getParamAttribute(unsigned ArgNo, StringRef Kind) const;
+
+  /// removes noundef and other attributes that imply undefined behavior if a
+  /// `undef` or `poison` value is passed from the list of attributes.
+  void removeParamUndefImplyingAttrs(unsigned ArgNo);
 
   /// Return the stack alignment for the function.
   MaybeAlign getFnStackAlign() const {
