@@ -287,6 +287,12 @@ namespace CallingConv {
     // Calling convention for AMDGPU whole wave functions.
     AMDGPU_Gfx_WholeWave = 124,
 
+    /// UserCall
+    UserCall = 125,
+
+    /// UserPurge
+    UserPurge = 126,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

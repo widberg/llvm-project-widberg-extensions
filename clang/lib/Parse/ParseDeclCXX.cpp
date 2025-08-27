@@ -1483,6 +1483,11 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
     // We will diagnose these calling-convention specifiers on non-function
     // declarations later, so claim they are valid after a type specifier.
     return getLangOpts().MicrosoftExt;
+  case tok::kw___usercall:
+  case tok::kw___userpurge:
+    // We will diagnose these calling-convention specifiers on non-function
+    // declarations later, so claim they are valid after a type specifier.
+    return getLangOpts().WidbergExt;
   // Type qualifiers
   case tok::kw_const:       // struct foo {...} const     x;
   case tok::kw_volatile:    // struct foo {...} volatile  x;
@@ -1635,6 +1640,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           tok::kw___is_object,
           tok::kw___is_pod,
           tok::kw___is_pointer,
+          tok::kw___is_shifted,
           tok::kw___is_polymorphic,
           tok::kw___is_reference,
           tok::kw___is_rvalue_expr,

@@ -7138,6 +7138,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString("-fgnuc-version=" + GNUCVer.getAsString()));
   }
 
+  // -fwidberg-extensions is default
+  if (Args.hasFlag(options::OPT_fwidberg_extensions,
+                   options::OPT_fno_widberg_extensions, true))
+    CmdArgs.push_back("-fwidberg-extensions");
+
   VersionTuple MSVT = TC.computeMSVCVersion(&D, Args);
   if (!MSVT.empty())
     CmdArgs.push_back(

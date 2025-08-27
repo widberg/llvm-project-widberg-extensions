@@ -3919,6 +3919,34 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     RequiresAdjustment = true;
   }
 
+  if (OldTypeInfo.getNoCalleeSavedRegs() !=
+      NewTypeInfo.getNoCalleeSavedRegs()) {
+    if (NewTypeInfo.getNoCalleeSavedRegs()) {
+      AnyX86NoCalleeSavedRegistersAttr *Attr =
+          New->getAttr<AnyX86NoCalleeSavedRegistersAttr>();
+      Diag(New->getLocation(), diag::err_function_attribute_mismatch) << Attr;
+      Diag(OldLocation, diag::note_previous_declaration);
+      return true;
+    }
+
+    NewTypeInfo = NewTypeInfo.withNoCallerSavedRegs(true);
+    RequiresAdjustment = true;
+  }
+
+  if (OldTypeInfo.getSpoils() !=
+      NewTypeInfo.getSpoils()) {
+    if (NewTypeInfo.getSpoils()) {
+      SpoilsAttr *Attr =
+          New->getAttr<SpoilsAttr>();
+      Diag(New->getLocation(), diag::err_function_attribute_mismatch) << Attr;
+      Diag(OldLocation, diag::note_previous_declaration);
+      return true;
+    }
+
+    NewTypeInfo = NewTypeInfo.withSpoils(true);
+    RequiresAdjustment = true;
+  }
+
   if (RequiresAdjustment) {
     const FunctionType *AdjustedType = New->getType()->getAs<FunctionType>();
     AdjustedType = Context.adjustFunctionType(AdjustedType, NewTypeInfo);
@@ -6612,6 +6640,9 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
 
   if (!New)
     return nullptr;
+
+  New->setWidbergLocation(D.getWidbergLocation());
+  New->setWidbergReturnLocation(D.getWidbergReturnLocation());
 
   warnOnCTypeHiddenInCPlusPlus(New);
 
@@ -10012,6 +10043,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   FunctionDecl *NewFD = CreateNewFunctionDecl(*this, D, DC, R, TInfo, SC,
                                               isVirtualOkay);
   if (!NewFD) return nullptr;
+
+  // NewFD->setWidbergLocation(D.getWidbergLocation());
 
   if (OriginalLexicalContext && OriginalLexicalContext->isObjCContainer())
     NewFD->setTopLevelDeclInObjCContainer();
@@ -15538,6 +15571,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   if (getLangOpts().OpenCL)
     deduceOpenCLAddressSpace(New);
 
+  New->setWidbergLocation(D.getWidbergLocation());
+  New->setWidbergReturnLocation(D.getWidbergReturnLocation());
+
   return New;
 }
 
@@ -20531,6 +20567,11 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   // likely a logic error.
   llvm::APInt FlagMask = ~FlagBits.zextOrTrunc(Val.getBitWidth());
   return !(FlagMask & Val) || (AllowMask && !(FlagMask & ~Val));
+}
+
+void Sema::ActOnWidbergLocation(Declarator &D, SourceLocation ATLoc, SourceLocation LAngleLoc, ArrayRef<IdentifierLoc *> RegisterIdentifiers, SourceLocation RAngleLoc) {
+  D.setWidbergLocation(WidbergLocation::Create(
+      Context, ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc));
 }
 
 void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,

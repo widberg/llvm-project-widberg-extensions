@@ -767,6 +767,7 @@ public:
     case tok::exclaim:
     case tok::tilde:
     case tok::kw_sizeof:
+    case tok::kw___deltaof:
     case tok::kw_alignof:
       return true;
     default:
@@ -793,7 +794,7 @@ public:
     return isOneOf(tok::kw_throw, tok::kw_typeid, tok::kw_return,
                    tok::kw_sizeof, tok::kw_alignof, tok::kw_alignas,
                    tok::kw_decltype, tok::kw_noexcept, tok::kw_static_assert,
-                   tok::kw__Atomic,
+                   tok::kw__Atomic, tok::kw___deltaof,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
 #include "clang/Basic/TransformTypeTraits.def"
                    tok::kw_requires);
@@ -1739,6 +1740,7 @@ struct AdditionalKeywords {
     case tok::kw_return:
     case tok::kw_short:
     case tok::kw_sizeof:
+    case tok::kw___deltaof:
     case tok::kw_static:
     case tok::kw_struct:
     case tok::kw_switch:

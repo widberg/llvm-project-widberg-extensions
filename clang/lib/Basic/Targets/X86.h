@@ -406,6 +406,8 @@ public:
     case CC_Swift:
     case CC_X86Pascal:
     case CC_IntelOclBicc:
+    case CC_UserCall:
+    case CC_UserPurge:
       return CCCR_OK;
     case CC_SwiftAsync:
       return CCCR_Error;
@@ -793,6 +795,8 @@ public:
     case CC_PreserveAll:
     case CC_PreserveNone:
     case CC_X86RegCall:
+    case CC_UserCall:
+    case CC_UserPurge:
       return CCCR_OK;
     case CC_DeviceKernel:
       return IsOpenCL ? CCCR_OK : CCCR_Warning;
@@ -932,6 +936,8 @@ public:
     case CC_SwiftAsync:
     case CC_X86RegCall:
     case CC_DeviceKernel:
+    case CC_UserCall:
+    case CC_UserPurge:
       return CCCR_OK;
     default:
       return CCCR_Warning;

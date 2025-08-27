@@ -267,6 +267,38 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   CallingConv::ID CC = F.getCallingConv();
 
+  auto adjust_regmask = [this, &MF](MCPhysReg const *CallPreservedMask) -> MCPhysReg const* {
+    if (MF->getFunction().hasRetAttribute("widberg_location")) {
+      const StringRef regs = MF->getFunction().getRetAttribute("widberg_location").getValueAsString();
+
+      SmallVector<StringRef, 2> Registers;
+      regs.split(Registers, ',');
+      SmallVector<MCRegister> SpoilsMCRegs;
+
+      for (StringRef SpoilsRegName : Registers) {
+        std::optional<MCRegister> PhysReg =
+            MF->getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
+
+        if (PhysReg) {
+          for (const MCPhysReg &SubReg : sub_and_superregs_inclusive(*PhysReg))
+            SpoilsMCRegs.push_back(SubReg);
+        } else {
+          llvm_unreachable("Spoils: Bad register");
+        }
+      }
+      SmallVector<MCPhysReg> CalleeSavedRegs;
+      for (size_t i = 0; CallPreservedMask[i]; ++i) {
+        if (std::find(SpoilsMCRegs.begin(), SpoilsMCRegs.end(), CallPreservedMask[i]) == SpoilsMCRegs.end()) {
+          CalleeSavedRegs.push_back(CallPreservedMask[i]);
+        }
+      }
+
+      return const_cast<MachineFunction *>(MF)->allocateSaveList(CalleeSavedRegs);
+    }
+
+    return CallPreservedMask;
+  };
+
   // If attribute NoCallerSavedRegisters exists then we set X86_INTR calling
   // convention because it has the CSR list.
   if (MF->getFunction().hasFnAttribute("no_caller_saved_registers"))
@@ -275,93 +307,145 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   // If atribute specified, override the CSRs normally specified by the
   // calling convention and use the empty set instead.
   if (MF->getFunction().hasFnAttribute("no_callee_saved_registers"))
-    return CSR_NoRegs_SaveList;
+    return adjust_regmask(CSR_NoRegs_SaveList);
+
+  if (MF->getFunction().hasFnAttribute("spoils")) {
+    StringRef SpoilsList = MF->getFunction().getFnAttribute("spoils")
+                               .getValueAsString();
+
+    const MCPhysReg *AllRegs;
+
+    if (Is64Bit) {
+      if (HasAVX512)
+        AllRegs = CSR_64_AllRegs_AVX512_SaveList;
+      if (HasAVX)
+        AllRegs = CSR_64_AllRegs_AVX_SaveList;
+      if (HasSSE)
+        AllRegs = CSR_64_AllRegs_SaveList;
+      AllRegs = CSR_64_AllRegs_NoSSE_SaveList;
+    } else {
+      if (HasAVX512)
+        AllRegs = CSR_32_AllRegs_AVX512_SaveList;
+      if (HasAVX)
+        AllRegs = CSR_32_AllRegs_AVX_SaveList;
+      if (HasSSE)
+        AllRegs = CSR_32_AllRegs_SSE_SaveList;
+      AllRegs = CSR_32_AllRegs_SaveList;
+    }
+
+    if (SpoilsList.empty())
+      return adjust_regmask(AllRegs);
+
+    SmallVector<StringRef> SpoilsListVec;
+    SmallVector<MCRegister> SpoilsMCRegs;
+    SpoilsList.split(SpoilsListVec, ',');
+
+    for (const StringRef &SpoilsRegName : SpoilsListVec) {
+      std::optional<MCRegister> PhysReg =
+          MF->getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
+
+      if (PhysReg) {
+        for (const MCPhysReg &SubReg : sub_and_superregs_inclusive(*PhysReg))
+          SpoilsMCRegs.push_back(SubReg);
+      } else {
+        llvm_unreachable("Spoils: Bad register");
+      }
+    }
+    SmallVector<MCPhysReg> CalleeSavedRegs;
+    for (size_t i = 0; AllRegs[i]; ++i) {
+      if (std::find(SpoilsMCRegs.begin(), SpoilsMCRegs.end(), AllRegs[i]) == SpoilsMCRegs.end()) {
+        CalleeSavedRegs.push_back(AllRegs[i]);
+      }
+    }
+
+    return adjust_regmask(const_cast<MachineFunction *>(MF)->allocateSaveList(CalleeSavedRegs));
+  }
 
   switch (CC) {
   case CallingConv::GHC:
   case CallingConv::HiPE:
-    return CSR_NoRegs_SaveList;
+    return adjust_regmask(CSR_NoRegs_SaveList);
   case CallingConv::AnyReg:
     if (HasAVX)
-      return CSR_64_AllRegs_AVX_SaveList;
-    return CSR_64_AllRegs_SaveList;
+      return adjust_regmask(CSR_64_AllRegs_AVX_SaveList);
+    return adjust_regmask(CSR_64_AllRegs_SaveList);
   case CallingConv::PreserveMost:
-    return IsWin64 ? CSR_Win64_RT_MostRegs_SaveList
-                   : CSR_64_RT_MostRegs_SaveList;
+    return adjust_regmask(IsWin64 ? CSR_Win64_RT_MostRegs_SaveList
+                   : CSR_64_RT_MostRegs_SaveList);
   case CallingConv::PreserveAll:
     if (HasAVX)
-      return CSR_64_RT_AllRegs_AVX_SaveList;
-    return CSR_64_RT_AllRegs_SaveList;
+      return adjust_regmask(CSR_64_RT_AllRegs_AVX_SaveList);
+    return adjust_regmask(CSR_64_RT_AllRegs_SaveList);
   case CallingConv::PreserveNone:
-    return CSR_64_NoneRegs_SaveList;
+    return adjust_regmask(CSR_64_NoneRegs_SaveList);
   case CallingConv::CXX_FAST_TLS:
     if (Is64Bit)
-      return MF->getInfo<X86MachineFunctionInfo>()->isSplitCSR() ?
-             CSR_64_CXX_TLS_Darwin_PE_SaveList : CSR_64_TLS_Darwin_SaveList;
+      return adjust_regmask(MF->getInfo<X86MachineFunctionInfo>()->isSplitCSR() ?
+             CSR_64_CXX_TLS_Darwin_PE_SaveList : CSR_64_TLS_Darwin_SaveList);
     break;
   case CallingConv::Intel_OCL_BI: {
     if (HasAVX512 && IsWin64)
-      return CSR_Win64_Intel_OCL_BI_AVX512_SaveList;
+      return adjust_regmask(CSR_Win64_Intel_OCL_BI_AVX512_SaveList);
     if (HasAVX512 && Is64Bit)
-      return CSR_64_Intel_OCL_BI_AVX512_SaveList;
+      return adjust_regmask(CSR_64_Intel_OCL_BI_AVX512_SaveList);
     if (HasAVX && IsWin64)
-      return CSR_Win64_Intel_OCL_BI_AVX_SaveList;
+      return adjust_regmask(CSR_Win64_Intel_OCL_BI_AVX_SaveList);
     if (HasAVX && Is64Bit)
-      return CSR_64_Intel_OCL_BI_AVX_SaveList;
+      return adjust_regmask(CSR_64_Intel_OCL_BI_AVX_SaveList);
     if (!HasAVX && !IsWin64 && Is64Bit)
-      return CSR_64_Intel_OCL_BI_SaveList;
+      return adjust_regmask(CSR_64_Intel_OCL_BI_SaveList);
     break;
   }
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
       if (IsWin64) {
-        return (HasSSE ? CSR_Win64_RegCall_SaveList :
+        return adjust_regmask(HasSSE ? CSR_Win64_RegCall_SaveList :
                          CSR_Win64_RegCall_NoSSE_SaveList);
       } else {
-        return (HasSSE ? CSR_SysV64_RegCall_SaveList :
+        return adjust_regmask(HasSSE ? CSR_SysV64_RegCall_SaveList :
                          CSR_SysV64_RegCall_NoSSE_SaveList);
       }
     } else {
-      return (HasSSE ? CSR_32_RegCall_SaveList :
+      return adjust_regmask(HasSSE ? CSR_32_RegCall_SaveList :
                        CSR_32_RegCall_NoSSE_SaveList);
     }
   case CallingConv::CFGuard_Check:
     assert(!Is64Bit && "CFGuard check mechanism only used on 32-bit X86");
-    return (HasSSE ? CSR_Win32_CFGuard_Check_SaveList
+    return adjust_regmask(HasSSE ? CSR_Win32_CFGuard_Check_SaveList
                    : CSR_Win32_CFGuard_Check_NoSSE_SaveList);
   case CallingConv::Cold:
     if (Is64Bit)
-      return CSR_64_MostRegs_SaveList;
+      return adjust_regmask(CSR_64_MostRegs_SaveList);
     break;
   case CallingConv::Win64:
     if (!HasSSE)
-      return CSR_Win64_NoSSE_SaveList;
-    return CSR_Win64_SaveList;
+      return adjust_regmask(CSR_Win64_NoSSE_SaveList);
+    return adjust_regmask(CSR_Win64_SaveList);
   case CallingConv::SwiftTail:
     if (!Is64Bit)
-      return CSR_32_SaveList;
-    return IsWin64 ? CSR_Win64_SwiftTail_SaveList : CSR_64_SwiftTail_SaveList;
+      return adjust_regmask(CSR_32_SaveList);
+    return adjust_regmask(IsWin64 ? CSR_Win64_SwiftTail_SaveList : CSR_64_SwiftTail_SaveList);
   case CallingConv::X86_64_SysV:
     if (CallsEHReturn)
-      return CSR_64EHRet_SaveList;
-    return CSR_64_SaveList;
+      return adjust_regmask(CSR_64EHRet_SaveList);
+    return adjust_regmask(CSR_64_SaveList);
   case CallingConv::X86_INTR:
     if (Is64Bit) {
       if (HasAVX512)
-        return CSR_64_AllRegs_AVX512_SaveList;
+        return adjust_regmask(CSR_64_AllRegs_AVX512_SaveList);
       if (HasAVX)
-        return CSR_64_AllRegs_AVX_SaveList;
+        return adjust_regmask(CSR_64_AllRegs_AVX_SaveList);
       if (HasSSE)
-        return CSR_64_AllRegs_SaveList;
-      return CSR_64_AllRegs_NoSSE_SaveList;
+        return adjust_regmask(CSR_64_AllRegs_SaveList);
+      return adjust_regmask(CSR_64_AllRegs_NoSSE_SaveList);
     } else {
       if (HasAVX512)
-        return CSR_32_AllRegs_AVX512_SaveList;
+        return adjust_regmask(CSR_32_AllRegs_AVX512_SaveList);
       if (HasAVX)
-        return CSR_32_AllRegs_AVX_SaveList;
+        return adjust_regmask(CSR_32_AllRegs_AVX_SaveList);
       if (HasSSE)
-        return CSR_32_AllRegs_SSE_SaveList;
-      return CSR_32_AllRegs_SaveList;
+        return adjust_regmask(CSR_32_AllRegs_SSE_SaveList);
+      return adjust_regmask(CSR_32_AllRegs_SaveList);
     }
   default:
     break;
@@ -371,17 +455,17 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     bool IsSwiftCC = Subtarget.getTargetLowering()->supportSwiftError() &&
                      F.getAttributes().hasAttrSomewhere(Attribute::SwiftError);
     if (IsSwiftCC)
-      return IsWin64 ? CSR_Win64_SwiftError_SaveList
-                     : CSR_64_SwiftError_SaveList;
+      return adjust_regmask(IsWin64 ? CSR_Win64_SwiftError_SaveList
+                     : CSR_64_SwiftError_SaveList);
 
     if (IsWin64 || IsUEFI64)
-      return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
+      return adjust_regmask(HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList);
     if (CallsEHReturn)
-      return CSR_64EHRet_SaveList;
-    return CSR_64_SaveList;
+      return adjust_regmask(CSR_64EHRet_SaveList);
+    return adjust_regmask(CSR_64_SaveList);
   }
 
-  return CallsEHReturn ? CSR_32EHRet_SaveList : CSR_32_SaveList;
+  return adjust_regmask(CallsEHReturn ? CSR_32EHRet_SaveList : CSR_32_SaveList);
 }
 
 const MCPhysReg *
@@ -406,85 +490,178 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
 
+  auto adjust_regmask = [this, &MF](uint32_t const *CallPreservedMask) -> uint32_t const* {
+    if (MF.getFunction().hasRetAttribute("widberg_location")) {
+      BitVector Reserved(MF.getTarget().getMCRegisterInfo()->getNumRegs());
+      Reserved.setBitsInMask(CallPreservedMask);
+      const StringRef regs = MF.getFunction().getRetAttribute("widberg_location").getValueAsString();
+
+      SmallVector<StringRef, 2> Registers;
+      regs.split(Registers, ',');
+
+      for (StringRef SpoilsRegName : Registers) {
+        std::optional<MCRegister> PhysReg =
+            MF.getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
+
+        if (PhysReg) {
+          for (const MCPhysReg &SubReg : sub_and_superregs_inclusive(*PhysReg))
+            Reserved.reset(SubReg);
+        } else {
+          llvm_unreachable("Spoils: Bad register");
+        }
+      }
+
+      uint32_t *CallPreservedRegs = const_cast<MachineFunction&>(MF).allocateRegMask();
+
+      for (unsigned i = 0, e = Reserved.size(); i < e; i += 32) {
+        unsigned Value = 0;
+        for (unsigned j = 0; j != 32 && i + j != e; ++j)
+          Value |= Reserved.test(i + j) << j;
+        CallPreservedRegs[i / 32] = Value;
+      }
+
+      return CallPreservedRegs;
+    }
+
+    return CallPreservedMask;
+  };
+
+  if (MF.getFunction().hasFnAttribute("spoils")) {
+    StringRef SpoilsList = MF.getFunction().getFnAttribute("spoils")
+                               .getValueAsString();
+
+    const uint32_t *AllRegs;
+
+    if (Is64Bit) {
+      if (HasAVX512)
+        AllRegs = CSR_64_AllRegs_AVX512_RegMask;
+      if (HasAVX)
+        AllRegs = CSR_64_AllRegs_AVX_RegMask;
+      if (HasSSE)
+        AllRegs = CSR_64_AllRegs_RegMask;
+      AllRegs = CSR_64_AllRegs_NoSSE_RegMask;
+    } else {
+      if (HasAVX512)
+        AllRegs = CSR_32_AllRegs_AVX512_RegMask;
+      if (HasAVX)
+        AllRegs = CSR_32_AllRegs_AVX_RegMask;
+      if (HasSSE)
+        AllRegs = CSR_32_AllRegs_SSE_RegMask;
+      AllRegs = CSR_32_AllRegs_RegMask;
+    }
+
+    if (SpoilsList.empty())
+      return adjust_regmask(AllRegs);
+
+    SmallVector<StringRef> SpoilsListVec;
+    BitVector Reserved(MF.getTarget().getMCRegisterInfo()->getNumRegs());
+    Reserved.setBitsInMask(AllRegs);
+
+    SpoilsList.split(SpoilsListVec, ',');
+
+    for (const StringRef &SpoilsRegName : SpoilsListVec) {
+      std::optional<MCRegister> PhysReg =
+          MF.getTarget().getMCRegisterInfo()->getRegNo(SpoilsRegName);
+
+      if (PhysReg) {
+        for (const MCPhysReg &SubReg : sub_and_superregs_inclusive(*PhysReg))
+          Reserved.reset(SubReg);
+      } else {
+        llvm_unreachable("Spoils: Bad register");
+      }
+    }
+
+    uint32_t *CallPreservedRegs = const_cast<MachineFunction&>(MF).allocateRegMask();
+
+    for (unsigned i = 0, e = Reserved.size(); i < e; i += 32) {
+      unsigned Value = 0;
+      for (unsigned j = 0; j != 32 && i + j != e; ++j)
+        Value |= Reserved.test(i + j) << j;
+      CallPreservedRegs[i / 32] = Value;
+    }
+
+    return adjust_regmask(CallPreservedRegs);
+  }
+
   switch (CC) {
   case CallingConv::GHC:
   case CallingConv::HiPE:
-    return CSR_NoRegs_RegMask;
+    return adjust_regmask(CSR_NoRegs_RegMask);
   case CallingConv::AnyReg:
     if (HasAVX)
-      return CSR_64_AllRegs_AVX_RegMask;
-    return CSR_64_AllRegs_RegMask;
+      return adjust_regmask(CSR_64_AllRegs_AVX_RegMask);
+    return adjust_regmask(CSR_64_AllRegs_RegMask);
   case CallingConv::PreserveMost:
-    return IsWin64 ? CSR_Win64_RT_MostRegs_RegMask : CSR_64_RT_MostRegs_RegMask;
+    return adjust_regmask(IsWin64 ? CSR_Win64_RT_MostRegs_RegMask : CSR_64_RT_MostRegs_RegMask);
   case CallingConv::PreserveAll:
     if (HasAVX)
-      return CSR_64_RT_AllRegs_AVX_RegMask;
-    return CSR_64_RT_AllRegs_RegMask;
+      return adjust_regmask(CSR_64_RT_AllRegs_AVX_RegMask);
+    return adjust_regmask(CSR_64_RT_AllRegs_RegMask);
   case CallingConv::PreserveNone:
-    return CSR_64_NoneRegs_RegMask;
+    return adjust_regmask(CSR_64_NoneRegs_RegMask);
   case CallingConv::CXX_FAST_TLS:
     if (Is64Bit)
-      return CSR_64_TLS_Darwin_RegMask;
+      return adjust_regmask(CSR_64_TLS_Darwin_RegMask);
     break;
   case CallingConv::Intel_OCL_BI: {
     if (HasAVX512 && IsWin64)
-      return CSR_Win64_Intel_OCL_BI_AVX512_RegMask;
+      return adjust_regmask(CSR_Win64_Intel_OCL_BI_AVX512_RegMask);
     if (HasAVX512 && Is64Bit)
-      return CSR_64_Intel_OCL_BI_AVX512_RegMask;
+      return adjust_regmask(CSR_64_Intel_OCL_BI_AVX512_RegMask);
     if (HasAVX && IsWin64)
-      return CSR_Win64_Intel_OCL_BI_AVX_RegMask;
+      return adjust_regmask(CSR_Win64_Intel_OCL_BI_AVX_RegMask);
     if (HasAVX && Is64Bit)
-      return CSR_64_Intel_OCL_BI_AVX_RegMask;
+      return adjust_regmask(CSR_64_Intel_OCL_BI_AVX_RegMask);
     if (!HasAVX && !IsWin64 && Is64Bit)
-      return CSR_64_Intel_OCL_BI_RegMask;
+      return adjust_regmask(CSR_64_Intel_OCL_BI_RegMask);
     break;
   }
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
       if (IsWin64) {
-        return (HasSSE ? CSR_Win64_RegCall_RegMask :
+        return adjust_regmask(HasSSE ? CSR_Win64_RegCall_RegMask :
                          CSR_Win64_RegCall_NoSSE_RegMask);
       } else {
-        return (HasSSE ? CSR_SysV64_RegCall_RegMask :
+        return adjust_regmask(HasSSE ? CSR_SysV64_RegCall_RegMask :
                          CSR_SysV64_RegCall_NoSSE_RegMask);
       }
     } else {
-      return (HasSSE ? CSR_32_RegCall_RegMask :
+      return adjust_regmask(HasSSE ? CSR_32_RegCall_RegMask :
                        CSR_32_RegCall_NoSSE_RegMask);
     }
   case CallingConv::CFGuard_Check:
     assert(!Is64Bit && "CFGuard check mechanism only used on 32-bit X86");
-    return (HasSSE ? CSR_Win32_CFGuard_Check_RegMask
+    return adjust_regmask(HasSSE ? CSR_Win32_CFGuard_Check_RegMask
                    : CSR_Win32_CFGuard_Check_NoSSE_RegMask);
   case CallingConv::Cold:
     if (Is64Bit)
-      return CSR_64_MostRegs_RegMask;
+      return adjust_regmask(CSR_64_MostRegs_RegMask);
     break;
   case CallingConv::Win64:
-    return CSR_Win64_RegMask;
+    return adjust_regmask(CSR_Win64_RegMask);
   case CallingConv::SwiftTail:
     if (!Is64Bit)
-      return CSR_32_RegMask;
-    return IsWin64 ? CSR_Win64_SwiftTail_RegMask : CSR_64_SwiftTail_RegMask;
+      return adjust_regmask(CSR_32_RegMask);
+    return adjust_regmask(IsWin64 ? CSR_Win64_SwiftTail_RegMask : CSR_64_SwiftTail_RegMask);
   case CallingConv::X86_64_SysV:
-    return CSR_64_RegMask;
+    return adjust_regmask(CSR_64_RegMask);
   case CallingConv::X86_INTR:
     if (Is64Bit) {
       if (HasAVX512)
-        return CSR_64_AllRegs_AVX512_RegMask;
+        return adjust_regmask(CSR_64_AllRegs_AVX512_RegMask);
       if (HasAVX)
-        return CSR_64_AllRegs_AVX_RegMask;
+        return adjust_regmask(CSR_64_AllRegs_AVX_RegMask);
       if (HasSSE)
-        return CSR_64_AllRegs_RegMask;
-      return CSR_64_AllRegs_NoSSE_RegMask;
+        return adjust_regmask(CSR_64_AllRegs_RegMask);
+      return adjust_regmask(CSR_64_AllRegs_NoSSE_RegMask);
     } else {
       if (HasAVX512)
-        return CSR_32_AllRegs_AVX512_RegMask;
+        return adjust_regmask(CSR_32_AllRegs_AVX512_RegMask);
       if (HasAVX)
-        return CSR_32_AllRegs_AVX_RegMask;
+        return adjust_regmask(CSR_32_AllRegs_AVX_RegMask);
       if (HasSSE)
-        return CSR_32_AllRegs_SSE_RegMask;
-      return CSR_32_AllRegs_RegMask;
+        return adjust_regmask(CSR_32_AllRegs_SSE_RegMask);
+      return adjust_regmask(CSR_32_AllRegs_RegMask);
     }
   default:
     break;
@@ -497,12 +674,12 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     bool IsSwiftCC = Subtarget.getTargetLowering()->supportSwiftError() &&
                      F.getAttributes().hasAttrSomewhere(Attribute::SwiftError);
     if (IsSwiftCC)
-      return IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask;
+      return adjust_regmask(IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask);
 
-    return (IsWin64 || IsUEFI64) ? CSR_Win64_RegMask : CSR_64_RegMask;
+    return adjust_regmask((IsWin64 || IsUEFI64) ? CSR_Win64_RegMask : CSR_64_RegMask);
   }
 
-  return CSR_32_RegMask;
+  return adjust_regmask(CSR_32_RegMask);
 }
 
 const uint32_t*

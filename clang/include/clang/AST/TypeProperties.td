@@ -692,6 +692,19 @@ let Class = HLSLInlineSpirvType in {
   }]>;
 }
 
+let Class = ShiftedType in {
+  def : Property<"attr", ShiftedAttr> {
+    let Read = [{ node->getAttr() }];
+  }
+  def : Property<"wrappedType", QualType> {
+    let Read = [{ node->getWrappedType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getShiftedType(attr, wrappedType);
+  }]>;
+}
+
 let Class = DependentAddressSpaceType in {
   def : Property<"pointeeType", QualType> {
     let Read = [{ node->getPointeeType() }];

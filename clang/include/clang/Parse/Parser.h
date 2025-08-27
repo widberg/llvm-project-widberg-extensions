@@ -2317,9 +2317,35 @@ private:
                                   SourceLocation AttrNameLoc,
                                   ParsedAttributes &Attrs);
   void ParseMicrosoftTypeAttributes(ParsedAttributes &attrs);
+  void ParseWidbergTypeAttributes(ParsedAttributes &attrs);
+  bool MaybeParseWidbergSpoils(ParsedAttributes &Attrs,
+                               SourceLocation *End = nullptr) {
+    const auto &LO = getLangOpts();
+    if (LO.WidbergExt && Tok.is(tok::kw___spoils)) {
+      ParseWidbergSpoils(Attrs, End);
+      return true;
+    }
+    return false;
+  }
+  void ParseWidbergSpoils(ParsedAttributes &Attrs,
+                          SourceLocation *End = nullptr);
+  bool MaybeParseWidbergShifted(ParsedAttributes &Attrs,
+                               SourceLocation *End = nullptr) {
+    const auto &LO = getLangOpts();
+    if (LO.WidbergExt && Tok.is(tok::kw___shifted)) {
+      ParseWidbergShifted(Attrs, End);
+      return true;
+    }
+    return false;
+  }
+  void ParseWidbergShifted(ParsedAttributes &Attrs,
+                          SourceLocation *End = nullptr);
+  bool TryParseWidbergLocation(SourceLocation &ATLoc, SourceLocation &LAngleLoc, SmallVector<IdentifierLoc*, 2> &RegisterIdentifiers, SourceLocation &RAngleLoc);
   void ParseWebAssemblyFuncrefTypeAttribute(ParsedAttributes &Attrs);
   void DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
   SourceLocation SkipExtendedMicrosoftTypeAttributes();
+  void DiagnoseAndSkipExtendedWidbergTypeAttributes();
+  SourceLocation SkipExtendedWidbergTypeAttributes();
 
   void ParseBorlandTypeAttributes(ParsedAttributes &attrs);
   void ParseOpenCLKernelAttributes(ParsedAttributes &attrs);
@@ -2470,6 +2496,8 @@ private:
   /// \endverbatim
   ///
   void ParseTypeofSpecifier(DeclSpec &DS);
+
+  void ParseParentofSpecifier(DeclSpec &DS);
 
   /// \verbatim
   /// [C11]   atomic-specifier:
@@ -8729,6 +8757,8 @@ private:
   /// \endverbatim
   ///
   TPResult TryParseTypeofSpecifier();
+
+  TPResult TryParseParentofSpecifier();
 
   /// [ObjC] protocol-qualifiers:
   ///         '<' identifier-list '>'

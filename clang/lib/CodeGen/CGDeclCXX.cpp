@@ -267,7 +267,7 @@ llvm::Constant *CodeGenFunction::createAtExitStub(const VarDecl &VD,
 
   // Get a proper function pointer.
   FunctionProtoType::ExtProtoInfo EPI(getContext().getDefaultCallingConvention(
-      /*IsVariadic=*/false, /*IsCXXMethod=*/false));
+      /*IsVariadic=*/false, /*IsCXXMethod=*/false), nullptr);
   QualType fnType = getContext().getFunctionType(getContext().VoidTy,
                                                  {getContext().VoidPtrTy}, EPI);
   return CGM.getFunctionPointer(fn, fnType);

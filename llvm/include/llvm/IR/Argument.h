@@ -186,6 +186,8 @@ public:
 
   LLVM_ABI Attribute getAttribute(Attribute::AttrKind Kind) const;
 
+  LLVM_ABI Attribute getAttribute(StringRef Kind) const;
+
   LLVM_ABI AttributeSet getAttributes() const;
 
   /// Method for support type inquiry through isa, cast, and dyn_cast.

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -220,6 +221,8 @@ template <typename FuncInfoTy>
 void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                const DataLayout &DL,
                                const FuncInfoTy &FuncInfo) const {
+  unsigned ParamIdx = OpIdx - AttributeList::FirstArgIndex;
+
   auto &Flags = Arg.Flags[0];
   const AttributeList &Attrs = FuncInfo.getAttributes();
   addArgFlagsFromAttributes(Flags, Attrs, OpIdx);
@@ -234,7 +237,6 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated() ||
       Flags.isByRef()) {
     assert(OpIdx >= AttributeList::FirstArgIndex);
-    unsigned ParamIdx = OpIdx - AttributeList::FirstArgIndex;
 
     Type *ElementTy = FuncInfo.getParamByValType(ParamIdx);
     if (!ElementTy)
@@ -272,6 +274,31 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   // swiftself, since it won't be passed in x0.
   if (Flags.isSwiftSelf())
     Flags.setReturned(false);
+
+  if (FuncInfo.getCallingConv() == CallingConv::UserCall || FuncInfo.getCallingConv() == CallingConv::UserPurge) {
+    if (FuncInfo.getAttributes().hasParamAttr(ParamIdx, "widberg_location")) {
+      StringRef regs = FuncInfo.getAttributes().getParamAttr(ParamIdx, "widberg_location").getValueAsString();
+
+      SmallVector<StringRef, 2> Registers;
+      regs.split(Registers, ',');
+
+      SmallVector<llvm::MCRegister, 2> MCRegisters;
+
+      for (StringRef reg : Registers) {
+        std::optional<MCRegister> PhysReg = TLI->getTargetMachine().getMCRegisterInfo()
+                                           ->getRegNo(reg);
+
+        if (PhysReg) {
+          MCRegisters.push_back(*PhysReg);
+        }
+        else
+        {
+          llvm_unreachable("Target lowering: Bad register");
+        }
+      }
+      Flags.setLocation(MCRegisters);
+    }
+  }
 }
 
 template void
@@ -710,6 +737,10 @@ bool CallLowering::determineAssignments(ValueAssigner &Assigner,
     ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
     Args[i].Flags.clear();
 
+    if (CallConv == CallingConv::UserCall || CallConv == CallingConv::UserPurge) {
+      assert(NumParts == OrigFlags.getLocation().size() && "number of split registers must match number of register arguments");
+    }
+
     for (unsigned Part = 0; Part < NumParts; ++Part) {
       ISD::ArgFlagsTy Flags = OrigFlags;
       if (Part == 0) {
@@ -719,6 +750,8 @@ bool CallLowering::determineAssignments(ValueAssigner &Assigner,
         if (Part == NumParts - 1)
           Flags.setSplitEnd();
       }
+
+      Flags.setSplitRegIndex(Part);
 
       Args[i].Flags.push_back(Flags);
       if (Assigner.assignArg(i, CurVT, NewVT, NewVT, CCValAssign::Full, Args[i],

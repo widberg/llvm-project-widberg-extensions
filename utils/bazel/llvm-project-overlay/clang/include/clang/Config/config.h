@@ -20,7 +20,7 @@
 #define CLANG_CONFIG_H
 
 /* Bug report URL. */
-#define BUG_REPORT_URL "https://github.com/llvm/llvm-project/issues/"
+#define BUG_REPORT_URL "https://github.com/widberg/llvm-project-widberg-extensions/"
 
 /* Default to -fPIE and -pie on Linux. */
 #define CLANG_DEFAULT_PIE_ON_LINUX 1

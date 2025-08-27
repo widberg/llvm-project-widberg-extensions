@@ -70,6 +70,8 @@ class TagDecl;
 class TemplateParameterList;
 class Type;
 class Attr;
+class WidbergLocation;
+class ShiftedAttr;
 
 enum {
   TypeAlignmentInBits = 4,
@@ -2600,6 +2602,7 @@ public:
   bool isFunctionNoProtoType() const { return getAs<FunctionNoProtoType>(); }
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
+  bool isShiftedType() const;
   bool isPointerOrReferenceType() const;
   bool isSignableType(const ASTContext &Ctx) const;
   bool isSignablePointerType() const;
@@ -4460,6 +4463,7 @@ public:
 class FunctionType : public Type {
   // The type returned by the function.
   QualType ResultType;
+  WidbergLocation *WidLoc = nullptr;
 
 public:
   /// Interesting information about a specific parameter that can't simply
@@ -4491,6 +4495,7 @@ public:
       IsNoEscape = 0x40,
     };
     unsigned char Data = 0;
+    WidbergLocation *Loc = nullptr;
 
   public:
     ExtParameterInfo() = default;
@@ -4500,6 +4505,13 @@ public:
     ExtParameterInfo withABI(ParameterABI kind) const {
       ExtParameterInfo copy = *this;
       copy.Data = (copy.Data & ~ABIMask) | unsigned(kind);
+      return copy;
+    }
+
+    WidbergLocation *getWidbergLocation() const { return Loc; }
+    ExtParameterInfo withWidbergLocation(WidbergLocation *newLoc) const {
+      ExtParameterInfo copy = *this;
+      copy.Loc = newLoc;
       return copy;
     }
 
@@ -4586,16 +4598,19 @@ public:
     enum { RegParmMask = 0xe00, RegParmOffset = 9 };
     enum { NoCfCheckMask = 0x1000 };
     enum { CmseNSCallMask = 0x2000 };
+    enum { SpoilsMask = 0x4000 };
+    enum { NoCalleeSavedRegsMask = 0x8000 };
     uint16_t Bits = CC_C;
+    WidbergLocation *WidLoc = nullptr;
 
-    ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)) {}
+    ExtInfo(unsigned Bits, WidbergLocation *WL) : Bits(static_cast<uint16_t>(Bits)), WidLoc(WL) {}
 
   public:
     // Constructor with no defaults. Use this when you know that you
     // have all the elements (when reading an AST file for example).
     ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
             bool producesResult, bool noCallerSavedRegs, bool NoCfCheck,
-            bool cmseNSCall) {
+            bool cmseNSCall, WidbergLocation *WL = nullptr) {
       assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
       Bits = ((unsigned)cc) | (noReturn ? NoReturnMask : 0) |
              (producesResult ? ProducesResultMask : 0) |
@@ -4603,6 +4618,7 @@ public:
              (hasRegParm ? ((regParm + 1) << RegParmOffset) : 0) |
              (NoCfCheck ? NoCfCheckMask : 0) |
              (cmseNSCall ? CmseNSCallMask : 0);
+      WidLoc = WL;
     }
 
     // Constructor with all defaults. Use when for example creating a
@@ -4611,14 +4627,18 @@ public:
 
     // Constructor with just the calling convention, which is an important part
     // of the canonical type.
-    ExtInfo(CallingConv CC) : Bits(CC) {}
+//    ExtInfo(CallingConv CC) : Bits(CC), WidLoc(nullptr) {}
+    ExtInfo(CallingConv CC, WidbergLocation *WL) : Bits(CC), WidLoc(WL) {}
 
     bool getNoReturn() const { return Bits & NoReturnMask; }
     bool getProducesResult() const { return Bits & ProducesResultMask; }
     bool getCmseNSCall() const { return Bits & CmseNSCallMask; }
     bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
+    bool getNoCalleeSavedRegs() const { return Bits & NoCalleeSavedRegsMask; }
+    bool getSpoils() const { return Bits & SpoilsMask; }
     bool getNoCfCheck() const { return Bits & NoCfCheckMask; }
     bool getHasRegParm() const { return ((Bits & RegParmMask) >> RegParmOffset) != 0; }
+    WidbergLocation *getWidbergLocation() const { return WidLoc; }
 
     unsigned getRegParm() const {
       unsigned RegParm = (Bits & RegParmMask) >> RegParmOffset;
@@ -4629,6 +4649,7 @@ public:
 
     CallingConv getCC() const { return CallingConv(Bits & CallConvMask); }
 
+    // TODO: Compare widloc
     bool operator==(ExtInfo Other) const {
       return Bits == Other.Bits;
     }
@@ -4639,49 +4660,67 @@ public:
     // Note that we don't have setters. That is by design, use
     // the following with methods instead of mutating these objects.
 
+    ExtInfo withWidbergLocation(WidbergLocation *WL) const {
+      return ExtInfo(Bits, WL);
+    }
+
     ExtInfo withNoReturn(bool noReturn) const {
       if (noReturn)
-        return ExtInfo(Bits | NoReturnMask);
+        return ExtInfo(Bits | NoReturnMask, WidLoc);
       else
-        return ExtInfo(Bits & ~NoReturnMask);
+        return ExtInfo(Bits & ~NoReturnMask, WidLoc);
     }
 
     ExtInfo withProducesResult(bool producesResult) const {
       if (producesResult)
-        return ExtInfo(Bits | ProducesResultMask);
+        return ExtInfo(Bits | ProducesResultMask, WidLoc);
       else
-        return ExtInfo(Bits & ~ProducesResultMask);
+        return ExtInfo(Bits & ~ProducesResultMask, WidLoc);
     }
 
     ExtInfo withCmseNSCall(bool cmseNSCall) const {
       if (cmseNSCall)
-        return ExtInfo(Bits | CmseNSCallMask);
+        return ExtInfo(Bits | CmseNSCallMask, WidLoc);
       else
-        return ExtInfo(Bits & ~CmseNSCallMask);
+        return ExtInfo(Bits & ~CmseNSCallMask, WidLoc);
     }
 
     ExtInfo withNoCallerSavedRegs(bool noCallerSavedRegs) const {
       if (noCallerSavedRegs)
-        return ExtInfo(Bits | NoCallerSavedRegsMask);
+        return ExtInfo(Bits | NoCallerSavedRegsMask, WidLoc);
       else
-        return ExtInfo(Bits & ~NoCallerSavedRegsMask);
+        return ExtInfo(Bits & ~NoCallerSavedRegsMask, WidLoc);
+    }
+
+    ExtInfo withNoCalleeSavedRegs(bool noCalleeSavedRegs) const {
+      if (noCalleeSavedRegs)
+        return ExtInfo(Bits | NoCalleeSavedRegsMask, WidLoc);
+      else
+        return ExtInfo(Bits & ~NoCalleeSavedRegsMask, WidLoc);
+    }
+
+    ExtInfo withSpoils(bool spoils) const {
+      if (spoils)
+        return ExtInfo(Bits | SpoilsMask, WidLoc);
+      else
+        return ExtInfo(Bits & ~SpoilsMask, WidLoc);
     }
 
     ExtInfo withNoCfCheck(bool noCfCheck) const {
       if (noCfCheck)
-        return ExtInfo(Bits | NoCfCheckMask);
+        return ExtInfo(Bits | NoCfCheckMask, WidLoc);
       else
-        return ExtInfo(Bits & ~NoCfCheckMask);
+        return ExtInfo(Bits & ~NoCfCheckMask, WidLoc);
     }
 
     ExtInfo withRegParm(unsigned RegParm) const {
       assert(RegParm < 7 && "Invalid regparm value");
       return ExtInfo((Bits & ~RegParmMask) |
-                     ((RegParm + 1) << RegParmOffset));
+                     ((RegParm + 1) << RegParmOffset), WidLoc);
     }
 
     ExtInfo withCallingConv(CallingConv cc) const {
-      return ExtInfo((Bits & ~CallConvMask) | (unsigned) cc);
+      return ExtInfo((Bits & ~CallConvMask) | (unsigned) cc, WidLoc);
     }
 
     void Profile(llvm::FoldingSetNodeID &ID) const {
@@ -4785,7 +4824,7 @@ public:
 protected:
   FunctionType(TypeClass tc, QualType res, QualType Canonical,
                TypeDependence Dependence, ExtInfo Info)
-      : Type(tc, Canonical, Dependence), ResultType(res) {
+      : Type(tc, Canonical, Dependence), ResultType(res), WidLoc(Info.WidLoc) {
     FunctionTypeBits.ExtInfo = Info.Bits;
   }
 
@@ -4813,7 +4852,7 @@ public:
 
   bool getCmseNSCallAttr() const { return getExtInfo().getCmseNSCall(); }
   CallingConv getCallConv() const { return getExtInfo().getCC(); }
-  ExtInfo getExtInfo() const { return ExtInfo(FunctionTypeBits.ExtInfo); }
+  ExtInfo getExtInfo() const { return ExtInfo(FunctionTypeBits.ExtInfo, WidLoc); }
 
   static_assert((~Qualifiers::FastMask & Qualifiers::CVRMask) == 0,
                 "Const, volatile and restrict are assumed to be a subset of "
@@ -5369,8 +5408,8 @@ public:
         : Variadic(false), HasTrailingReturn(false), CFIUncheckedCallee(false),
           AArch64SMEAttributes(SME_NormalFunction) {}
 
-    ExtProtoInfo(CallingConv CC)
-        : ExtInfo(CC), Variadic(false), HasTrailingReturn(false),
+    ExtProtoInfo(CallingConv CC, WidbergLocation *WL)
+        : ExtInfo(CC, WL), Variadic(false), HasTrailingReturn(false),
           CFIUncheckedCallee(false), AArch64SMEAttributes(SME_NormalFunction) {}
 
     ExtProtoInfo withExceptionSpec(const ExceptionSpecInfo &ESI) {
@@ -6891,6 +6930,39 @@ public:
   }
 };
 
+class ShiftedType : public Type, public llvm::FoldingSetNode {
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType WrappedType;
+  const ShiftedAttr *SAttr;
+
+  ShiftedType(QualType Canon, QualType Wrapped,
+                       const ShiftedAttr *SAttr)
+      : Type(Shifted, Canon, Wrapped->getDependence()),
+        WrappedType(Wrapped), SAttr(SAttr) {}
+
+public:
+  QualType getWrappedType() const { return WrappedType; }
+  const ShiftedAttr *getAttr() const { return SAttr; }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return getWrappedType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, WrappedType, SAttr);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
+                      const ShiftedAttr *SAttr) {
+    ID.AddPointer(Wrapped.getAsOpaquePtr());
+    ID.AddPointer(SAttr);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == Shifted;
+  }
+};
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
@@ -8523,6 +8595,10 @@ inline bool Type::isPointerType() const {
   return isa<PointerType>(CanonicalType);
 }
 
+inline bool Type::isShiftedType() const {
+  return isa<ShiftedType>(this);
+}
+
 inline bool Type::isPointerOrReferenceType() const {
   return isPointerType() || isReferenceType();
 }
@@ -9133,6 +9209,8 @@ template <typename T> const T *Type::getAsAdjusted() const {
     if (const auto *A = dyn_cast<AttributedType>(Ty))
       Ty = A->getModifiedType().getTypePtr();
     else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
+      Ty = A->getWrappedType().getTypePtr();
+    else if (const auto *A = dyn_cast<ShiftedType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
     else if (const auto *A = dyn_cast<HLSLAttributedResourceType>(Ty))
       Ty = A->getWrappedType().getTypePtr();

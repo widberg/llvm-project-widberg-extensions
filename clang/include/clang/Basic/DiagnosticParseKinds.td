@@ -832,6 +832,8 @@ def err_ms_property_expected_comma_or_rparen : Error<
   "expected ',' or ')' at end of property accessor list">;
 def err_ms_property_initializer : Error<
   "property declaration cannot have a default member initializer">;
+def err_widberg_spoils_type : Error<
+  "__spoils arguments must be an identifier">;
 def ext_invalid_attribute_argument
     : Extension<"'%0' is not allowed in an attribute argument list">,
     InGroup<DiagGroup<"attribute-preprocessor-tokens">>;

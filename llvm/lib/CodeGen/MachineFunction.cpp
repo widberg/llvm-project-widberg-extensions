@@ -630,6 +630,13 @@ uint32_t *MachineFunction::allocateRegMask() {
   return Mask;
 }
 
+MCPhysReg *MachineFunction::allocateSaveList(ArrayRef<MCPhysReg> Registers) {
+  MCPhysReg *SaveList = Allocator.Allocate<MCPhysReg>(Registers.size() + 1);
+  memcpy(SaveList, Registers.data(), Registers.size() * sizeof(Registers[0]));
+  SaveList[Registers.size()] = MCPhysReg();
+  return SaveList;
+}
+
 ArrayRef<int> MachineFunction::allocateShuffleMask(ArrayRef<int> Mask) {
   int* AllocMask = Allocator.Allocate<int>(Mask.size());
   copy(Mask, AllocMask);
