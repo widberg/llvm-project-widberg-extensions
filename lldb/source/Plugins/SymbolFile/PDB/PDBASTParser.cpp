@@ -356,6 +356,10 @@ static clang::CallingConv TranslateCallingConvention(PDB_CallingConv pdb_cc) {
     return clang::CC_X86VectorCall;
   case llvm::codeview::CallingConvention::NearPascal:
     return clang::CC_X86Pascal;
+  case llvm::codeview::CallingConvention::UserCall:
+    return clang::CC_UserCall;
+  case llvm::codeview::CallingConvention::UserPurge:
+    return clang::CC_UserPurge;
   default:
     assert(false && "Unknown calling convention");
     return clang::CC_C;

@@ -112,6 +112,12 @@ static void outputCallingConvention(OutputBuffer &OB, CallingConv CC) {
   case CallingConv::SwiftAsync:
     OB << "__attribute__((__swiftasynccall__)) ";
     break;
+  case CallingConv::UserCall:
+    OB << "__usercall";
+    break;
+  case CallingConv::UserPurge:
+    OB << "__userpurge";
+    break;
   default:
     break;
   }

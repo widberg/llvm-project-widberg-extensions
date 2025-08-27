@@ -3639,6 +3639,8 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   CC_VLS_CASE(65536)
 #undef CC_VLS_CASE
     // clang-format on
+  case CC_UserCall: return "usercall";
+  case CC_UserPurge: return "userpurge";
   }
 
   llvm_unreachable("Invalid calling convention.");
@@ -4427,6 +4429,8 @@ bool AttributedType::isCallingConv() const {
   case attr::PreserveNone:
   case attr::RISCVVectorCC:
   case attr::RISCVVLSCC:
+  case attr::UserCall:
+  case attr::UserPurge:
     return true;
   }
   llvm_unreachable("invalid attr kind");

@@ -1186,6 +1186,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     }
     break;
 
+    case Type::Shifted:
+    if (!IsStructurallyEquivalent(
+            Context, cast<ShiftedType>(T1)->getWrappedType(),
+            cast<ShiftedType>(T2)->getWrappedType()))
+      return false;
+    break;
+
   case Type::Paren:
     if (!IsStructurallyEquivalent(Context, cast<ParenType>(T1)->getInnerType(),
                                   cast<ParenType>(T2)->getInnerType()))
