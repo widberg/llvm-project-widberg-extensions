@@ -2880,6 +2880,14 @@ bool AsmPrinter::doFinalization(Module &M) {
   // after everything else has gone out.
   emitEndOfAsmFile(M);
 
+  if (NamedMDNode *UserComments = M.getNamedMetadata("llvm.user-comments")) {
+    for (const auto *UserComment : UserComments->operands()) {
+      for (const auto &Piece : cast<MDNode>(UserComment)->operands()) {
+        OutStreamer->emitUserComment(cast<MDString>(Piece)->getString());
+      }
+    }
+  }
+
   MMI = nullptr;
   AddrLabelSymbols = nullptr;
 
