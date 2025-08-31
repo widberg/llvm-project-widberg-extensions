@@ -66,6 +66,7 @@ private:
   SectionListType Sections;
 
   SmallVector<const MCSymbol *, 0> Symbols;
+  SmallVector<std::string, 0> UserComments;
 
   struct RelocDirective {
     const MCExpr &Offset;
@@ -203,9 +204,12 @@ public:
     return make_pointee_range(Symbols);
   }
 
+  SmallVectorImpl<std::string> &getUserComments() { return UserComments; }
+
   LLVM_ABI bool registerSection(MCSection &Section);
   LLVM_ABI bool registerSymbol(const MCSymbol &Symbol);
   LLVM_ABI void addRelocDirective(RelocDirective RD);
+  LLVM_ABI void addUserComment(StringRef UserComment);
 
   LLVM_ABI void reportError(SMLoc L, const Twine &Msg) const;
   // Record pending errors during layout iteration, as they may go away once the

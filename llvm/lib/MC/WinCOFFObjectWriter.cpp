@@ -189,6 +189,7 @@ private:
   void WriteRelocation(const COFF::relocation &R);
   uint32_t writeSectionContents(const MCSection &MCSec);
   void writeSection(const COFFSection &Sec);
+  void WriteUserComment(StringRef S);
 
   void createFileSymbols();
   void setWeakDefaultNames();
@@ -635,6 +636,11 @@ void WinCOFFWriter::writeSection(const COFFSection &Sec) {
 
   for (const auto &Relocation : Sec.Relocations)
     WriteRelocation(Relocation.Data);
+}
+
+void WinCOFFWriter::WriteUserComment(StringRef S) {
+  W.OS.write(S.data(), S.size());
+  W.OS.write('\0');
 }
 
 // Create .file symbols.
@@ -1154,6 +1160,9 @@ uint64_t WinCOFFWriter::writeObject() {
 
   // Write a string table, which completes the entire COFF file.
   Strings.write(W.OS);
+
+  for (StringRef UserComment : Asm->getUserComments())
+    WriteUserComment(UserComment);
 
   return W.OS.tell() - StartOffset;
 }

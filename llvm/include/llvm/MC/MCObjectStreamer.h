@@ -168,6 +168,7 @@ public:
   void emitCVFileChecksumOffsetDirective(unsigned FileNo) override;
   void emitRelocDirective(const MCExpr &Offset, StringRef Name,
                           const MCExpr *Expr, SMLoc Loc = {}) override;
+  void emitUserComment(StringRef UserComment) override;
   using MCStreamer::emitFill;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
