@@ -587,6 +587,9 @@ private:
   /// A vector of metadata strings for dependent libraries for ELF.
   SmallVector<llvm::MDNode *, 16> ELFDependentLibraries;
 
+  /// A vector of metadata strings for user comments.
+  SmallVector<llvm::MDNode *, 16> UserComments;
+
   /// @name Cache for Objective-C runtime types
   /// @{
 
@@ -1458,6 +1461,8 @@ public:
   /// Appends a dependent lib to the appropriate metadata value.
   void AddDependentLib(StringRef Lib);
 
+  /// Appends a user comment to the appropriate metadata value.
+  void AddUserComment(StringRef Lib);
 
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
 
