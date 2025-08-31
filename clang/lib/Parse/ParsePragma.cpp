@@ -3304,7 +3304,9 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  if (PP.getTargetInfo().getTriple().isOSBinFormatELF() && Kind != PCK_Lib) {
+  if ((PP.getTargetInfo().getTriple().isOSBinFormatELF() && Kind != PCK_Lib) ||
+      (!PP.getTargetInfo().getTriple().isOSBinFormatCOFF() && Kind == PCK_User))
+  {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
         << II->getName();
     return;
