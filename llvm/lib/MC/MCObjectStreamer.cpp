@@ -696,6 +696,10 @@ void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
   getAssembler().addRelocDirective({*O, Expr, Kind});
 }
 
+void MCObjectStreamer::emitUserComment(StringRef UserComment) {
+  getAssembler().addUserComment(UserComment);
+}
+
 void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                                 SMLoc Loc) {
   assert(getCurrentSectionOnly() && "need a section");
