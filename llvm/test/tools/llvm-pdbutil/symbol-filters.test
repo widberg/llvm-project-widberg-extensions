@@ -1,4 +1,3 @@
-; XFAIL: *
 ; REQUIRES: diasdk
 
 ; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=data %p/Inputs/FilterTest.pdb \
