@@ -1101,6 +1101,12 @@ void CodeGenModule::Release() {
       NMD->addOperand(MD);
   }
 
+  if (!UserComments.empty()) {
+    auto *NMD = getModule().getOrInsertNamedMetadata("llvm.user-comments");
+    for (auto *MD : UserComments)
+      NMD->addOperand(MD);
+  }
+
   if (CodeGenOpts.DwarfVersion) {
     getModule().addModuleFlag(llvm::Module::Max, "Dwarf Version",
                               CodeGenOpts.DwarfVersion);
@@ -3287,6 +3293,11 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
   getTargetCodeGenInfo().getDependentLibraryOption(Lib, Opt);
   auto *MDOpts = llvm::MDString::get(getLLVMContext(), Opt);
   LinkerOptionsMetadata.push_back(llvm::MDNode::get(C, MDOpts));
+}
+
+void CodeGenModule::AddUserComment(StringRef UserComment) {
+  auto *MDUserComment = llvm::MDString::get(getLLVMContext(), UserComment);
+  UserComments.push_back(llvm::MDNode::get(getLLVMContext(), MDUserComment));
 }
 
 /// Add link options implied by the given module, including modules
@@ -7399,9 +7410,11 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     case PCK_Lib:
         AddDependentLib(PCD->getArg());
       break;
+    case PCK_User:
+      AddUserComment(PCD->getArg());
+      break;
     case PCK_Compiler:
     case PCK_ExeStr:
-    case PCK_User:
       break; // We ignore all of these.
     }
     break;
