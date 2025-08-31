@@ -95,6 +95,7 @@ void MCAssembler::reset() {
   Sections.clear();
   Symbols.clear();
   ThumbFuncs.clear();
+  UserComments.clear();
 
   // reset objects owned by us
   if (getBackendPtr())
@@ -391,6 +392,10 @@ bool MCAssembler::registerSymbol(const MCSymbol &Symbol) {
 
 void MCAssembler::addRelocDirective(RelocDirective RD) {
   relocDirectives.push_back(RD);
+}
+
+void MCAssembler::addUserComment(StringRef UserComment) {
+  UserComments.emplace_back(UserComment);
 }
 
 /// Write the fragment \p F to the output file.

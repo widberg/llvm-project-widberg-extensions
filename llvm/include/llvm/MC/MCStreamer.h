@@ -1080,6 +1080,8 @@ public:
   /// Record a relocation described by the .reloc directive.
   virtual void emitRelocDirective(const MCExpr &Offset, StringRef Name,
                                   const MCExpr *Expr, SMLoc Loc = {}) {}
+  
+  virtual void emitUserComment(StringRef UserComment) {};
 
   virtual void emitAddrsig() {}
   virtual void emitAddrsigSym(const MCSymbol *Sym) {}
