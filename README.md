@@ -128,8 +128,8 @@ An alternative implementation of defs.h from the Hex-Rays decompiler sdk intende
 Use `x64 Native Tools Command Prompt`
 
 ```sh
-cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86"
-cmake --build build --config RelWithDebInfo --target clang
+cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build build --config RelWithDebInfo --target clang clangd lld
 ```
 
 # Affiliation with LLVM (Or Lack Thereof)
