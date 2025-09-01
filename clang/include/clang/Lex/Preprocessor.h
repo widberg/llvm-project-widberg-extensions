@@ -182,6 +182,8 @@ class Preprocessor {
   friend class VariadicMacroScopeGuard;
 
   llvm::unique_function<void(const clang::Token &)> OnToken;
+  llvm::unique_function<std::vector<Token>(ArrayRef<Token>)>
+      FunctionLocalPredefinedMacroExpander;
   /// Functor for getting the dependency preprocessor directives of a file.
   ///
   /// These are directives derived from a special form of lexing where the
@@ -340,6 +342,11 @@ class Preprocessor {
   bool IncrementalProcessing = false;
 
 public:
+  void setFunctionLocalPredefinedMacroExpander(
+      llvm::unique_function<std::vector<Token>(ArrayRef<Token>)> Expander) {
+    FunctionLocalPredefinedMacroExpander = std::move(Expander);
+  }
+
   /// The kind of translation unit we are processing.
   const TranslationUnitKind TUKind;
 

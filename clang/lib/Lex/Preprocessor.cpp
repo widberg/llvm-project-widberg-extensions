@@ -1548,14 +1548,15 @@ bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
                                           const char *DiagnosticTag,
                                           bool AllowMacroExpansion) {
   // We need at least one string literal.
-  if (Result.isNot(tok::string_literal)) {
+  if (Result.isNot(tok::string_literal) && (!FunctionLocalPredefinedMacroExpander ||
+      !isFunctionLocalStringLiteralMacro(Result.getKind(), LangOpts))) {
     Diag(Result, diag::err_expected_string_literal)
       << /*Source='in...'*/0 << DiagnosticTag;
     return false;
   }
 
   // Lex string literal tokens, optionally with macro expansion.
-  SmallVector<Token, 4> StrToks;
+  std::vector<Token> StrToks;
   do {
     StrToks.push_back(Result);
 
@@ -1566,7 +1567,11 @@ bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
       Lex(Result);
     else
       LexUnexpandedToken(Result);
-  } while (Result.is(tok::string_literal));
+  } while (Result.is(tok::string_literal) || (FunctionLocalPredefinedMacroExpander &&
+           isFunctionLocalStringLiteralMacro(Result.getKind(), LangOpts)));
+
+  if (FunctionLocalPredefinedMacroExpander && getLangOpts().MicrosoftExt)
+    StrToks = FunctionLocalPredefinedMacroExpander(StrToks);
 
   // Concatenate and parse the strings.
   StringLiteralParser Literal(StrToks, *this);

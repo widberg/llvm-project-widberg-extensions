@@ -327,6 +327,10 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
+  PP.setFunctionLocalPredefinedMacroExpander(
+      [this](ArrayRef<Token> Toks) {
+        return ExpandFunctionLocalPredefinedMacros(Toks);
+      });
 
   LoadedExternalKnownNamespaces = false;
   for (unsigned I = 0; I != NSAPI::NumNSNumberLiteralMethods; ++I)
@@ -594,6 +598,8 @@ void Sema::Initialize() {
 Sema::~Sema() {
   assert(InstantiatingSpecializations.empty() &&
          "failed to clean up an InstantiatingTemplate?");
+
+  PP.setFunctionLocalPredefinedMacroExpander({});
 
   if (VisContext) FreeVisContext();
 
