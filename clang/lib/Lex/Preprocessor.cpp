@@ -51,6 +51,7 @@
 #include "clang/Lex/ScratchBuffer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Sema/Sema.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -92,7 +93,7 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
       // deserializing an ASTUnit), adding keywords to the identifier table is
       // deferred to Preprocessor::Initialize().
       Identifiers(IILookup), PragmaHandlers(new PragmaNamespace(StringRef())),
-      TUKind(TUKind), SkipMainFilePreamble(0, true),
+      TheSema(nullptr), TUKind(TUKind), SkipMainFilePreamble(0, true),
       CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
 
@@ -1385,14 +1386,15 @@ bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
                                           const char *DiagnosticTag,
                                           bool AllowMacroExpansion) {
   // We need at least one string literal.
-  if (Result.isNot(tok::string_literal)) {
+  if (Result.isNot(tok::string_literal) && (!TheSema ||
+      !isFunctionLocalStringLiteralMacro(Result.getKind(), LangOpts))) {
     Diag(Result, diag::err_expected_string_literal)
       << /*Source='in...'*/0 << DiagnosticTag;
     return false;
   }
 
   // Lex string literal tokens, optionally with macro expansion.
-  SmallVector<Token, 4> StrToks;
+  std::vector<Token> StrToks;
   do {
     StrToks.push_back(Result);
 
@@ -1403,7 +1405,11 @@ bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
       Lex(Result);
     else
       LexUnexpandedToken(Result);
-  } while (Result.is(tok::string_literal));
+  } while (Result.is(tok::string_literal) || (TheSema &&
+           isFunctionLocalStringLiteralMacro(Result.getKind(), LangOpts)));
+
+  if (TheSema && getLangOpts().MicrosoftExt)
+    StrToks = TheSema->ExpandFunctionLocalPredefinedMacros(StrToks);
 
   // Concatenate and parse the strings.
   StringLiteralParser Literal(StrToks, *this);

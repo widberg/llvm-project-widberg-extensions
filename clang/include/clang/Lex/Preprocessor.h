@@ -83,6 +83,7 @@ class PreprocessorOptions;
 class ScratchBuffer;
 class TargetInfo;
 class NoTrivialPPDirectiveTracer;
+class Sema;
 
 namespace Builtin {
 class Context;
@@ -305,6 +306,7 @@ class Preprocessor {
   bool IncrementalProcessing = false;
 
 public:
+  Sema *TheSema;
   /// The kind of translation unit we are processing.
   const TranslationUnitKind TUKind;
 
