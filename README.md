@@ -1,7 +1,7 @@
 # The LLVM Compiler Infrastructure With Widberg Extensions
 
 The LLVM Compiler Infrastructure With Widberg Extensions, affectionately called
-the Widpiler, is a fork of LLVM intended to implement C/C++ language features in
+the Widpiler by many, is a fork of LLVM intended to implement C/C++ language features in
 LLVM/Clang to aid in reverse engineering. Currently, the scope of this project
 covers a subset of the IDA Pro [__usercall syntax](https://github.com/widberg/llvm-project-widberg-extensions/wiki/User‐Defined-Calling-Conventions)
 and [shifted pointers](https://github.com/widberg/llvm-project-widberg-extensions/wiki/Shifted-Pointers).
@@ -18,7 +18,7 @@ An example of the syntax that is currently supported is as follows:
 
 ```cpp
 // __usercall
-// https://www.hex-rays.com/products/ida/support/idadoc/1361.shtml
+// https://hex-rays.com/blog/igors-tip-of-the-week-51-custom-calling-conventions
 long long __usercall __spoils<eax,esi>
 square@<ebx:ecx>(long long num@<eax:edx>) {
     return num * num;
@@ -39,7 +39,8 @@ int *__usercall call_fn_ptr@<ebx>(int *(__usercall *x)@<eax>(long @<ecx>)@<edx>)
 }
 
 // __shifted
-// https://hex-rays.com/products/ida/support/idadoc/1695.shtml
+// https://hex-rays.com/blog/igors-tip-of-the-week-54-shifted-pointers
+// https://hex-rays.com/blog/igors-tip-of-the-week-57-shifted-pointers-2
 typedef struct vec3f {
     float x;
     float y;
@@ -60,17 +61,23 @@ const char *get_player_name_from_shifted_pos_pointer(const vec3f_t *__shifted(pl
 ```
 
 The first thing most people coming from MSVC say to me when I tell them
-about this project is, "I won't have to do the __fastcall/__thiscall trick
-anymore." What they don't know is that Clang already allows __thiscall on
+about this project is, "I won't have to do the `__fastcall`/`__thiscall` trick
+anymore." What they don't know is that Clang already allows `__thiscall` on
 non-member functions without this fork. For example the following is
 acceptable in mainline Clang, as well as this fork, and produces the correct
-output (_this in ecx, other args on the stack):
+output (`_this` in `ecx`, other args on the stack):
 
 ```cpp
 int __thiscall square(void *_this, int num) {
     return num * num;
 }
 ```
+
+This project also adds some MSVC compatibility features not found in LLVM:
+* Allow [`__FUNCDNAME__`, `__FUNCSIG__`, and `__FUNCTION__`](https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=msvc-170) to be used in `pragma`s.
+* Add [`#pragma comment(user, "...")`](https://learn.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?view=msvc-170).
+
+I'll also point out [backengineering/llvm-msvc](https://github.com/backengineering/llvm-msvc). It has a lot more MSVC compatibility improvements. If your use case is sufficiently complicated, then you might want to cherry-pick some of the improvements from that repository into here.
 
 ## Compiler Explorer
 
@@ -93,6 +100,11 @@ the X86_32 and X86_64 backends are supported.
 Next steps are to improve the diagnostics reporting as described above and fix
 the bugs. Pull requests and issues are encouraged; especially pull requests
 adding tests.
+
+Furthermore, scattered argument locations haven't been implemented yet and the
+name mangling scheme for `__usercall`/`__userpurge` function symbols,
+especially important when interacting with `extern "C"`, have not yet been
+finalized. These are lower priority since they are easily worked around.
 
 ## Enable and Disable the Extensions
 
