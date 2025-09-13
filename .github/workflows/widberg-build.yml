@@ -13,12 +13,19 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@v1.12.0
     - name: Build
       run: |
-           cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86"
+           cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86"
            cmake --build build --config RelWithDebInfo --target vt_gen
-           cmake --build build --config RelWithDebInfo --target clang
+           cmake --build build --config RelWithDebInfo --target clang clangd clang-format clang-tidy lld llvm-lib llvm-ar
 
     - name: Archive Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: widberg-windows-x86_64-${{ github.sha }}
-        path: ./build/bin/clang-cl.exe
+        path: |
+          ./build/bin/clang-cl.exe
+          ./build/bin/clangd.exe
+          ./build/bin/clang-format.exe
+          ./build/bin/clang-tidy.exe
+          ./build/bin/lld-link.exe
+          ./build/bin/llvm-lib.exe
+          ./build/bin/llvm-ar.exe
