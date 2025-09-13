@@ -23,7 +23,7 @@ entry:
 ; CHECK-LABEL: is_even:
 ; CHECK: testb	$1, 4(%esp)
 ; CHECK: sete	%al
-; CHECK: retl	$4
+; CHECK: retl
   %0 = and i32 %num, 1
   %cmp = icmp eq i32 %0, 0
   ret i1 %cmp
@@ -36,7 +36,7 @@ entry:
 ; CHECK: andl	4(%esp), %ecx
 ; CHECK: cmpl	$1, %ecx
 ; CHECK: sete	(%eax)
-; CHECK: retl
+; CHECK: retl $4
   %0 = and i32 %num, -2147483647
   %cmp = icmp eq i32 %0, 1
   %frombool = zext i1 %cmp to i8
