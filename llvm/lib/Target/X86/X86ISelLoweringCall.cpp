@@ -1273,7 +1273,6 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::X86_StdCall:
   case CallingConv::X86_VectorCall:
   case CallingConv::X86_FastCall:
-  case CallingConv::UserCall:
   case CallingConv::UserPurge:
   // Swift:
   case CallingConv::Swift:
@@ -3210,7 +3209,8 @@ bool X86::isCalleePop(CallingConv::ID CallingConv,
   case CallingConv::X86_FastCall:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_VectorCall:
-  case CallingConv::UserCall:
     return !is64Bit;
+  case CallingConv::UserPurge:
+    return true;
   }
 }

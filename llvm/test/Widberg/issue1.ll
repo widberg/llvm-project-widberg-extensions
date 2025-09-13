@@ -5,7 +5,7 @@ entry:
 ; CHECK-LABEL: foo:
 ; CHECK: movl	(%edi), %ebx
 ; CHECK: addl	4(%esp), %ebx
-; CHECK: retl
+; CHECK: retl $4
   %0 = load i32, ptr %a1, align 4, !tbaa !5
   %add = add nsw i32 %0, %frame
   ret i32 %add
@@ -21,7 +21,7 @@ entry:
 ; CHECK: addss	(%eax), %xmm0
 ; CHECK: addss	16(%esp), %xmm0
 ; CHECK: movd	%xmm0, %ecx
-; CHECK: retl	$16
+; CHECK: retl
   %add = add nsw i32 %a2, %a1
   %add1 = add nsw i32 %add, %a3
   %conv = sitofp i32 %add1 to float
