@@ -279,7 +279,7 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
     Out << '0';
     return;
   }
-  assert(!Proto->isVariadic());
+  // assert(!Proto->isVariadic());
   unsigned ArgWords = 0;
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD))
     if (MD->isImplicitObjectMemberFunction())

@@ -16,15 +16,15 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@v1.12.0
     - name: Build
       run: |
-           cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86"
+           cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86"
            cmake --build build --config RelWithDebInfo --target vt_gen
-           cmake --build build --config RelWithDebInfo --target clang
+           cmake --build build --config RelWithDebInfo --target clang clangd clang-format clang-tidy lld llvm-lib llvm-ar
 
     - name: Package
       run: |
            cd build/bin/
-           7z a ../../bin.zip clang-cl.exe
-    
+           7z a ../../bin.zip clang-cl.exe clangd.exe clang-format.exe clang-tidy.exe lld-link.exe llvm-lib.exe llvm-ar.exe
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -35,7 +35,7 @@ jobs:
         release_name: Release ${{ github.ref }}
         draft: false
         prerelease: false
-    
+
     - name: Upload Archive to Release
       uses: actions/upload-release-asset@v1
       env:
