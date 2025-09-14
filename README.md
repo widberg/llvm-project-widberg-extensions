@@ -95,7 +95,11 @@ largely by asserts and internal compiler errors, especially in X86_64. More work
 needs to be done to take advantage of Clang's diagnostics infrastructure and
 produce pretty errors rather than compiler stack traces. Additionally, some
 incorrect syntax is accepted and ignored rather than reported. Currently, only
-the X86_32 and X86_64 backends are supported.
+the X86_32 and X86_64 backends are supported. You have to use `fp0` instead of
+`st0` for floating point registers for reasons I haven't figured out and don't
+care enough to fix right now. Some more warnings that anticipate people
+copy-pasting IDA decompilation would be nice: lack of calling convention
+attributes on functions and bad optimizations due to stack variable aliasing.
 
 Next steps are to improve the diagnostics reporting as described above and fix
 the bugs. Pull requests and issues are encouraged; especially pull requests
