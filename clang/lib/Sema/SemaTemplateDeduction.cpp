@@ -4741,6 +4741,12 @@ QualType Sema::adjustCCAndNoReturn(QualType ArgFunctionType,
     Rebuild = true;
   }
 
+  WidbergLocation *WidLoc = FunctionTypeP->getExtInfo().getWidbergLocation();
+  if (!EPI.ExtInfo.getWidbergLocation() != !WidLoc || (WidLoc && *EPI.ExtInfo.getWidbergLocation() != *WidLoc)) {
+    EPI.ExtInfo = EPI.ExtInfo.withWidbergLocation(WidLoc);
+    Rebuild = true;
+  }
+
   bool NoReturn = FunctionTypeP->getNoReturnAttr();
   if (EPI.ExtInfo.getNoReturn() != NoReturn) {
     EPI.ExtInfo = EPI.ExtInfo.withNoReturn(NoReturn);

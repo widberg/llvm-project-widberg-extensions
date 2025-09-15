@@ -110,6 +110,7 @@ static_library("AST") {
     "DeclOpenMP.cpp",
     "DeclPrinter.cpp",
     "DeclTemplate.cpp",
+    "DeclWidberg.cpp",
     "DeclarationName.cpp",
     "DynamicRecursiveASTVisitor.cpp",
     "Expr.cpp",
