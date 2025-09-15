@@ -789,6 +789,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (EI1.getCC() != EI2.getCC())
     return false;
 
+  if (!EI1.getWidbergLocation() != !EI2.getWidbergLocation() || (EI1.getWidbergLocation() && *EI1.getWidbergLocation() != *EI2.getWidbergLocation()))
+    return false;
+
   // Regparm is part of the calling convention.
   if (EI1.getHasRegParm() != EI2.getHasRegParm())
     return false;

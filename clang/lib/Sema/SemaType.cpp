@@ -2595,6 +2595,7 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
                     llvm::function_ref<SourceLocation(unsigned)> getParamLoc) {
   assert(EPI.ExtParameterInfos && "shouldn't get here without param infos");
 
+  // FIXME: Check WidLoc
   bool emittedError = false;
   auto actualCC = EPI.ExtInfo.getCC();
   enum class RequiredCC { OnlySwift, SwiftOrSwiftAsync };

@@ -3871,6 +3871,12 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     }
   }
 
+  if (!OldTypeInfo.getWidbergLocation() != !NewTypeInfo.getWidbergLocation()) {
+    // FIXME: Check that it's compatible
+    NewTypeInfo = NewTypeInfo.withWidbergLocation(OldTypeInfo.getWidbergLocation());
+    RequiresAdjustment = true;
+  }
+
   // FIXME: diagnose the other way around?
   if (OldTypeInfo.getNoReturn() && !NewTypeInfo.getNoReturn()) {
     NewTypeInfo = NewTypeInfo.withNoReturn(true);
@@ -11518,7 +11524,7 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
         ArmStreamingCCMismatched = true;
     }
 
-    if (OldTypeInfo.getCC() != NewTypeInfo.getCC() || ArmStreamingCCMismatched)
+    if (OldTypeInfo.getCC() != NewTypeInfo.getCC() || (!OldTypeInfo.getWidbergLocation() != !NewTypeInfo.getWidbergLocation() || (OldTypeInfo.getWidbergLocation() && (*OldTypeInfo.getWidbergLocation() != *NewTypeInfo.getWidbergLocation()))) || ArmStreamingCCMismatched)
       return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << CallingConv;
 
     QualType OldReturnType = OldType->getReturnType();

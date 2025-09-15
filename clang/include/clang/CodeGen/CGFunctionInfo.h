@@ -824,6 +824,11 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     ID.AddInteger(getASTCallingConvention());
+    if (getWidbergLocation()) {
+      for (auto *x : getWidbergLocation()->asArray()) {
+        ID.AddString(x->getIdentifierInfo()->getName());
+      }
+    }
     ID.AddBoolean(InstanceMethod);
     ID.AddBoolean(ChainCall);
     ID.AddBoolean(DelegateCall);
@@ -837,8 +842,14 @@ public:
     ID.AddInteger(Required.getOpaqueData());
     ID.AddBoolean(HasExtParameterInfos);
     if (HasExtParameterInfos) {
-      for (auto paramInfo : getExtParameterInfos())
+      for (auto paramInfo : getExtParameterInfos()) {
         ID.AddInteger(paramInfo.getOpaqueValue());
+        if (paramInfo.getWidbergLocation()) {
+          for (auto *x : paramInfo.getWidbergLocation()->asArray()) {
+            ID.AddString(x->getIdentifierInfo()->getName());
+          }
+        }
+      }
     }
     getReturnType().Profile(ID);
     for (const auto &I : arguments())
@@ -851,6 +862,11 @@ public:
                       RequiredArgs required, CanQualType resultType,
                       ArrayRef<CanQualType> argTypes) {
     ID.AddInteger(info.getCC());
+    if (info.getWidbergLocation()) {
+      for (auto *x : info.getWidbergLocation()->asArray()) {
+        ID.AddString(x->getIdentifierInfo()->getName());
+      }
+    }
     ID.AddBoolean(InstanceMethod);
     ID.AddBoolean(ChainCall);
     ID.AddBoolean(IsDelegateCall);
@@ -864,8 +880,14 @@ public:
     ID.AddInteger(required.getOpaqueData());
     ID.AddBoolean(!paramInfos.empty());
     if (!paramInfos.empty()) {
-      for (auto paramInfo : paramInfos)
+      for (auto paramInfo : paramInfos) {
         ID.AddInteger(paramInfo.getOpaqueValue());
+        if (paramInfo.getWidbergLocation()) {
+          for (auto *x : paramInfo.getWidbergLocation()->asArray()) {
+            ID.AddString(x->getIdentifierInfo()->getName());
+          }
+        }
+      }
     }
     resultType.Profile(ID);
     for (const CanQualType &argType : argTypes)

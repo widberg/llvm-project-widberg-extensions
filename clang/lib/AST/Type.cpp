@@ -3934,8 +3934,14 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());
   }
   if (epi.ExtParameterInfos) {
-    for (unsigned i = 0; i != NumParams; ++i)
+    for (unsigned i = 0; i != NumParams; ++i) {
       ID.AddInteger(epi.ExtParameterInfos[i].getOpaqueValue());
+      if (epi.ExtParameterInfos[i].getWidbergLocation()) {
+        for (auto *x : epi.ExtParameterInfos[i].getWidbergLocation()->asArray()) {
+          ID.AddString(x->getIdentifierInfo()->getName());
+        }
+      }
+    }
   }
 
   epi.ExtInfo.Profile(ID);

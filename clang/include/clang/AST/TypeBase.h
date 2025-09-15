@@ -17,6 +17,7 @@
 #ifndef LLVM_CLANG_AST_TYPE_BASE_H
 #define LLVM_CLANG_AST_TYPE_BASE_H
 
+#include "clang/AST/DeclWidberg.h"
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateName.h"
@@ -70,7 +71,6 @@ class TagDecl;
 class TemplateParameterList;
 class Type;
 class Attr;
-class WidbergLocation;
 class ShiftedAttr;
 
 enum {
@@ -4552,11 +4552,11 @@ public:
     }
 
     friend bool operator==(ExtParameterInfo lhs, ExtParameterInfo rhs) {
-      return lhs.Data == rhs.Data;
+      return lhs.Data == rhs.Data && !lhs.getWidbergLocation() == !rhs.getWidbergLocation() && (!lhs.getWidbergLocation() || *lhs.getWidbergLocation() == *rhs.getWidbergLocation());
     }
 
     friend bool operator!=(ExtParameterInfo lhs, ExtParameterInfo rhs) {
-      return lhs.Data != rhs.Data;
+      return !(lhs == rhs);
     }
   };
 
@@ -4649,12 +4649,11 @@ public:
 
     CallingConv getCC() const { return CallingConv(Bits & CallConvMask); }
 
-    // TODO: Compare widloc
     bool operator==(ExtInfo Other) const {
-      return Bits == Other.Bits;
+      return Bits == Other.Bits && !WidLoc == !Other.WidLoc && (!WidLoc || *WidLoc == *Other.WidLoc);
     }
     bool operator!=(ExtInfo Other) const {
-      return Bits != Other.Bits;
+      return !(*this == Other);
     }
 
     // Note that we don't have setters. That is by design, use
@@ -4725,6 +4724,11 @@ public:
 
     void Profile(llvm::FoldingSetNodeID &ID) const {
       ID.AddInteger(Bits);
+      if (WidLoc) {
+        for (auto *x : WidLoc->asArray()) {
+          ID.AddString(x->getIdentifierInfo()->getName());
+        }
+      }
     }
   };
 

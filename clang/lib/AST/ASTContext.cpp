@@ -11482,6 +11482,9 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
   if (lbaseInfo.getCC() != rbaseInfo.getCC())
     return {};
 
+  if (!lbaseInfo.getWidbergLocation() != !rbaseInfo.getWidbergLocation() || (lbaseInfo.getWidbergLocation() && *lbaseInfo.getWidbergLocation() != *rbaseInfo.getWidbergLocation()))
+    return {};
+
   // Regparm is part of the calling convention.
   if (lbaseInfo.getHasRegParm() != rbaseInfo.getHasRegParm())
     return {};
