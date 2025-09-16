@@ -356,6 +356,10 @@ public:
 
   /// Emit a list of attributes.
   void AddAttributes(ArrayRef<const Attr*> Attrs);
+
+  /// Emit a WidbergLocation
+  void AddWidbergLocation(const WidbergLocation *WidLoc);
+  void writeWidbergLocation(const WidbergLocation *WidLoc);
 };
 
 } // end namespace clang

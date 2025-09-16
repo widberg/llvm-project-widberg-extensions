@@ -345,6 +345,9 @@ public:
   /// Reads attributes from the current stream position, advancing Idx.
   void readAttributes(AttrVec &Attrs);
 
+  /// Reads a WidbergLocation from the current stream position, advancing Idx.
+  WidbergLocation *readWidbergLocation();
+
   /// Read an BTFTypeTagAttr object.
   BTFTypeTagAttr *readBTFTypeTagAttr() {
     return cast<BTFTypeTagAttr>(readAttr());

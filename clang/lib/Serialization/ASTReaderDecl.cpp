@@ -625,6 +625,15 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     D->setAttrsImpl(Attrs, Reader.getContext());
   }
 
+  BitsUnpacker WidBits(Record.readInt());
+  bool HasWidbergLocation = WidBits.getNextBit();
+  bool HasWidbergReturnLocation = WidBits.getNextBit();
+
+  if (HasWidbergLocation)
+    D->WidLoc = Record.readWidbergLocation();
+  if (HasWidbergReturnLocation)
+    D->WidRetLoc = Record.readWidbergLocation();
+
   // Determine whether this declaration is part of a (sub)module. If so, it
   // may not yet be visible.
   bool ModulePrivate =
@@ -3199,6 +3208,24 @@ void ASTRecordReader::readAttributes(AttrVec &Attrs) {
   for (unsigned I = 0, E = readInt(); I != E; ++I)
     if (auto *A = readAttr())
       Attrs.push_back(A);
+}
+
+/// Reads WidbergLocation from the current stream position.
+WidbergLocation *ASTRecordReader::readWidbergLocation() {
+  if (readInt() == 0) {
+    return nullptr;
+  }
+  auto ATLoc = readSourceLocation();
+  auto LAngleLoc = readSourceLocation();
+  auto RAngleLoc = readSourceLocation();
+  std::vector<IdentifierLoc *> RegisterIdentifiers;
+  for (unsigned I = 0, E = readInt(); I != E; ++I) {
+    auto Loc = readSourceLocation();
+    auto *Ident = readIdentifier();
+    IdentifierLoc *IL = new (getASTContext()) IdentifierLoc(Loc, Ident);
+    RegisterIdentifiers.push_back(IL);
+  }
+  return WidbergLocation::Create(getASTContext(), ATLoc, LAngleLoc, RegisterIdentifiers, RAngleLoc);
 }
 
 //===----------------------------------------------------------------------===//

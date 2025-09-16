@@ -4610,14 +4610,15 @@ public:
     // have all the elements (when reading an AST file for example).
     ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
             bool producesResult, bool noCallerSavedRegs, bool NoCfCheck,
-            bool cmseNSCall, WidbergLocation *WL = nullptr) {
+            bool cmseNSCall, bool spoils, bool noCalleeSavedRegs, WidbergLocation *WL) {
       assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
       Bits = ((unsigned)cc) | (noReturn ? NoReturnMask : 0) |
              (producesResult ? ProducesResultMask : 0) |
              (noCallerSavedRegs ? NoCallerSavedRegsMask : 0) |
              (hasRegParm ? ((regParm + 1) << RegParmOffset) : 0) |
              (NoCfCheck ? NoCfCheckMask : 0) |
-             (cmseNSCall ? CmseNSCallMask : 0);
+             (cmseNSCall ? CmseNSCallMask : 0) | (spoils ? SpoilsMask : 0) |
+             (noCalleeSavedRegs ? NoCalleeSavedRegsMask : 0);
       WidLoc = WL;
     }
 

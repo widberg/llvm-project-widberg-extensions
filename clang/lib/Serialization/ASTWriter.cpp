@@ -5271,6 +5271,27 @@ void ASTRecordWriter::AddAttributes(ArrayRef<const Attr *> Attrs) {
     AddAttr(A);
 }
 
+void ASTRecordWriter::AddWidbergLocation(const WidbergLocation *WidLoc) {
+  if (!WidLoc) {
+    push_back(0);
+    return;
+  }
+  push_back(1);
+  auto &Record = *this;
+  Record.AddSourceLocation(WidLoc->getATLoc());
+  Record.AddSourceLocation(WidLoc->getLAngleLoc());
+  Record.AddSourceLocation(WidLoc->getRAngleLoc());
+  Record.push_back(WidLoc->size());
+  for (auto *x : WidLoc->asArray()) {
+    Record.AddSourceLocation(x->getLoc());
+    Record.AddIdentifierRef(x->getIdentifierInfo());
+  }
+}
+
+void ASTRecordWriter::writeWidbergLocation(const WidbergLocation *WidLoc) {
+  AddWidbergLocation(WidLoc);
+}
+
 void ASTWriter::AddToken(const Token &Tok, RecordDataImpl &Record) {
   AddSourceLocation(Tok.getLocation(), Record);
   // FIXME: Should translate token kind to a stable encoding.
