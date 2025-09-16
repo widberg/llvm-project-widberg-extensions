@@ -4592,6 +4592,8 @@ bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Left,
                                           const FormatToken &Right) const {
+  if (Style.isCpp() && Right.is(tok::at) && (Right.Next && Right.Next->is(tok::less)))
+    return false;
   if (Left.is(tok::kw_return) &&
       Right.isNoneOf(tok::semi, tok::r_paren, tok::hashhash)) {
     return true;
@@ -5085,6 +5087,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   const auto *BeforeLeft = Left.Previous;
 
   if (IsCpp) {
+    if (Right.is(tok::at) && (Right.Next && Right.Next->is(tok::less)))
+      return false;
+
     if (Left.is(TT_OverloadedOperator) &&
         Right.isOneOf(TT_TemplateOpener, TT_TemplateCloser)) {
       return true;
@@ -5832,6 +5837,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
              (IsCpp || Style.isProto() || Style.isTableGen())) {
     if (Left.isStringLiteral() && Right.isStringLiteral())
       return true;
+  } else if (Style.isCpp()) {
+    if (Right.is(tok::at) && (Right.Next && Right.Next->is(tok::less)))
+      return false;
   }
 
   // Basic JSON newline processing.
@@ -6291,6 +6299,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     if (Left.is(tok::hash) || Right.is(tok::hash))
       return false;
     if (Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator))
+      return false;
+  } else if (Style.isCpp()) {
+    if (Right.is(tok::at) && (Right.Next && Right.Next->is(tok::less)))
       return false;
   }
 
