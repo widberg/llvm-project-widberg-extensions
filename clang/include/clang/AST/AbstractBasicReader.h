@@ -240,7 +240,9 @@ public:
                     <= sizeof(uint32_t),
                   "opaque value doesn't fit into uint32_t");
     uint32_t value = asImpl().readUInt32();
-    return FunctionProtoType::ExtParameterInfo::getFromOpaqueValue(value);
+    WidbergLocation *WidLoc = asImpl().readWidbergLocation();
+    FunctionProtoType::ExtParameterInfo EPI = FunctionProtoType::ExtParameterInfo::getFromOpaqueValue(value);
+    return EPI.withWidbergLocation(WidLoc);
   }
 
   FunctionEffect readFunctionEffect() {
