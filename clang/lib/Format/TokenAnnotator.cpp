@@ -83,6 +83,33 @@ static bool isKeywordWithCondition(const FormatToken &Tok) {
                      tok::kw_constexpr, tok::kw_catch);
 }
 
+/// Returns \c true if \p Tok is a separator inside a Widberg register list,
+/// i.e. inside either @<...> or __spoils<...>.
+static bool isWidbergRegisterListSeparator(const FormatToken &Tok) {
+  if (Tok.isNoneOf(tok::comma, tok::colon))
+    return false;
+
+  auto IsWidbergRegisterListIntroducer = [](const FormatToken *Before) {
+    return Before && Before->isOneOf(tok::at, tok::kw___spoils);
+  };
+
+  const FormatToken *Current = &Tok;
+  int AngleDepth = 0;
+  while (Current) {
+    if (Current->isOneOf(TT_TemplateCloser, tok::greater)) {
+      ++AngleDepth;
+    } else if (Current->isOneOf(TT_TemplateOpener, tok::less)) {
+      if (AngleDepth == 0) {
+        const FormatToken *Before = Current->getPreviousNonComment();
+        return IsWidbergRegisterListIntroducer(Before);
+      }
+      --AngleDepth;
+    }
+    Current = Current->getPreviousNonComment();
+  }
+  return false;
+}
+
 /// Returns \c true if the token starts a C++ attribute, \c false otherwise.
 static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
   if (!IsCpp || !Tok.startsSequence(tok::l_square, tok::l_square))
@@ -4606,6 +4633,11 @@ bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Left,
                                           const FormatToken &Right) const {
+  if (Style.isCpp() && Right.is(tok::at) && (Right.Next && Right.Next->is(tok::less)))
+    return false;
+  if ((Style.isCpp() && isWidbergRegisterListSeparator(Left)) ||
+      (Style.isCpp() && isWidbergRegisterListSeparator(Right)))
+    return false;
   if (Left.is(tok::kw_return) &&
       Right.isNoneOf(tok::semi, tok::r_paren, tok::hashhash)) {
     return true;
@@ -5111,6 +5143,13 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   const auto *BeforeLeft = Left.Previous;
 
   if (IsCpp) {
+    if (Right.is(tok::at) && (Right.Next && Right.Next->is(tok::less)))
+      return false;
+    if (isWidbergRegisterListSeparator(Left) ||
+        isWidbergRegisterListSeparator(Right)) {
+      return false;
+    }
+
     if (Left.is(TT_OverloadedOperator) &&
         Right.isOneOf(TT_TemplateOpener, TT_TemplateCloser)) {
       return true;
@@ -5860,6 +5899,9 @@ bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
              (IsCpp || Style.isProto() || Style.isTableGen())) {
     if (Left.isStringLiteral() && Right.isStringLiteral())
       return true;
+  } else if (Style.isCpp()) {
+    if (Right.is(tok::at) && (Right.Next && Right.Next->is(tok::less)))
+      return false;
   }
 
   // Basic JSON newline processing.
@@ -6334,6 +6376,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     if (Left.is(tok::hash) || Right.is(tok::hash))
       return false;
     if (Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator))
+      return false;
+  } else if (Style.isCpp()) {
+    if (Right.is(tok::at) && (Right.Next && Right.Next->is(tok::less)))
       return false;
   }
 

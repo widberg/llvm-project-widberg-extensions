@@ -5854,6 +5854,14 @@ struct FormatStyle {
   /// \version 17
   bool VerilogBreakBetweenInstancePorts;
 
+  /// Enable Widberg language extensions during clang-format lexing/parsing.
+  ///
+  /// This defaults to ``true`` to match clang frontend behavior.
+  /// Set to ``false`` to explicitly disable Widberg extensions.
+  ///
+  /// \version 23
+  bool WidbergExt;
+
   /// A vector of macros which are whitespace-sensitive and should not
   /// be touched.
   ///
@@ -6114,6 +6122,7 @@ struct FormatStyle {
            UseTab == R.UseTab && VariableTemplates == R.VariableTemplates &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
+           WidbergExt == R.WidbergExt &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros &&
            WrapNamespaceBodyWithEmptyLines == R.WrapNamespaceBodyWithEmptyLines;
   }

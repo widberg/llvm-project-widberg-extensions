@@ -110,6 +110,9 @@ name mangling scheme for `__usercall`/`__userpurge` function symbols,
 especially important when interacting with `extern "C"`, have not yet been
 finalized. These are lower priority since they are easily worked around.
 
+Finally, at the lowest priority is things like clang-format not working well
+with spoils and split register parameters.
+
 ## Enable and Disable the Extensions
 
 By default, the extensions are enabled. They can be disabled using the

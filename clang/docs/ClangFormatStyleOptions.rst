@@ -7645,6 +7645,14 @@ the configuration (without a prefix: ``Auto``).
 
   For example: BOOST_PP_STRINGIZE
 
+.. _WidbergExt:
+
+**WidbergExt** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <WidbergExt>`
+  Enable Widberg language extensions during clang-format lexing/parsing.
+
+  This defaults to ``true`` to match clang frontend behavior.
+  Set to ``false`` to explicitly disable Widberg extensions.
+
 .. _WrapNamespaceBodyWithEmptyLines:
 
 **WrapNamespaceBodyWithEmptyLines** (``WrapNamespaceBodyWithEmptyLinesStyle``) :versionbadge:`clang-format 20` :ref:`¶ <WrapNamespaceBodyWithEmptyLines>`
