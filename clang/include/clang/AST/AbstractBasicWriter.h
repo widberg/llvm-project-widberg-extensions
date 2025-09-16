@@ -219,6 +219,7 @@ public:
     static_assert(sizeof(epi.getOpaqueValue()) <= sizeof(uint32_t),
                   "opaque value doesn't fit into uint32_t");
     asImpl().writeUInt32(epi.getOpaqueValue());
+    asImpl().writeWidbergLocation(epi.getWidbergLocation());
   }
 
   void writeFunctionEffect(FunctionEffect E) {

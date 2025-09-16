@@ -650,6 +650,12 @@ class CGFunctionInfo final
   LLVM_PREFERRED_TYPE(bool)
   unsigned NoCallerSavedRegs : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned NoCalleeSavedRegs : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Spoils : 1;
+
   /// How many arguments to pass inreg.
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasRegParm : 1;
@@ -748,6 +754,10 @@ public:
   /// Whether this function no longer saves caller registers.
   bool isNoCallerSavedRegs() const { return NoCallerSavedRegs; }
 
+  bool isNoCalleeSavedRegs() const { return NoCalleeSavedRegs; }
+
+  bool isSpoils() const { return Spoils; }
+
   /// Whether this function has nocf_check attribute.
   bool isNoCfCheck() const { return NoCfCheck; }
 
@@ -780,7 +790,7 @@ public:
     return FunctionType::ExtInfo(isNoReturn(), getHasRegParm(), getRegParm(),
                                  getASTCallingConvention(), isReturnsRetained(),
                                  isNoCallerSavedRegs(), isNoCfCheck(),
-                                 isCmseNSCall(), getWidbergLocation());
+                                 isCmseNSCall(), isSpoils(), isNoCalleeSavedRegs(), getWidbergLocation());
   }
 
   CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
@@ -839,6 +849,8 @@ public:
     ID.AddInteger(RegParm);
     ID.AddBoolean(NoCfCheck);
     ID.AddBoolean(CmseNSCall);
+    ID.AddBoolean(Spoils);
+    ID.AddBoolean(NoCalleeSavedRegs);
     ID.AddInteger(Required.getOpaqueData());
     ID.AddBoolean(HasExtParameterInfos);
     if (HasExtParameterInfos) {
@@ -877,6 +889,8 @@ public:
     ID.AddInteger(info.getRegParm());
     ID.AddBoolean(info.getNoCfCheck());
     ID.AddBoolean(info.getCmseNSCall());
+    ID.AddBoolean(info.getSpoils());
+    ID.AddBoolean(info.getNoCalleeSavedRegs());
     ID.AddInteger(required.getOpaqueData());
     ID.AddBoolean(!paramInfos.empty());
     if (!paramInfos.empty()) {

@@ -83,6 +83,7 @@ def BuiltinTypeKind : EnumPropertyType<"BuiltinType::Kind">;
 def BTFTypeTagAttr : PropertyType<"const BTFTypeTagAttr *">;
 def ShiftedAttr : PropertyType<"const ShiftedAttr *">;
 def CallingConv : EnumPropertyType;
+def WidbergLocation : PropertyType<"WidbergLocation *">;
 def DeclarationName : PropertyType;
 def DeclarationNameKind : EnumPropertyType<"DeclarationName::NameKind">;
 def DeclRef : RefPropertyType<"Decl"> { let ConstWhenWriting = 1; }
