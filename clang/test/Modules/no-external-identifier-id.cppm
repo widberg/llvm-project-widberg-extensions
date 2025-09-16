@@ -29,7 +29,7 @@ export inline int b() {
     return foo;
 }
 
-// CHECK: <DECL_VAR {{.*}} op5=4
+// CHECK: <DECL_VAR {{.*}} op6=4
 
 //--- a.v1.cppm
 // We remove the unused the function and testing if the format of the BMI of B will change.

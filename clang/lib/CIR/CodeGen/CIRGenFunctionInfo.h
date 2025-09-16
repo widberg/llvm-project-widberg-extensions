@@ -98,7 +98,7 @@ class CIRGenFunctionInfo final
         isNoReturn(), /*getHasRegParm=*/false, /*getRegParm=*/false,
         /*getASTCallingConvention=*/CallingConv(0), /*isReturnsRetained=*/false,
         /*isNoCallerSavedRegs=*/false, /*isNoCfCheck=*/false,
-        /*isCmseNSCall=*/false);
+        /*isCmseNSCall=*/false, /*spoils=*/false, /*noCalleeSavedRegs=*/false, /*WL=*/nullptr);
   }
 
 public:

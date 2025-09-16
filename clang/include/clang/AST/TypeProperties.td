@@ -286,6 +286,9 @@ let Class = FunctionType in {
   def : Property<"callingConvention", CallingConv> {
     let Read = [{ node->getExtInfo().getCC() }];
   }
+  def : Property<"widLoc", WidbergLocation> {
+    let Read = [{ node->getExtInfo().getWidbergLocation() }];
+  }
   def : Property<"producesResult", Bool> {
     let Read = [{ node->getExtInfo().getProducesResult() }];
   }
@@ -298,6 +301,12 @@ let Class = FunctionType in {
   def : Property<"cmseNSCall", Bool> {
     let Read = [{ node->getExtInfo().getCmseNSCall() }];
   }
+  def : Property<"spoils", Bool> {
+    let Read = [{ node->getExtInfo().getSpoils() }];
+  }
+  def : Property<"noCalleeSavedRegs", Bool> {
+    let Read = [{ node->getExtInfo().getNoCalleeSavedRegs() }];
+  }
 }
 
 let Class = FunctionNoProtoType in {
@@ -305,7 +314,8 @@ let Class = FunctionNoProtoType in {
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
                                          callingConvention, producesResult,
                                          noCallerSavedRegs, noCfCheck,
-                                         cmseNSCall);
+                                         cmseNSCall, spoils, noCalleeSavedRegs,
+                                         widLoc);
     return ctx.getFunctionNoProtoType(returnType, extInfo);
   }]>;
 }
@@ -351,7 +361,8 @@ let Class = FunctionProtoType in {
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
                                          callingConvention, producesResult,
                                          noCallerSavedRegs, noCfCheck,
-                                         cmseNSCall);
+                                         cmseNSCall, spoils, noCalleeSavedRegs,
+                                         widLoc);
     FunctionProtoType::ExtProtoInfo epi;
     epi.ExtInfo = extInfo;
     epi.Variadic = variadic;

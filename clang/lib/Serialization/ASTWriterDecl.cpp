@@ -527,6 +527,16 @@ void ASTDeclWriter::VisitDecl(Decl *D) {
   if (D->hasAttrs())
     Record.AddAttributes(D->getAttrs());
 
+  BitsPacker WidBits;
+  WidBits.addBit(D->getWidbergLocation());
+  WidBits.addBit(D->getWidbergReturnLocation());
+  Record.push_back(WidBits);
+
+  if (D->getWidbergLocation())
+    Record.AddWidbergLocation(D->getWidbergLocation());
+  if (D->getWidbergReturnLocation())
+    Record.AddWidbergLocation(D->getWidbergReturnLocation());
+
   Record.push_back(Writer.getSubmoduleID(D->getOwningModule()));
 
   // If this declaration injected a name into a context different from its
@@ -605,6 +615,8 @@ void ASTDeclWriter::VisitTypedefDecl(TypedefDecl *D) {
   VisitTypedefNameDecl(D);
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
+      !D->getWidbergLocation() &&
+      !D->getWidbergReturnLocation() &&
       !D->isImplicit() &&
       D->getFirstDecl() == D->getMostRecentDecl() &&
       !D->isInvalidDecl() &&
@@ -683,6 +695,8 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   }
 
   if (D->getDeclContext() == D->getLexicalDeclContext() && !D->hasAttrs() &&
+      !D->getWidbergLocation() &&
+      !D->getWidbergReturnLocation() &&
       !D->isInvalidDecl() && !D->isImplicit() && !D->hasExtInfo() &&
       !D->getTypedefNameForAnonDecl() &&
       D->getFirstDecl() == D->getMostRecentDecl() &&
@@ -725,6 +739,8 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
     Record.push_back(D->getODRHash());
 
   if (D->getDeclContext() == D->getLexicalDeclContext() && !D->hasAttrs() &&
+      !D->getWidbergLocation() &&
+      !D->getWidbergReturnLocation() &&
       !D->isImplicit() && !D->isInvalidDecl() && !D->hasExtInfo() &&
       !D->getTypedefNameForAnonDecl() &&
       D->getFirstDecl() == D->getMostRecentDecl() &&
@@ -1071,6 +1087,8 @@ void ASTDeclWriter::VisitObjCIvarDecl(ObjCIvarDecl *D) {
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
+      !D->getWidbergLocation() &&
+      !D->getWidbergReturnLocation() &&
       !D->isImplicit() &&
       !D->isUsed(false) &&
       !D->isInvalidDecl() &&
@@ -1204,6 +1222,8 @@ void ASTDeclWriter::VisitFieldDecl(FieldDecl *D) {
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
+      !D->getWidbergLocation() &&
+      !D->getWidbergReturnLocation() &&
       !D->isImplicit() &&
       !D->isUsed(false) &&
       !D->isInvalidDecl() &&
@@ -1336,6 +1356,8 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   }
 
   if (D->getDeclContext() == D->getLexicalDeclContext() && !D->hasAttrs() &&
+      !D->getWidbergLocation() &&
+      !D->getWidbergReturnLocation() &&
       !D->isTopLevelDeclInObjCContainer() &&
       !needsAnonymousDeclarationNumber(D) &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier &&
@@ -1386,6 +1408,8 @@ void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
   // we dynamically check for the properties that we optimize for, but don't
   // know are true of all PARM_VAR_DECLs.
   if (D->getDeclContext() == D->getLexicalDeclContext() && !D->hasAttrs() &&
+      !D->getWidbergLocation() &&
+      !D->getWidbergReturnLocation() &&
       !D->hasExtInfo() && D->getStorageClass() == 0 && !D->isInvalidDecl() &&
       !D->isTopLevelDeclInObjCContainer() &&
       D->getInitStyle() == VarDecl::CInit && // Can params have anything else?
@@ -1606,6 +1630,8 @@ void ASTDeclWriter::VisitUsingShadowDecl(UsingShadowDecl *D) {
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       D->getFirstDecl() == D->getMostRecentDecl() && !D->hasAttrs() &&
+      !D->getWidbergLocation() &&
+      !D->getWidbergReturnLocation() &&
       !needsAnonymousDeclarationNumber(D) &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier)
     AbbrevToUse = Writer.getDeclUsingShadowAbbrev();
@@ -1725,7 +1751,9 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       D->getFirstDecl() == D->getMostRecentDecl() && !D->isInvalidDecl() &&
-      !D->hasAttrs() && !D->isTopLevelDeclInObjCContainer() &&
+      !D->hasAttrs() &&
+      !D->getWidbergLocation() &&
+      !D->getWidbergReturnLocation() && !D->isTopLevelDeclInObjCContainer() &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier &&
       !D->hasExtInfo() && !D->isExplicitlyDefaulted()) {
     if (D->getTemplatedKind() == FunctionDecl::TK_NonTemplate ||
@@ -2089,6 +2117,8 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   if (!D->hasTypeConstraint() && !OwnsDefaultArg &&
       D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->isInvalidDecl() && !D->hasAttrs() &&
+      !D->getWidbergLocation() &&
+      !D->getWidbergReturnLocation() &&
       !D->isTopLevelDeclInObjCContainer() && !D->isImplicit() &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier)
     AbbrevToUse = Writer.getDeclTemplateTypeParmAbbrev();
@@ -2417,6 +2447,7 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
                                 // TopLevelDeclInObjCContainer,
                                 // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WidBits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(DeclarationName::Identifier)); // NameKind
@@ -2478,6 +2509,7 @@ void ASTWriter::WriteDeclAbbrevs() {
                                 // TopLevelDeclInObjCContainer,
                                 // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WidBits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2507,6 +2539,7 @@ void ASTWriter::WriteDeclAbbrevs() {
                                  // isReferenced, TopLevelDeclInObjCContainer,
                                  // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WidBits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2544,6 +2577,7 @@ void ASTWriter::WriteDeclAbbrevs() {
                                 // TopLevelDeclInObjCContainer,
                                 // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WidBits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2589,6 +2623,7 @@ void ASTWriter::WriteDeclAbbrevs() {
                                 // TopLevelDeclInObjCContainer,
                                 // isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WidBits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2640,6 +2675,7 @@ void ASTWriter::WriteDeclAbbrevs() {
                                 // TopLevelDeclInObjCContainer,
                                 // isInvalidDecl,
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WidBits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2682,6 +2718,7 @@ void ASTWriter::WriteDeclAbbrevs() {
                                 // HasStandaloneLexicalDC, HasAttrs,
                                 // TopLevelDeclInObjCContainer, isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WidBits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2707,6 +2744,7 @@ void ASTWriter::WriteDeclAbbrevs() {
                                  // isReferenced, TopLevelDeclInObjCContainer,
                                  // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WidBits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2762,6 +2800,7 @@ void ASTWriter::WriteDeclAbbrevs() {
                                 // HasStandaloneLexicalDC, HasAttrs,
                                 // TopLevelDeclInObjCContainer, isInvalidDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WidBits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2788,6 +2827,7 @@ void ASTWriter::WriteDeclAbbrevs() {
                                  // isReferenced, TopLevelDeclInObjCContainer,
                                  // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WidBits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
