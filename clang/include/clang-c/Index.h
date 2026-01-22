@@ -3087,6 +3087,7 @@ enum CXCallingConv {
 
   CXCallingConv_UserCall = 34,
   CXCallingConv_UserPurge = 35,
+  CXCallingConv_X86WatCall = 36,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200

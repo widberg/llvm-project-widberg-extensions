@@ -302,6 +302,9 @@ namespace CallingConv {
 
     /// UserPurge
     UserPurge = 129,
+    
+    /// WatCall
+    X86_WatCall = 130,
 
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023

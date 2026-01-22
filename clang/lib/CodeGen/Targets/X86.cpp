@@ -465,6 +465,7 @@ ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
   if (State.CC != llvm::CallingConv::X86_FastCall &&
+      State.CC != llvm::CallingConv::X86_WatCall &&
       State.CC != llvm::CallingConv::X86_VectorCall && State.FreeRegs) {
     --State.FreeRegs;
     if (!IsMCUABI)
@@ -693,6 +694,7 @@ bool X86_32ABIInfo::shouldAggregateUseDirect(QualType Ty, CCState &State,
     return true;
 
   if (State.CC == llvm::CallingConv::X86_FastCall ||
+      State.CC == llvm::CallingConv::X86_WatCall ||
       State.CC == llvm::CallingConv::X86_VectorCall ||
       State.CC == llvm::CallingConv::X86_RegCall) {
     if (getContext().getTypeSize(Ty) <= 32 && State.FreeRegs)
@@ -710,6 +712,7 @@ bool X86_32ABIInfo::shouldPrimitiveUseInReg(QualType Ty, CCState &State) const {
                      Ty->isReferenceType());
 
   if (!IsPtrOrInt && (State.CC == llvm::CallingConv::X86_FastCall ||
+                      State.CC == llvm::CallingConv::X86_WatCall ||
                       State.CC == llvm::CallingConv::X86_VectorCall))
     return false;
 
@@ -753,6 +756,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
                                                unsigned ArgIndex) const {
   // FIXME: Set alignment on indirect arguments.
   bool IsFastCall = State.CC == llvm::CallingConv::X86_FastCall;
+  bool IsWatCall = State.CC == llvm::CallingConv::X86_WatCall;
   bool IsRegCall = State.CC == llvm::CallingConv::X86_RegCall;
   bool IsVectorCall = State.CC == llvm::CallingConv::X86_VectorCall;
 
@@ -856,7 +860,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
     if (TI.Width <= 4 * 32 && (!IsMCUABI || State.FreeRegs == 0) &&
         canExpandIndirectArgument(Ty))
       return ABIArgInfo::getExpandWithPadding(
-          IsFastCall || IsVectorCall || IsRegCall, PaddingType);
+          IsFastCall || IsWatCall || IsVectorCall || IsRegCall, PaddingType);
 
     return getIndirectResult(Ty, true, State);
   }
@@ -920,6 +924,8 @@ void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   else if (State.CC == llvm::CallingConv::X86_FastCall) {
     State.FreeRegs = 2;
     State.FreeSSERegs = 3;
+  } else if (State.CC == llvm::CallingConv::X86_WatCall) {
+    State.FreeRegs = 4;
   } else if (State.CC == llvm::CallingConv::X86_VectorCall) {
     State.FreeRegs = 2;
     State.FreeSSERegs = 6;

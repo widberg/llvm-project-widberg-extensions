@@ -3583,6 +3583,8 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "stdcall";
   case CC_X86FastCall:
     return "fastcall";
+  case CC_X86WatCall:
+    return "watcall";
   case CC_X86ThisCall:
     return "thiscall";
   case CC_X86Pascal:
@@ -4416,6 +4418,7 @@ bool AttributedType::isCallingConv() const {
   case attr::Pcs:
   case attr::CDecl:
   case attr::FastCall:
+  case attr::WatCall:
   case attr::StdCall:
   case attr::ThisCall:
   case attr::RegCall:

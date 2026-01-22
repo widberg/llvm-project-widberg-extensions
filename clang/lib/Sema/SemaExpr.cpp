@@ -18491,6 +18491,7 @@ static bool funcHasParameterSizeMangling(Sema &S, FunctionDecl *FD) {
   switch (CC) {
   case CC_X86StdCall:
   case CC_X86FastCall:
+  case CC_X86WatCall:
   case CC_X86VectorCall:
   case CC_UserCall:
   case CC_UserPurge:
@@ -18528,6 +18529,9 @@ static void CheckCompleteParameterTypesForMangler(Sema &S, FunctionDecl *FD,
         break;
       case CC_X86FastCall:
         CCName = "fastcall";
+        break;
+      case CC_X86WatCall:
+        CCName = "watcall";
         break;
       case CC_X86VectorCall:
         CCName = "vectorcall";

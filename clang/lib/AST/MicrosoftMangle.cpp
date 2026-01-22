@@ -3157,6 +3157,7 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
   //                      ::= x # __regcall4
   //                      ::= r # __usercall
   //                      ::= R # __userpurge
+  //                      ::= t # __watcall
   // The 'export' calling conventions are from a bygone era
   // (*cough*Win16*cough*) when functions were declared for export with
   // that keyword. (It didn't actually export them, it just made them so
@@ -3182,6 +3183,9 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
       return;
     case CC_X86FastCall:
       Out << 'I';
+      return;
+    case CC_X86WatCall:
+      Out << 't';
       return;
     case CC_X86VectorCall:
       Out << 'Q';
