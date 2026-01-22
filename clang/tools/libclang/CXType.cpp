@@ -722,6 +722,7 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(M68kRTD);
       TCALLINGCONV(UserCall);
       TCALLINGCONV(UserPurge);
+      TCALLINGCONV(X86WatCall);
       TCALLINGCONV(PreserveNone);
       TCALLINGCONV(RISCVVectorCall);
       TCALLINGCONV(RISCVVLSCall_32);

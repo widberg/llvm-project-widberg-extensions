@@ -1772,6 +1772,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86StdCall:
   case CC_X86ThisCall:
   case CC_X86FastCall:
+  case CC_X86WatCall:
     return CCCR_Ignore;
   case CC_C:
   case CC_DeviceKernel:

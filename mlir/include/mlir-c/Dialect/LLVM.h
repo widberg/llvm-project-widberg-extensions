@@ -198,6 +198,7 @@ enum MlirLLVMCConv {
   MlirLLVMCConvWASM_EmscriptenInvoke = 99,
   MlirLLVMCConvAMDGPU_Gfx = 100,
   MlirLLVMCConvM68k_INTR = 101,
+  MlirLLVMCConvX86_WatCall = 102,
 };
 
 typedef enum MlirLLVMCConv MlirLLVMCConv;

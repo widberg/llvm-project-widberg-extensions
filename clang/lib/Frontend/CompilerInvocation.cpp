@@ -700,6 +700,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     auto DefaultCC = LangOpts.getDefaultCallingConv();
 
     bool emitError = (DefaultCC == LangOptions::DCC_FastCall ||
+                      DefaultCC == LangOptions::DCC_WatCall ||
                       DefaultCC == LangOptions::DCC_StdCall) &&
                      Arch != llvm::Triple::x86;
     emitError |= (DefaultCC == LangOptions::DCC_VectorCall ||

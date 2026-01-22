@@ -364,6 +364,7 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::UserPurge:     Out << "userpurgecc"; break;
   case CallingConv::X86_StdCall:   Out << "x86_stdcallcc"; break;
   case CallingConv::X86_FastCall:  Out << "x86_fastcallcc"; break;
+  case CallingConv::X86_WatCall:   Out << "x86_watcallcc"; break;
   case CallingConv::X86_ThisCall:  Out << "x86_thiscallcc"; break;
   case CallingConv::X86_RegCall:   Out << "x86_regcallcc"; break;
   case CallingConv::X86_VectorCall:Out << "x86_vectorcallcc"; break;

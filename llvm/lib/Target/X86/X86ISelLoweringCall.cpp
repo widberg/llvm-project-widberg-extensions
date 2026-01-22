@@ -3207,6 +3207,7 @@ bool X86::isCalleePop(CallingConv::ID CallingConv,
     return false;
   case CallingConv::X86_StdCall:
   case CallingConv::X86_FastCall:
+  case CallingConv::X86_WatCall:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_VectorCall:
     return !is64Bit;

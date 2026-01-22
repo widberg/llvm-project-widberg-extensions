@@ -653,6 +653,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(userpurgecc);
   KEYWORD(x86_stdcallcc);
   KEYWORD(x86_fastcallcc);
+  KEYWORD(x86_watcallcc);
   KEYWORD(x86_thiscallcc);
   KEYWORD(x86_vectorcallcc);
   KEYWORD(arm_apcscc);

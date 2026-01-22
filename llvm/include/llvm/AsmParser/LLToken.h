@@ -142,6 +142,7 @@ enum Kind {
   kw_userpurgecc,
   kw_x86_stdcallcc,
   kw_x86_fastcallcc,
+  kw_x86_watcallcc,
   kw_x86_thiscallcc,
   kw_x86_vectorcallcc,
   kw_x86_regcallcc,

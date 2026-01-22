@@ -133,6 +133,7 @@ OptCallingConv ::= + _ |
                  userpurgecc |
                  "x86_stdcallcc" |
                  "x86_fastcallcc" |
+                 "x86_watcallcc" |
                  cc EUINT64VAL ;
 
 ParamAttr ::= zeroext

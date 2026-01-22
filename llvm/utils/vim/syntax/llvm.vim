@@ -210,6 +210,7 @@ syn keyword llvmKeyword
       \ writeonly
       \ x86_64_sysvcc
       \ x86_fastcallcc
+      \ x86_watcallcc
       \ x86_stdcallcc
       \ x86_thiscallcc
       \ zeroext

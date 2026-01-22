@@ -61,6 +61,8 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::X86_StdCall;
   case CC_X86FastCall:
     return llvm::CallingConv::X86_FastCall;
+  case CC_X86WatCall:
+    return llvm::CallingConv::X86_WatCall;
   case CC_X86RegCall:
     return llvm::CallingConv::X86_RegCall;
   case CC_X86ThisCall:
@@ -266,6 +268,9 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<FastCallAttr>())
     return CC_X86FastCall;
+
+  if (D->hasAttr<WatCallAttr>())
+    return CC_X86WatCall;
 
   if (D->hasAttr<RegCallAttr>())
     return CC_X86RegCall;

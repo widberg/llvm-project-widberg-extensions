@@ -1826,7 +1826,8 @@ private:
         if (Next && Next->is(tok::l_paren) && Prev &&
             Prev->isOneOf(tok::kw___cdecl, tok::kw___stdcall,
                           tok::kw___fastcall, tok::kw___thiscall,
-                          tok::kw___regcall, tok::kw___vectorcall)) {
+                          tok::kw___regcall, tok::kw___vectorcall,
+                          tok::kw___watcall)) {
           Tok->setFinalizedType(TT_FunctionDeclarationName);
           Next->setFinalizedType(TT_FunctionDeclarationLParen);
         }

@@ -303,6 +303,7 @@ patterns:
             \\bwriteonly\\b|\
             \\bx86_64_sysvcc\\b|\
             \\bx86_fastcallcc\\b|\
+            \\bx86_watcallcc\\b|\
             \\bx86_stdcallcc\\b|\
             \\bx86_thiscallcc\\b|\
             \\bzeroext\\b"

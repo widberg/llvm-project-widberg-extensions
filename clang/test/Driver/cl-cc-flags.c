@@ -7,6 +7,9 @@
 // RUN: %clang_cl --target=i686-windows-msvc /Gr -### -- %s 2>&1 | FileCheck --check-prefix=FASTCALL %s
 // FASTCALL: -fdefault-calling-conv=fastcall
 
+// RUN: %clang_cl --target=i686-windows-msvc /Gwatcall -### -- %s 2>&1 | FileCheck --check-prefix=WATCALL %s
+// WATCALL: -fdefault-calling-conv=watcall
+
 // RUN: %clang_cl --target=i686-windows-msvc /Gz -### -- %s 2>&1 | FileCheck --check-prefix=STDCALL %s
 // STDCALL: -fdefault-calling-conv=stdcall
 
@@ -28,13 +31,13 @@
 // RUN: %clang_cl --target=i686-windows-msvc /Gv /Gd -### -- %s 2>&1 | FileCheck --check-prefix=LASTWINS_CDECL %s
 // LASTWINS_CDECL: -fdefault-calling-conv=cdecl
 
-// No fastcall or stdcall on x86_64:
+// No fastcall, watcall, or stdcall on x86_64:
 
 // RUN: %clang_cl -Wno-msvc-not-found --target=x86_64-windows-msvc /Gr -### -- %s 2>&1 | FileCheck --check-prefix=UNAVAILABLE %s
+// RUN: %clang_cl -Wno-msvc-not-found --target=x86_64-windows-msvc /Gwatcall -### -- %s 2>&1 | FileCheck --check-prefix=UNAVAILABLE %s
 // RUN: %clang_cl -Wno-msvc-not-found --target=x86_64-windows-msvc /Gz -### -- %s 2>&1 | FileCheck --check-prefix=UNAVAILABLE %s
 // RUN: %clang_cl -Wno-msvc-not-found --target=thumbv7-windows-msvc /Gv -### -- %s 2>&1 | FileCheck --check-prefix=UNAVAILABLE %s
 
 // UNAVAILABLE-NOT: error:
 // UNAVAILABLE-NOT: warning:
 // UNAVAILABLE-NOT: -fdefault-calling-conv=
-

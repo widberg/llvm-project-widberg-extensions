@@ -1780,6 +1780,8 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_BORLAND_stdcall;
   case CC_X86FastCall:
     return llvm::dwarf::DW_CC_BORLAND_msfastcall;
+  case CC_X86WatCall:
+    return llvm::dwarf::DW_CC_WATCOM_watcall;
   case CC_X86ThisCall:
     return llvm::dwarf::DW_CC_BORLAND_thiscall;
   case CC_X86VectorCall:

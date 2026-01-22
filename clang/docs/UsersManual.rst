@@ -5087,6 +5087,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Gregcall               Set __regcall as a default calling convention
       /GR                     Emit RTTI data (default)
       /Gr                     Set __fastcall as a default calling convention
+      /Gwatcall               Set __watcall as a default calling convention
       /GS-                    Disable buffer security check
       /GS                     Enable buffer security check (default)
       /Gs                     Use stack probes (default)

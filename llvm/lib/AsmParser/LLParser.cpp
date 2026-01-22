@@ -2268,6 +2268,7 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_userpurgecc:    CC = CallingConv::UserPurge; break;
   case lltok::kw_x86_stdcallcc:  CC = CallingConv::X86_StdCall; break;
   case lltok::kw_x86_fastcallcc: CC = CallingConv::X86_FastCall; break;
+  case lltok::kw_x86_watcallcc: CC = CallingConv::X86_WatCall; break;
   case lltok::kw_x86_regcallcc:  CC = CallingConv::X86_RegCall; break;
   case lltok::kw_x86_thiscallcc: CC = CallingConv::X86_ThisCall; break;
   case lltok::kw_x86_vectorcallcc:CC = CallingConv::X86_VectorCall; break;

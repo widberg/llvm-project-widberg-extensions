@@ -5356,6 +5356,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_FastCall:
     D->addAttr(::new (S.Context) FastCallAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_WatCall:
+    D->addAttr(::new (S.Context) WatCallAttr(S.Context, AL));
+    return;
   case ParsedAttr::AT_StdCall:
     D->addAttr(::new (S.Context) StdCallAttr(S.Context, AL));
     return;
@@ -5638,6 +5641,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_FastCall:
     CC = CC_X86FastCall;
+    break;
+  case ParsedAttr::AT_WatCall:
+    CC = CC_X86WatCall;
     break;
   case ParsedAttr::AT_StdCall:
     CC = CC_X86StdCall;
@@ -7939,6 +7945,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_StdCall:
   case ParsedAttr::AT_CDecl:
   case ParsedAttr::AT_FastCall:
+  case ParsedAttr::AT_WatCall:
   case ParsedAttr::AT_ThisCall:
   case ParsedAttr::AT_Pascal:
   case ParsedAttr::AT_RegCall:

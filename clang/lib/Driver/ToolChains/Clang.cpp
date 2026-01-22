@@ -8649,6 +8649,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   // Parse the default calling convention options.
   if (Arg *CCArg =
           Args.getLastArg(options::OPT__SLASH_Gd, options::OPT__SLASH_Gr,
+                          options::OPT__SLASH_Gwatcall,
                           options::OPT__SLASH_Gz, options::OPT__SLASH_Gv,
                           options::OPT__SLASH_Gregcall)) {
     unsigned DCCOptId = CCArg->getOption().getID();
@@ -8662,6 +8663,10 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     case options::OPT__SLASH_Gr:
       ArchSupported = Arch == llvm::Triple::x86;
       DCCFlag = "-fdefault-calling-conv=fastcall";
+      break;
+    case options::OPT__SLASH_Gwatcall:
+      ArchSupported = Arch == llvm::Triple::x86;
+      DCCFlag = "-fdefault-calling-conv=watcall";
       break;
     case options::OPT__SLASH_Gz:
       ArchSupported = Arch == llvm::Triple::x86;

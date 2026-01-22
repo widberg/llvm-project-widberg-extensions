@@ -71,6 +71,7 @@ void MangleContext::anchor() { }
 enum CCMangling {
   CCM_Other,
   CCM_Fast,
+  CCM_Wat,
   CCM_RegCall,
   CCM_Vector,
   CCM_Std,
@@ -119,6 +120,8 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
     return CCM_Other;
   case CC_X86FastCall:
     return CCM_Fast;
+  case CC_X86WatCall:
+    return CCM_Wat;
   case CC_X86StdCall:
     return CCM_Std;
   case CC_X86VectorCall:
@@ -259,6 +262,8 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
     Out << '_';
   else if (CC == CCM_Fast)
     Out << '@';
+  else if (CC == CCM_Wat)
+    Out << "__watcall__";
   else if (CC == CCM_RegCall) {
     if (getASTContext().getLangOpts().RegCall4)
       Out << "__regcall4__";

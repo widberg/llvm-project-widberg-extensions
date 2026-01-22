@@ -1650,7 +1650,7 @@ static void repeatForLambdaConversionFunctionCallingConvs(
   /// detecting the attribute by the time we get here.
   if (S.getLangOpts().MSVCCompat) {
     CallingConv Convs[] = {
-        CC_C,        CC_X86StdCall, CC_X86FastCall, CC_X86VectorCall,
+        CC_C,        CC_X86StdCall, CC_X86FastCall, CC_X86WatCall, CC_X86VectorCall,
         DefaultFree, DefaultMember, CallOpCC, CC_UserCall, CC_UserPurge};
     llvm::sort(Convs);
     llvm::iterator_range<CallingConv *> Range(std::begin(Convs),

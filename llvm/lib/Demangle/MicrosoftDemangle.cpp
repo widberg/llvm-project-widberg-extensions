@@ -1782,6 +1782,8 @@ Demangler::demangleCallingConvention(std::string_view &MangledName) {
   case 'I':
   case 'J':
     return CallingConv::Fastcall;
+  case 't':
+    return CallingConv::Watcall;
   case 'M':
   case 'N':
     return CallingConv::Clrcall;

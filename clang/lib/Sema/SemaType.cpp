@@ -125,6 +125,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
 #define CALLING_CONV_ATTRS_CASELIST                                            \
   case ParsedAttr::AT_CDecl:                                                   \
   case ParsedAttr::AT_FastCall:                                                \
+  case ParsedAttr::AT_WatCall:                                                \
   case ParsedAttr::AT_StdCall:                                                 \
   case ParsedAttr::AT_ThisCall:                                                \
   case ParsedAttr::AT_RegCall:                                                 \
@@ -7773,6 +7774,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<CDeclAttr>(Ctx, Attr);
   case ParsedAttr::AT_FastCall:
     return createSimpleAttr<FastCallAttr>(Ctx, Attr);
+  case ParsedAttr::AT_WatCall:
+    return createSimpleAttr<WatCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_StdCall:
     return createSimpleAttr<StdCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_ThisCall:
@@ -8220,7 +8223,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     // Diagnose regparm with fastcall.
     const FunctionType *fn = unwrapped.get();
     CallingConv CC = fn->getCallConv();
-    if (CC == CC_X86FastCall) {
+    if (CC == CC_X86FastCall || CC == CC_X86WatCall) {
       S.Diag(attr.getLoc(), diag::err_attributes_are_not_compatible)
           << FunctionType::getNameForCallConv(CC) << "regparm"
           << attr.isRegularKeywordAttribute();
@@ -8431,7 +8434,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     if (FnP && FnP->isVariadic()) {
       // stdcall and fastcall are ignored with a warning for GCC and MS
       // compatibility.
-      if (CC == CC_X86StdCall || CC == CC_X86FastCall)
+      if (CC == CC_X86StdCall || CC == CC_X86FastCall || CC == CC_X86WatCall)
         return S.Diag(attr.getLoc(), diag::warn_cconv_unsupported)
                << FunctionType::getNameForCallConv(CC)
                << (int)Sema::CallingConventionIgnoredReason::VariadicFunction;
@@ -8443,9 +8446,9 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   }
 
   // Also diagnose fastcall with regparm.
-  if (CC == CC_X86FastCall && fn->getHasRegParm()) {
+  if ((CC == CC_X86FastCall || CC == CC_X86WatCall) && fn->getHasRegParm()) {
     S.Diag(attr.getLoc(), diag::err_attributes_are_not_compatible)
-        << "regparm" << FunctionType::getNameForCallConv(CC_X86FastCall)
+        << "regparm" << FunctionType::getNameForCallConv(CC)
         << attr.isRegularKeywordAttribute();
     attr.setInvalid();
     return true;

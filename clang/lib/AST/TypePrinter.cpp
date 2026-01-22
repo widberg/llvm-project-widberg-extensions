@@ -1120,6 +1120,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_X86FastCall:
       OS << " __attribute__((fastcall))";
       break;
+    case CC_X86WatCall:
+      OS << " __attribute__((watcall))";
+      break;
     case CC_X86ThisCall:
       OS << " __attribute__((thiscall))";
       break;
@@ -2067,6 +2070,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::AnyX86NoCfCheck: OS << "nocf_check"; break;
   case attr::CDecl: OS << "cdecl"; break;
   case attr::FastCall: OS << "fastcall"; break;
+  case attr::WatCall: OS << "watcall"; break;
   case attr::StdCall: OS << "stdcall"; break;
   case attr::ThisCall: OS << "thiscall"; break;
   case attr::SwiftCall: OS << "swiftcall"; break;

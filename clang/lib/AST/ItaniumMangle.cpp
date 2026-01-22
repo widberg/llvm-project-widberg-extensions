@@ -3571,6 +3571,8 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
     return "stdcall";
   case CC_X86FastCall:
     return "fastcall";
+  case CC_X86WatCall:
+    return "watcall";
   case CC_X86_64SysV:
     return "sysv_abi";
   case CC_Win64:

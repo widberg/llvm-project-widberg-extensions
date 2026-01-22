@@ -444,5 +444,97 @@ static bool RetCC_X86_XX_UserCall(unsigned ValNo, MVT ValVT, MVT LocVT,
   return true;
 }
 
+static bool CC_X86_32_WatCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                              CCValAssign::LocInfo &LocInfo,
+                              ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  if (LocVT == MVT::i1) {
+    LocVT = MVT::i8;
+    if (ArgFlags.isSExt())
+      LocInfo = CCValAssign::SExt;
+    else if (ArgFlags.isZExt())
+      LocInfo = CCValAssign::ZExt;
+    else
+      LocInfo = CCValAssign::AExt;
+  }
+
+  SmallVectorImpl<CCValAssign> &PendingMembers = State.getPendingLocs();
+  const bool StackAlreadyUsed = State.getStackSize() != 0;
+  const TypeSize SlotSize = TypeSize::getFixed(4);
+  const Align SlotAlign(4);
+
+  if (ArgFlags.isSplit() || !PendingMembers.empty()) {
+    PendingMembers.push_back(
+        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+    if (!ArgFlags.isSplitEnd())
+      return true;
+  }
+
+  if (PendingMembers.empty()) {
+    if (!StackAlreadyUsed) {
+      if (LocVT == MVT::i8) {
+        static const MCPhysReg RegList1[] = {
+            X86::AL, X86::DL, X86::BL, X86::CL};
+        if (MCRegister Reg = State.AllocateReg(RegList1)) {
+          State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+          return true;
+        }
+      }
+
+      if (LocVT == MVT::i16) {
+        static const MCPhysReg RegList2[] = {
+            X86::AX, X86::DX, X86::BX, X86::CX};
+        if (MCRegister Reg = State.AllocateReg(RegList2)) {
+          State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+          return true;
+        }
+      }
+
+      if (LocVT == MVT::i32) {
+        static const MCPhysReg RegList3[] = {
+            X86::EAX, X86::EDX, X86::EBX, X86::ECX};
+        if (MCRegister Reg = State.AllocateReg(RegList3)) {
+          State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+          return true;
+        }
+      }
+    }
+
+    int64_t Offset = State.AllocateStack(SlotSize, SlotAlign);
+    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
+    return true;
+  }
+
+  assert(ArgFlags.isSplitEnd());
+
+  static const MCPhysReg Pair1[] = {X86::EAX, X86::EDX};
+  static const MCPhysReg Pair2[] = {X86::EBX, X86::ECX};
+  const bool HasPair1 = !State.isAllocated(Pair1[0]) &&
+                        !State.isAllocated(Pair1[1]);
+  const bool HasPair2 = !State.isAllocated(Pair2[0]) &&
+                        !State.isAllocated(Pair2[1]);
+  bool UseRegs = !StackAlreadyUsed && (PendingMembers.size() == 2) &&
+                 (LocVT == MVT::i32) && (HasPair1 || HasPair2);
+
+  if (UseRegs) {
+    MCPhysReg RegA = HasPair1 ? Pair1[0] : Pair2[0];
+    MCPhysReg RegB = HasPair1 ? Pair1[1] : Pair2[1];
+    PendingMembers[0].convertToReg(State.AllocateReg(RegA));
+    PendingMembers[1].convertToReg(State.AllocateReg(RegB));
+  } else {
+    int64_t Offset = State.AllocateStack(SlotSize * PendingMembers.size(),
+                                         SlotAlign);
+    for (unsigned I = 0; I < PendingMembers.size(); ++I)
+      PendingMembers[I].convertToMem(Offset + (SlotSize * I));
+  }
+
+  if (!PendingMembers.empty()) {
+    for (auto &It : PendingMembers)
+      State.addLoc(It);
+    PendingMembers.clear();
+  }
+
+  return true;
+}
+
 // Provides entry points of CC_X86 and RetCC_X86.
 #include "X86GenCallingConv.inc"
