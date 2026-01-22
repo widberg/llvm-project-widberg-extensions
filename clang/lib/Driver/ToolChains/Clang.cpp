@@ -8467,6 +8467,10 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
       ArchSupported = Arch == llvm::Triple::x86;
       DCCFlag = "-fdefault-calling-conv=fastcall";
       break;
+    case options::OPT__SLASH_Gwatcall:
+      ArchSupported = Arch == llvm::Triple::x86;
+      DCCFlag = "-fdefault-calling-conv=watcall";
+      break;
     case options::OPT__SLASH_Gz:
       ArchSupported = Arch == llvm::Triple::x86;
       DCCFlag = "-fdefault-calling-conv=stdcall";

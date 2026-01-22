@@ -957,6 +957,7 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
     auto Kind = Tok.getKind();
     switch (Kind) {
     case tok::kw___fastcall:
+    case tok::kw___watcall:
     case tok::kw___stdcall:
     case tok::kw___thiscall:
     case tok::kw___regcall:
@@ -1133,6 +1134,7 @@ SourceLocation Parser::SkipExtendedMicrosoftTypeAttributes() {
     case tok::kw_const:
     case tok::kw_volatile:
     case tok::kw___fastcall:
+    case tok::kw___watcall:
     case tok::kw___stdcall:
     case tok::kw___thiscall:
     case tok::kw___cdecl:
@@ -4175,6 +4177,7 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw___cdecl:
     case tok::kw___stdcall:
     case tok::kw___fastcall:
+    case tok::kw___watcall:
     case tok::kw___thiscall:
     case tok::kw___regcall:
     case tok::kw___vectorcall:
@@ -5825,6 +5828,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___cdecl:
   case tok::kw___stdcall:
   case tok::kw___fastcall:
+  case tok::kw___watcall:
   case tok::kw___thiscall:
   case tok::kw___regcall:
   case tok::kw___vectorcall:
@@ -6111,6 +6115,7 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___cdecl:
   case tok::kw___stdcall:
   case tok::kw___fastcall:
+  case tok::kw___watcall:
   case tok::kw___thiscall:
   case tok::kw___regcall:
   case tok::kw___vectorcall:
@@ -6407,6 +6412,7 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___cdecl:
     case tok::kw___stdcall:
     case tok::kw___fastcall:
+    case tok::kw___watcall:
     case tok::kw___thiscall:
     case tok::kw___regcall:
     case tok::kw___vectorcall:

@@ -808,8 +808,9 @@ function. The operand fields are:
   * ``arm_apcscc``: code 66
   * ``arm_aapcscc``: code 67
   * ``arm_aapcs_vfpcc``: code 68
-  * ``usercallcc``: code 110
-  * ``userpurgecc``: code 111
+  * ``usercallcc``: code 128
+  * ``userpurgecc``: code 129
+  * ``x86_watcallcc``: code 130
 
 * isproto*: Non-zero if this entry represents a declaration rather than a
   definition

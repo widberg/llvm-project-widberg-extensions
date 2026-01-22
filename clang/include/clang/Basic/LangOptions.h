@@ -141,6 +141,7 @@ public:
     DCC_None,
     DCC_CDecl,
     DCC_FastCall,
+    DCC_WatCall,
     DCC_StdCall,
     DCC_VectorCall,
     DCC_RegCall,

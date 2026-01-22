@@ -61,7 +61,8 @@ enum class CallingConv : uint8_t {
   Pascal,
   Thiscall,
   Stdcall,
-  Fastcall,
+  Fastcall,   // Clang-only
+  Watcall,
   Clrcall,
   Eabi,
   Vectorcall,

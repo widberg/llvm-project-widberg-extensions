@@ -5376,3 +5376,9 @@ def Shifted : TypeAttr {
   let Args = [TypeArgument<"Parent">, ExprArgument<"Delta">];
   let Documentation = [Undocumented];
 }
+
+def WatCall : DeclOrTypeAttr {
+  let Spellings = [GCC<"watcall">, CustomKeyword<"__watcall">,
+                   CustomKeyword<"_watcall">];
+  let Documentation = [Undocumented];
+}
