@@ -899,6 +899,84 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+// Three integral values (lhs, rhs, resultTypeExpr).
+static bool interp__builtin_overflowop_p(InterpState &S, CodePtr OpPC,
+                                         const CallExpr *Call,
+                                         unsigned BuiltinOp) {
+  PrimType Arg3T = *S.getContext().classify(Call->getArg(2)->getType());
+  APSInt Arg3 = popToAPSInt(S.Stk, Arg3T);
+  (void)Arg3;
+
+  PrimType RHST = *S.getContext().classify(Call->getArg(1)->getType());
+  PrimType LHST = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt RHS = popToAPSInt(S.Stk, RHST);
+  APSInt LHS = popToAPSInt(S.Stk, LHST);
+
+  QualType ResultType = Call->getArg(2)->getType();
+  if (const auto *Field = Call->getArg(2)->getSourceBitField()) {
+    if (Field->hasConstantIntegerBitWidth()) {
+      ResultType = S.getASTContext().getBitIntType(
+          Field->getType()->isUnsignedIntegerType(),
+          Field->getBitWidthValue());
+    }
+  }
+
+  bool Overflow;
+  APSInt Result;
+  if (BuiltinOp == Builtin::BI__builtin_add_overflow_p ||
+      BuiltinOp == Builtin::BI__builtin_sub_overflow_p ||
+      BuiltinOp == Builtin::BI__builtin_mul_overflow_p) {
+    bool IsSigned = LHS.isSigned() || RHS.isSigned() ||
+                    ResultType->isSignedIntegerOrEnumerationType();
+    bool AllSigned = LHS.isSigned() && RHS.isSigned() &&
+                     ResultType->isSignedIntegerOrEnumerationType();
+    uint64_t LHSSize = LHS.getBitWidth();
+    uint64_t RHSSize = RHS.getBitWidth();
+    uint64_t ResultSize = S.getASTContext().getTypeSize(ResultType);
+    uint64_t MaxBits = std::max(std::max(LHSSize, RHSSize), ResultSize);
+
+    // Add an additional bit if the signedness isn't uniformly agreed to. We
+    // could do this ONLY if there is a signed and an unsigned that both have
+    // MaxBits, but the code to check that is pretty nasty. The issue will be
+    // caught in the shrink-to-result later anyway.
+    if (IsSigned && !AllSigned)
+      ++MaxBits;
+
+    LHS = APSInt(LHS.extOrTrunc(MaxBits), !IsSigned);
+    RHS = APSInt(RHS.extOrTrunc(MaxBits), !IsSigned);
+    Result = APSInt(MaxBits, !IsSigned);
+  }
+
+  switch (BuiltinOp) {
+  default:
+    llvm_unreachable("Invalid value for BuiltinOp");
+  case Builtin::BI__builtin_add_overflow_p:
+    Result = LHS.isSigned() ? LHS.sadd_ov(RHS, Overflow)
+                            : LHS.uadd_ov(RHS, Overflow);
+    break;
+  case Builtin::BI__builtin_sub_overflow_p:
+    Result = LHS.isSigned() ? LHS.ssub_ov(RHS, Overflow)
+                            : LHS.usub_ov(RHS, Overflow);
+    break;
+  case Builtin::BI__builtin_mul_overflow_p:
+    Result = LHS.isSigned() ? LHS.smul_ov(RHS, Overflow)
+                            : LHS.umul_ov(RHS, Overflow);
+    break;
+  }
+
+  // Truncate and see if the values are the same.
+  APSInt Temp = Result.extOrTrunc(S.getASTContext().getTypeSize(ResultType));
+  Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
+
+  if (!APSInt::isSameValue(Temp, Result))
+    Overflow = true;
+  Result = std::move(Temp);
+
+  assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
+  S.Stk.push<Boolean>(Overflow);
+  return true;
+}
+
 /// Three integral values followed by a pointer (lhs, rhs, carry, carryOut).
 static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
                                     const InterpFrame *Frame,
@@ -4338,6 +4416,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_smull_overflow:
   case Builtin::BI__builtin_smulll_overflow:
     return interp__builtin_overflowop(S, OpPC, Call, BuiltinID);
+
+  case Builtin::BI__builtin_add_overflow_p:
+  case Builtin::BI__builtin_sub_overflow_p:
+  case Builtin::BI__builtin_mul_overflow_p:
+    return interp__builtin_overflowop_p(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_addcb:
   case Builtin::BI__builtin_addcs:

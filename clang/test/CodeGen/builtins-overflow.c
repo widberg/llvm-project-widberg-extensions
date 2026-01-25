@@ -56,6 +56,41 @@ int test_add_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y) {
   return r;
 }
 
+_Bool test_add_overflow_p_int_int_schar(int x, int y) {
+  // CHECK-LABEL: define {{(dso_local )?(zeroext )?}}i1 @test_add_overflow_p_int_int_schar
+  // CHECK: [[S:%.+]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+  // CHECK-DAG: [[OV:%.+]] = extractvalue { i32, i1 } [[S]], 1
+  // CHECK-DAG: [[RES:%.+]] = extractvalue { i32, i1 } [[S]], 0
+  // CHECK: [[TR:%.+]] = trunc i32 [[RES]] to i8
+  // CHECK: [[EXT:%.+]] = sext i8 [[TR]] to i32
+  // CHECK: [[NE:%.+]] = icmp ne i32 [[RES]], [[EXT]]
+  // CHECK: [[OR:%.+]] = or i1 [[OV]], [[NE]]
+  // CHECK: ret i1 [[OR]]
+  return __builtin_add_overflow_p(x, y, (signed char)0);
+}
+
+_Bool test_sub_overflow_p_int_int_schar(int x, int y) {
+  // CHECK-LABEL: define {{(dso_local )?(zeroext )?}}i1 @test_sub_overflow_p_int_int_schar
+  // CHECK: [[S:%.+]] = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+  // CHECK: [[TR:%.+]] = trunc i32 {{%.+}} to i8
+  // CHECK: [[EXT:%.+]] = sext i8 [[TR]] to i32
+  // CHECK: [[NE:%.+]] = icmp ne i32 {{%.+}}, [[EXT]]
+  // CHECK: [[OR:%.+]] = or i1 {{%.+}}, [[NE]]
+  // CHECK: ret i1 [[OR]]
+  return __builtin_sub_overflow_p(x, y, (signed char)0);
+}
+
+_Bool test_mul_overflow_p_int_int_schar(int x, int y) {
+  // CHECK-LABEL: define {{(dso_local )?(zeroext )?}}i1 @test_mul_overflow_p_int_int_schar
+  // CHECK: [[S:%.+]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+  // CHECK: [[TR:%.+]] = trunc i32 {{%.+}} to i8
+  // CHECK: [[EXT:%.+]] = sext i8 [[TR]] to i32
+  // CHECK: [[NE:%.+]] = icmp ne i32 {{%.+}}, [[EXT]]
+  // CHECK: [[OR:%.+]] = or i1 {{%.+}}, [[NE]]
+  // CHECK: ret i1 [[OR]]
+  return __builtin_mul_overflow_p(x, y, (signed char)0);
+}
+
 unsigned test_sub_overflow_uint_uint_uint(unsigned x, unsigned y) {
   // CHECK-LABEL: define {{(dso_local )?}}i32 @test_sub_overflow_uint_uint_uint
   // CHECK-NOT: ext

@@ -9536,6 +9536,8 @@ def err_overflow_builtin_must_be_ptr_int : Error<
   "result argument to %select{overflow builtin|checked integer operation}0 "
   "must be a pointer to a non-const integer type %select{|other than plain 'char', "
   "'bool', bit-precise, or an enumeration }0(%1 invalid)">;
+def err_overflow_builtin_p_must_be_int : Error<
+  "result argument to overflow builtin must be an integer type (%0 invalid)">;
 def err_overflow_builtin_bit_int_max_size : Error<
   "__builtin_mul_overflow does not support 'signed _BitInt' operands of more "
   "than %0 bits">;

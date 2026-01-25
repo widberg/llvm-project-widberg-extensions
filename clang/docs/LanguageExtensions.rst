@@ -4509,6 +4509,25 @@ including boolean types.  The operands need not have the same type as each
 other, or as the result.  The other builtins may implicitly promote or
 convert their operands before performing the operation.
 
+.. code-block:: c
+
+  bool __builtin_add_overflow_p (type1 x, type2 y, type3 sum);
+  bool __builtin_sub_overflow_p (type1 x, type2 y, type3 diff);
+  bool __builtin_mul_overflow_p (type1 x, type2 y, type3 prod);
+
+The ``__builtin_*_overflow_p`` variants behave like the corresponding
+``__builtin_*_overflow`` builtins, but they do not store a result. The third
+argument is an expression of an integer type (not a pointer); its value is
+ignored, though its side effects are still evaluated. The third argument may
+be any integer type, including enumeration and boolean types. No integer
+promotions are performed on the third argument. For bit-field expressions, the
+cast uses the bit-field's width and signedness rather than the underlying
+type. The first two operands are
+conceptually promoted to an infinite-precision signed type and the operation
+is performed there. The result is cast to the type of the third argument and
+compared to the infinite-precision result; the builtin returns 0 if they are
+equal and 1 otherwise.
+
 Query for this feature with ``__has_builtin(__builtin_add_overflow)``, etc.
 
 Floating point builtins

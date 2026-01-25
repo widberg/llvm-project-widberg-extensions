@@ -1890,6 +1890,28 @@ namespace I128Mul {
 }
 #endif
 
+namespace OverflowP {
+  constexpr bool add_ok() {
+    return __builtin_add_overflow_p(1, 2, (signed char)0);
+  }
+  static_assert(!add_ok());
+
+  constexpr bool add_overflow() {
+    return __builtin_add_overflow_p(127, 1, (signed char)0);
+  }
+  static_assert(add_overflow());
+
+  constexpr bool sub_ok() {
+    return __builtin_sub_overflow_p(1, 2, (signed char)0);
+  }
+  static_assert(!sub_ok());
+
+  constexpr bool mul_overflow() {
+    return __builtin_mul_overflow_p(64, 2, (signed char)0);
+  }
+  static_assert(mul_overflow());
+}
+
 namespace InitParam {
   constexpr int foo(int a) {
       __builtin_mul_overflow(20, 10, &a);

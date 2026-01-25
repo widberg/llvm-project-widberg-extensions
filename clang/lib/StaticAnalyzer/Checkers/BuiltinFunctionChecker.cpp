@@ -47,6 +47,23 @@ QualType getOverflowBuiltinResultType(const CallEvent &Call) {
   return Call.getArgExpr(2)->getType()->getPointeeType();
 }
 
+QualType getOverflowBuiltinResultTypeForOverflowP(const CallEvent &Call,
+                                                  CheckerContext &C) {
+  // Calling a builtin with an incorrect argument count produces compiler error.
+  assert(Call.getNumArgs() == 3);
+
+  const Expr *ResultArg = Call.getArgExpr(2);
+  if (const FieldDecl *Field = ResultArg->getSourceBitField()) {
+    if (Field->hasConstantIntegerBitWidth()) {
+      return C.getASTContext().getBitIntType(
+          Field->getType()->isUnsignedIntegerType(),
+          Field->getBitWidthValue());
+    }
+  }
+
+  return ResultArg->getType();
+}
+
 QualType getOverflowBuiltinResultType(const CallEvent &Call, CheckerContext &C,
                                       unsigned BI) {
   // Calling a builtin with an incorrect argument count produces compiler error.
@@ -83,6 +100,10 @@ QualType getOverflowBuiltinResultType(const CallEvent &Call, CheckerContext &C,
   case Builtin::BI__builtin_sub_overflow:
   case Builtin::BI__builtin_add_overflow:
     return getOverflowBuiltinResultType(Call);
+  case Builtin::BI__builtin_mul_overflow_p:
+  case Builtin::BI__builtin_sub_overflow_p:
+  case Builtin::BI__builtin_add_overflow_p:
+    return getOverflowBuiltinResultTypeForOverflowP(Call, C);
   default:
     assert(false && "Unknown overflow builtin");
     return ACtx.IntTy;
@@ -275,6 +296,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   case Builtin::BI__builtin_umul_overflow:
   case Builtin::BI__builtin_umull_overflow:
   case Builtin::BI__builtin_umulll_overflow:
+  case Builtin::BI__builtin_mul_overflow_p:
     handleOverflowBuiltin(Call, C, BO_Mul,
                           getOverflowBuiltinResultType(Call, C, BI));
     return true;
@@ -285,6 +307,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   case Builtin::BI__builtin_usub_overflow:
   case Builtin::BI__builtin_usubl_overflow:
   case Builtin::BI__builtin_usubll_overflow:
+  case Builtin::BI__builtin_sub_overflow_p:
     handleOverflowBuiltin(Call, C, BO_Sub,
                           getOverflowBuiltinResultType(Call, C, BI));
     return true;
@@ -295,6 +318,7 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   case Builtin::BI__builtin_uadd_overflow:
   case Builtin::BI__builtin_uaddl_overflow:
   case Builtin::BI__builtin_uaddll_overflow:
+  case Builtin::BI__builtin_add_overflow_p:
     handleOverflowBuiltin(Call, C, BO_Add,
                           getOverflowBuiltinResultType(Call, C, BI));
     return true;
