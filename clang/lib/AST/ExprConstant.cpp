@@ -17014,6 +17014,76 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(DidOverflow, E);
   }
 
+  case Builtin::BI__builtin_add_overflow_p:
+  case Builtin::BI__builtin_sub_overflow_p:
+  case Builtin::BI__builtin_mul_overflow_p: {
+    APSInt LHS, RHS, Arg3;
+
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info) ||
+        !EvaluateInteger(E->getArg(2), Arg3, Info))
+      return false;
+
+    QualType ResultType = E->getArg(2)->getType();
+    if (const auto *Field = E->getArg(2)->getSourceBitField()) {
+      if (Field->hasConstantIntegerBitWidth()) {
+        ResultType = Info.Ctx.getBitIntType(
+            Field->getType()->isUnsignedIntegerType(),
+            Field->getBitWidthValue());
+      }
+    }
+
+    APSInt Result;
+    bool DidOverflow = false;
+
+    bool IsSigned = LHS.isSigned() || RHS.isSigned() ||
+                    ResultType->isSignedIntegerOrEnumerationType();
+    bool AllSigned = LHS.isSigned() && RHS.isSigned() &&
+                     ResultType->isSignedIntegerOrEnumerationType();
+    uint64_t LHSSize = LHS.getBitWidth();
+    uint64_t RHSSize = RHS.getBitWidth();
+    uint64_t ResultSize = Info.Ctx.getTypeSize(ResultType);
+    uint64_t MaxBits = std::max(std::max(LHSSize, RHSSize), ResultSize);
+
+    // Add an additional bit if the signedness isn't uniformly agreed to. We
+    // could do this ONLY if there is a signed and an unsigned that both have
+    // MaxBits, but the code to check that is pretty nasty. The issue will be
+    // caught in the shrink-to-result later anyway.
+    if (IsSigned && !AllSigned)
+      ++MaxBits;
+
+    LHS = APSInt(LHS.extOrTrunc(MaxBits), !IsSigned);
+    RHS = APSInt(RHS.extOrTrunc(MaxBits), !IsSigned);
+    Result = APSInt(MaxBits, !IsSigned);
+
+    switch (BuiltinOp) {
+    default:
+      llvm_unreachable("Invalid value for BuiltinOp");
+    case Builtin::BI__builtin_add_overflow_p:
+      Result = LHS.isSigned() ? LHS.sadd_ov(RHS, DidOverflow)
+                              : LHS.uadd_ov(RHS, DidOverflow);
+      break;
+    case Builtin::BI__builtin_sub_overflow_p:
+      Result = LHS.isSigned() ? LHS.ssub_ov(RHS, DidOverflow)
+                              : LHS.usub_ov(RHS, DidOverflow);
+      break;
+    case Builtin::BI__builtin_mul_overflow_p:
+      Result = LHS.isSigned() ? LHS.smul_ov(RHS, DidOverflow)
+                              : LHS.umul_ov(RHS, DidOverflow);
+      break;
+    }
+
+    // Truncate and see if the values are the same.
+    APSInt Temp = Result.extOrTrunc(Info.Ctx.getTypeSize(ResultType));
+    Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
+
+    if (!APSInt::isSameValue(Temp, Result))
+      DidOverflow = true;
+    Result = std::move(Temp);
+
+    return Success(DidOverflow, E);
+  }
+
   case Builtin::BI__builtin_reduce_add:
   case Builtin::BI__builtin_reduce_mul:
   case Builtin::BI__builtin_reduce_and:

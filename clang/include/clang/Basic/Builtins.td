@@ -4513,6 +4513,24 @@ def MulOverflow : Builtin {
   let Prototype = "bool(...)";
 }
 
+def AddOverflowP : Builtin {
+  let Spellings = ["__builtin_add_overflow_p"];
+  let Attributes = [NoThrow, CustomTypeChecking, Constexpr];
+  let Prototype = "bool(...)";
+}
+
+def SubOverflowP : Builtin {
+  let Spellings = ["__builtin_sub_overflow_p"];
+  let Attributes = [NoThrow, CustomTypeChecking, Constexpr];
+  let Prototype = "bool(...)";
+}
+
+def MulOverflowP : Builtin {
+  let Spellings = ["__builtin_mul_overflow_p"];
+  let Attributes = [NoThrow, CustomTypeChecking, Constexpr];
+  let Prototype = "bool(...)";
+}
+
 class UOverflowTemplate :
     Template<["unsigned int", "unsigned long int", "unsigned long long int"],
              ["_overflow",    "l_overflow",        "ll_overflow"]>;

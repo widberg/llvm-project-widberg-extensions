@@ -401,6 +401,10 @@ static bool BuiltinOverflow(Sema &S, CallExpr *TheCall, unsigned BuiltinID) {
   if (S.checkArgCount(TheCall, 3))
     return true;
 
+  bool IsOverflowP = BuiltinID == Builtin::BI__builtin_add_overflow_p ||
+                     BuiltinID == Builtin::BI__builtin_sub_overflow_p ||
+                     BuiltinID == Builtin::BI__builtin_mul_overflow_p;
+
   std::pair<unsigned, const char *> Builtins[] = {
     { Builtin::BI__builtin_add_overflow, "ckd_add" },
     { Builtin::BI__builtin_sub_overflow, "ckd_sub" },
@@ -442,34 +446,46 @@ static bool BuiltinOverflow(Sema &S, CallExpr *TheCall, unsigned BuiltinID) {
     }
   }
 
-  // Third argument should be a pointer to a non-const integer.
-  // IRGen correctly handles volatile, restrict, and address spaces, and
-  // the other qualifiers aren't possible.
   {
     ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(2));
     if (Arg.isInvalid()) return true;
     TheCall->setArg(2, Arg.get());
 
     QualType Ty = Arg.get()->getType();
-    const auto *PtrTy = Ty->getAs<PointerType>();
-    if (!PtrTy ||
-        !PtrTy->getPointeeType()->isIntegerType() ||
-        (!ValidCkdIntType(PtrTy->getPointeeType()) && CkdOperation) ||
-        PtrTy->getPointeeType().isConstQualified()) {
-      S.Diag(Arg.get()->getBeginLoc(),
-             diag::err_overflow_builtin_must_be_ptr_int)
-        << CkdOperation << Ty << Arg.get()->getSourceRange();
-      return true;
+    if (IsOverflowP) {
+      if (!Ty->isIntegerType()) {
+        S.Diag(Arg.get()->getBeginLoc(),
+               diag::err_overflow_builtin_p_must_be_int)
+            << Ty << Arg.get()->getSourceRange();
+        return true;
+      }
+    } else {
+      // Third argument should be a pointer to a non-const integer.
+      // IRGen correctly handles volatile, restrict, and address spaces, and
+      // the other qualifiers aren't possible.
+      const auto *PtrTy = Ty->getAs<PointerType>();
+      if (!PtrTy ||
+          !PtrTy->getPointeeType()->isIntegerType() ||
+          (!ValidCkdIntType(PtrTy->getPointeeType()) && CkdOperation) ||
+          PtrTy->getPointeeType().isConstQualified()) {
+        S.Diag(Arg.get()->getBeginLoc(),
+               diag::err_overflow_builtin_must_be_ptr_int)
+            << CkdOperation << Ty << Arg.get()->getSourceRange();
+        return true;
+      }
     }
   }
 
   // Disallow signed bit-precise integer args larger than 128 bits to mul
   // function until we improve backend support.
-  if (BuiltinID == Builtin::BI__builtin_mul_overflow) {
+  if (BuiltinID == Builtin::BI__builtin_mul_overflow ||
+      BuiltinID == Builtin::BI__builtin_mul_overflow_p) {
     for (unsigned I = 0; I < 3; ++I) {
       const auto Arg = TheCall->getArg(I);
-      // Third argument will be a pointer.
-      auto Ty = I < 2 ? Arg->getType() : Arg->getType()->getPointeeType();
+      auto Ty = I < 2
+                    ? Arg->getType()
+                    : (IsOverflowP ? Arg->getType()
+                                   : Arg->getType()->getPointeeType());
       if (Ty->isBitIntType() && Ty->isSignedIntegerType() &&
           S.getASTContext().getIntWidth(Ty) > 128)
         return S.Diag(Arg->getBeginLoc(),
@@ -3167,6 +3183,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_add_overflow:
   case Builtin::BI__builtin_sub_overflow:
   case Builtin::BI__builtin_mul_overflow:
+  case Builtin::BI__builtin_add_overflow_p:
+  case Builtin::BI__builtin_sub_overflow_p:
+  case Builtin::BI__builtin_mul_overflow_p:
     if (BuiltinOverflow(*this, TheCall, BuiltinID))
       return ExprError();
     break;

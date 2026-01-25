@@ -216,6 +216,20 @@ getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
   return {width, isSigned};
 }
 
+static WidthAndSignedness
+getIntegerWidthAndSignednessForOverflowP(const clang::ASTContext &astContext,
+                                         const clang::Expr *resultExpr) {
+  if (const auto *field = resultExpr->getSourceBitField()) {
+    if (field->hasConstantIntegerBitWidth()) {
+      unsigned width = field->getBitWidthValue();
+      bool isSigned = field->getType()->isSignedIntegerType();
+      return {width, isSigned};
+    }
+  }
+
+  return getIntegerWidthAndSignedness(astContext, resultExpr->getType());
+}
+
 // Given one or more integer types, this function produces an integer type that
 // encompasses them: any value in one of the given types could be expressed in
 // the encompassing type.
@@ -1567,6 +1581,65 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     bool isVolatile =
         resultArg->getType()->getPointeeType().isVolatileQualified();
     builder.createStore(loc, arithOp.getResult(), resultPtr, isVolatile);
+
+    return RValue::get(arithOp.getOverflow());
+  }
+
+  case Builtin::BI__builtin_add_overflow_p:
+  case Builtin::BI__builtin_sub_overflow_p:
+  case Builtin::BI__builtin_mul_overflow_p: {
+    const clang::Expr *leftArg = e->getArg(0);
+    const clang::Expr *rightArg = e->getArg(1);
+    const clang::Expr *resultTypeArg = e->getArg(2);
+
+    WidthAndSignedness leftInfo =
+        getIntegerWidthAndSignedness(cgm.getASTContext(), leftArg->getType());
+    WidthAndSignedness rightInfo =
+        getIntegerWidthAndSignedness(cgm.getASTContext(), rightArg->getType());
+    WidthAndSignedness resultInfo =
+        getIntegerWidthAndSignednessForOverflowP(cgm.getASTContext(),
+                                                 resultTypeArg);
+
+    mlir::Value left = emitScalarExpr(leftArg);
+    mlir::Value right = emitScalarExpr(rightArg);
+
+    // Evaluate the result argument for side effects.
+    emitScalarExpr(resultTypeArg);
+
+    WidthAndSignedness encompassingInfo =
+        EncompassingIntegerType({leftInfo, rightInfo, resultInfo});
+
+    auto encompassingCIRTy = cir::IntType::get(
+        &getMLIRContext(), encompassingInfo.width, encompassingInfo.isSigned);
+    auto resultCIRTy = cir::IntType::get(
+        &getMLIRContext(), resultInfo.width, resultInfo.isSigned);
+
+    // Extend each operand to the encompassing type, if necessary.
+    if (left.getType() != encompassingCIRTy)
+      left =
+          builder.createCast(cir::CastKind::integral, left, encompassingCIRTy);
+    if (right.getType() != encompassingCIRTy)
+      right =
+          builder.createCast(cir::CastKind::integral, right, encompassingCIRTy);
+
+    cir::BinOpOverflowKind opKind;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unknown overflow builtin id.");
+    case Builtin::BI__builtin_add_overflow_p:
+      opKind = cir::BinOpOverflowKind::Add;
+      break;
+    case Builtin::BI__builtin_sub_overflow_p:
+      opKind = cir::BinOpOverflowKind::Sub;
+      break;
+    case Builtin::BI__builtin_mul_overflow_p:
+      opKind = cir::BinOpOverflowKind::Mul;
+      break;
+    }
+
+    mlir::Location loc = getLoc(e->getSourceRange());
+    auto arithOp = cir::BinOpOverflowOp::create(builder, loc, resultCIRTy,
+                                                opKind, left, right);
 
     return RValue::get(arithOp.getOverflow());
   }

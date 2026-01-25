@@ -4635,6 +4635,28 @@ convert their operands before performing the operation.
 
 Query for this feature with ``__has_builtin(__builtin_add_overflow)``, etc.
 
+Clang also provides the following predicate-only checked arithmetic builtins:
+
+.. code-block:: c
+
+  bool __builtin_add_overflow_p(type1 x, type2 y, type3 sum);
+  bool __builtin_sub_overflow_p(type1 x, type2 y, type3 diff);
+  bool __builtin_mul_overflow_p(type1 x, type2 y, type3 prod);
+
+The ``__builtin_*_overflow_p`` variants behave like the corresponding
+``__builtin_*_overflow`` builtins, but they do not store a result.  The third
+argument is an integer-typed expression instead of a pointer, and it may be any
+integer type, including boolean types.  Its value is ignored, but its side
+effects are still evaluated.  No integer promotions are performed on the third
+argument.  For bit-field expressions, the cast uses the bit-field's width and
+signedness rather than the underlying type.  The first two operands are
+conceptually promoted to an infinite-precision signed type and the operation is
+performed there.  The result is cast to the type of the third argument and
+compared to the infinite-precision result.  The builtin returns 0 if they are
+equal and 1 otherwise.
+
+Query for this feature with ``__has_builtin(__builtin_add_overflow_p)``, etc.
+
 Floating point builtins
 ---------------------------------------
 

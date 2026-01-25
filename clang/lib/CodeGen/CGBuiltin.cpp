@@ -871,6 +871,20 @@ getIntegerWidthAndSignedness(const clang::ASTContext &context,
   return {Width, Signed};
 }
 
+static WidthAndSignedness
+getIntegerWidthAndSignednessForOverflowP(const clang::ASTContext &context,
+                                         const clang::Expr *ResultExpr) {
+  if (const auto *Field = ResultExpr->getSourceBitField()) {
+    if (Field->hasConstantIntegerBitWidth()) {
+      unsigned Width = Field->getBitWidthValue();
+      bool Signed = Field->getType()->isSignedIntegerType();
+      return {Width, Signed};
+    }
+  }
+
+  return getIntegerWidthAndSignedness(context, ResultExpr->getType());
+}
+
 // Given one or more integer types, this function produces an integer type that
 // encompasses them: any value in one of the given types could be expressed in
 // the encompassing type.
@@ -2309,7 +2323,8 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
 static bool isSpecialUnsignedMultiplySignedResult(
     unsigned BuiltinID, WidthAndSignedness Op1Info, WidthAndSignedness Op2Info,
     WidthAndSignedness ResultInfo) {
-  return BuiltinID == Builtin::BI__builtin_mul_overflow &&
+  return (BuiltinID == Builtin::BI__builtin_mul_overflow ||
+          BuiltinID == Builtin::BI__builtin_mul_overflow_p) &&
          Op1Info.Width == Op2Info.Width && Op2Info.Width == ResultInfo.Width &&
          !Op1Info.Signed && !Op2Info.Signed && ResultInfo.Signed;
 }
@@ -2347,12 +2362,39 @@ static RValue EmitCheckedUnsignedMultiplySignedResult(
   return RValue::get(HasOverflow);
 }
 
+static llvm::Value *EmitCheckedUnsignedMultiplySignedResultNoStore(
+    CodeGenFunction &CGF, llvm::Value *Op1Val, WidthAndSignedness Op1Info,
+    llvm::Value *Op2Val, WidthAndSignedness Op2Info,
+    WidthAndSignedness ResultInfo) {
+  assert(isSpecialUnsignedMultiplySignedResult(
+             Builtin::BI__builtin_mul_overflow_p, Op1Info, Op2Info,
+             ResultInfo) &&
+         "Cannot specialize this multiply");
+
+  llvm::Value *V1 = Op1Val;
+  llvm::Value *V2 = Op2Val;
+
+  llvm::Value *HasOverflow;
+  llvm::Value *Result = EmitOverflowIntrinsic(
+      CGF, Intrinsic::umul_with_overflow, V1, V2, HasOverflow);
+
+  // The intrinsic call will detect overflow when the value is > UINT_MAX,
+  // however, since the original builtin had a signed result, we need to report
+  // an overflow when the result is greater than INT_MAX.
+  auto IntMax = llvm::APInt::getSignedMaxValue(ResultInfo.Width);
+  llvm::Value *IntMaxValue = llvm::ConstantInt::get(Result->getType(), IntMax);
+
+  llvm::Value *IntMaxOverflow = CGF.Builder.CreateICmpUGT(Result, IntMaxValue);
+  return CGF.Builder.CreateOr(HasOverflow, IntMaxOverflow);
+}
+
 /// Determine if a binop is a checked mixed-sign multiply we can specialize.
 static bool isSpecialMixedSignMultiply(unsigned BuiltinID,
                                        WidthAndSignedness Op1Info,
                                        WidthAndSignedness Op2Info,
                                        WidthAndSignedness ResultInfo) {
-  return BuiltinID == Builtin::BI__builtin_mul_overflow &&
+  return (BuiltinID == Builtin::BI__builtin_mul_overflow ||
+          BuiltinID == Builtin::BI__builtin_mul_overflow_p) &&
          std::max(Op1Info.Width, Op2Info.Width) >= ResultInfo.Width &&
          Op1Info.Signed != Op2Info.Signed;
 }
@@ -2445,6 +2487,70 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
   CGF.Builder.CreateStore(CGF.EmitToMemory(Result, ResultQTy), ResultPtr,
                           isVolatile);
   return RValue::get(Overflow);
+}
+
+static llvm::Value *EmitCheckedMixedSignMultiplyNoStore(
+    CodeGenFunction &CGF, llvm::Value *Op1Val, WidthAndSignedness Op1Info,
+    llvm::Value *Op2Val, WidthAndSignedness Op2Info,
+    WidthAndSignedness ResultInfo) {
+  assert(isSpecialMixedSignMultiply(Builtin::BI__builtin_mul_overflow_p,
+                                    Op1Info, Op2Info, ResultInfo) &&
+         "Not a mixed-sign multiplication we can specialize");
+
+  // Emit the signed and unsigned operands.
+  llvm::Value *Signed = Op1Info.Signed ? Op1Val : Op2Val;
+  llvm::Value *Unsigned = Op1Info.Signed ? Op2Val : Op1Val;
+  unsigned SignedOpWidth = Op1Info.Signed ? Op1Info.Width : Op2Info.Width;
+  unsigned UnsignedOpWidth = Op1Info.Signed ? Op2Info.Width : Op1Info.Width;
+
+  // One of the operands may be smaller than the other. If so, [s|z]ext it.
+  if (SignedOpWidth < UnsignedOpWidth)
+    Signed = CGF.Builder.CreateSExt(Signed, Unsigned->getType(), "op.sext");
+  if (UnsignedOpWidth < SignedOpWidth)
+    Unsigned = CGF.Builder.CreateZExt(Unsigned, Signed->getType(), "op.zext");
+
+  llvm::Type *OpTy = Signed->getType();
+  llvm::Value *Zero = llvm::Constant::getNullValue(OpTy);
+  unsigned OpWidth = std::max(Op1Info.Width, Op2Info.Width);
+
+  // Take the absolute value of the signed operand.
+  llvm::Value *IsNegative = CGF.Builder.CreateICmpSLT(Signed, Zero);
+  llvm::Value *AbsOfNegative = CGF.Builder.CreateSub(Zero, Signed);
+  llvm::Value *AbsSigned =
+      CGF.Builder.CreateSelect(IsNegative, AbsOfNegative, Signed);
+
+  // Perform a checked unsigned multiplication.
+  llvm::Value *UnsignedOverflow;
+  llvm::Value *UnsignedResult =
+      EmitOverflowIntrinsic(CGF, Intrinsic::umul_with_overflow, AbsSigned,
+                            Unsigned, UnsignedOverflow);
+
+  llvm::Value *Overflow;
+  if (ResultInfo.Signed) {
+    // Signed overflow occurs if the result is greater than INT_MAX or lesser
+    // than INT_MIN, i.e when |Result| > (INT_MAX + IsNegative).
+    auto IntMax =
+        llvm::APInt::getSignedMaxValue(ResultInfo.Width).zext(OpWidth);
+    llvm::Value *MaxResult =
+        CGF.Builder.CreateAdd(llvm::ConstantInt::get(OpTy, IntMax),
+                              CGF.Builder.CreateZExt(IsNegative, OpTy));
+    llvm::Value *SignedOverflow =
+        CGF.Builder.CreateICmpUGT(UnsignedResult, MaxResult);
+    Overflow = CGF.Builder.CreateOr(UnsignedOverflow, SignedOverflow);
+  } else {
+    // Unsigned overflow occurs if the result is < 0 or greater than UINT_MAX.
+    llvm::Value *Underflow = CGF.Builder.CreateAnd(
+        IsNegative, CGF.Builder.CreateIsNotNull(UnsignedResult));
+    Overflow = CGF.Builder.CreateOr(UnsignedOverflow, Underflow);
+    if (ResultInfo.Width < OpWidth) {
+      auto IntMax = llvm::APInt::getMaxValue(ResultInfo.Width).zext(OpWidth);
+      llvm::Value *TruncOverflow = CGF.Builder.CreateICmpUGT(
+          UnsignedResult, llvm::ConstantInt::get(OpTy, IntMax));
+      Overflow = CGF.Builder.CreateOr(Overflow, TruncOverflow);
+    }
+  }
+  assert(Overflow && "Missing overflow");
+  return Overflow;
 }
 
 static bool
@@ -5515,6 +5621,89 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     bool isVolatile =
       ResultArg->getType()->getPointeeType().isVolatileQualified();
     Builder.CreateStore(EmitToMemory(Result, ResultQTy), ResultPtr, isVolatile);
+
+    return RValue::get(Overflow);
+  }
+
+  case Builtin::BI__builtin_add_overflow_p:
+  case Builtin::BI__builtin_sub_overflow_p:
+  case Builtin::BI__builtin_mul_overflow_p: {
+    const clang::Expr *LeftArg = E->getArg(0);
+    const clang::Expr *RightArg = E->getArg(1);
+    const clang::Expr *ResultTypeArg = E->getArg(2);
+
+    WidthAndSignedness LeftInfo =
+        getIntegerWidthAndSignedness(CGM.getContext(), LeftArg->getType());
+    WidthAndSignedness RightInfo =
+        getIntegerWidthAndSignedness(CGM.getContext(), RightArg->getType());
+    WidthAndSignedness ResultInfo = getIntegerWidthAndSignednessForOverflowP(
+        CGM.getContext(), ResultTypeArg);
+
+    llvm::Value *Left = EmitScalarExpr(LeftArg);
+    llvm::Value *Right = EmitScalarExpr(RightArg);
+
+    // Evaluate the result argument for side effects.
+    EmitScalarExpr(ResultTypeArg);
+
+    // Handle mixed-sign multiplication as a special case, because adding
+    // runtime or backend support for our generic irgen would be too expensive.
+    if (isSpecialMixedSignMultiply(BuiltinID, LeftInfo, RightInfo, ResultInfo))
+      return RValue::get(EmitCheckedMixedSignMultiplyNoStore(
+          *this, Left, LeftInfo, Right, RightInfo, ResultInfo));
+
+    if (isSpecialUnsignedMultiplySignedResult(BuiltinID, LeftInfo, RightInfo,
+                                              ResultInfo))
+      return RValue::get(EmitCheckedUnsignedMultiplySignedResultNoStore(
+          *this, Left, LeftInfo, Right, RightInfo, ResultInfo));
+
+    WidthAndSignedness EncompassingInfo =
+        EncompassingIntegerType({LeftInfo, RightInfo, ResultInfo});
+
+    llvm::Type *EncompassingLLVMTy =
+        llvm::IntegerType::get(CGM.getLLVMContext(), EncompassingInfo.Width);
+    llvm::Type *ResultLLVMTy =
+        llvm::IntegerType::get(CGM.getLLVMContext(), ResultInfo.Width);
+
+    Intrinsic::ID IntrinsicId;
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("Unknown overflow builtin id.");
+    case Builtin::BI__builtin_add_overflow_p:
+      IntrinsicId = EncompassingInfo.Signed ? Intrinsic::sadd_with_overflow
+                                            : Intrinsic::uadd_with_overflow;
+      break;
+    case Builtin::BI__builtin_sub_overflow_p:
+      IntrinsicId = EncompassingInfo.Signed ? Intrinsic::ssub_with_overflow
+                                            : Intrinsic::usub_with_overflow;
+      break;
+    case Builtin::BI__builtin_mul_overflow_p:
+      IntrinsicId = EncompassingInfo.Signed ? Intrinsic::smul_with_overflow
+                                            : Intrinsic::umul_with_overflow;
+      break;
+    }
+
+    // Extend each operand to the encompassing type.
+    Left = Builder.CreateIntCast(Left, EncompassingLLVMTy, LeftInfo.Signed);
+    Right = Builder.CreateIntCast(Right, EncompassingLLVMTy, RightInfo.Signed);
+
+    // Perform the operation on the extended values.
+    llvm::Value *Overflow, *Result;
+    Result = EmitOverflowIntrinsic(*this, IntrinsicId, Left, Right, Overflow);
+
+    if (EncompassingInfo.Width > ResultInfo.Width) {
+      // The encompassing type is wider than the result type, so we need to
+      // truncate it.
+      llvm::Value *ResultTrunc = Builder.CreateTrunc(Result, ResultLLVMTy);
+
+      // To see if the truncation caused an overflow, we will extend
+      // the result and then compare it to the original result.
+      llvm::Value *ResultTruncExt = Builder.CreateIntCast(
+          ResultTrunc, EncompassingLLVMTy, ResultInfo.Signed);
+      llvm::Value *TruncationOverflow =
+          Builder.CreateICmpNE(Result, ResultTruncExt);
+
+      Overflow = Builder.CreateOr(Overflow, TruncationOverflow);
+    }
 
     return RValue::get(Overflow);
   }

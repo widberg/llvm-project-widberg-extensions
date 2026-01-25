@@ -35,6 +35,32 @@ bool test_add_overflow_int_int_int(int x, int y, int *res) {
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !s32i, !cir.ptr<!s32i>
 //      CIR: }
 
+bool test_add_overflow_p_int_int_schar(int x, int y) {
+  return __builtin_add_overflow_p(x, y, (signed char)0);
+}
+
+//      CIR: cir.func {{.*}} @{{.*}}test_add_overflow_p_int_int_schar{{.*}}
+//      CIR:   %{{.+}} = cir.load{{.*}} : !cir.ptr<!s32i>, !s32i
+//      CIR:   %{{.+}} = cir.load{{.*}} : !cir.ptr<!s32i>, !s32i
+//      CIR:   %{{.+}}, %{{.+}} = cir.binop.overflow(add, %{{.+}}, %{{.+}}) : {{.*}}
+//      CIR:   cir.return %{{.+}}
+
+bool test_sub_overflow_p_int_int_schar(int x, int y) {
+  return __builtin_sub_overflow_p(x, y, (signed char)0);
+}
+
+//      CIR: cir.func {{.*}} @{{.*}}test_sub_overflow_p_int_int_schar{{.*}}
+//      CIR:   %{{.+}}, %{{.+}} = cir.binop.overflow(sub, %{{.+}}, %{{.+}}) : {{.*}}
+//      CIR:   cir.return %{{.+}}
+
+bool test_mul_overflow_p_int_int_schar(int x, int y) {
+  return __builtin_mul_overflow_p(x, y, (signed char)0);
+}
+
+//      CIR: cir.func {{.*}} @{{.*}}test_mul_overflow_p_int_int_schar{{.*}}
+//      CIR:   %{{.+}}, %{{.+}} = cir.binop.overflow(mul, %{{.+}}, %{{.+}}) : {{.*}}
+//      CIR:   cir.return %{{.+}}
+
 bool test_add_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y, _BitInt(31) *res) {
   return __builtin_add_overflow(x, y, res);
 }
