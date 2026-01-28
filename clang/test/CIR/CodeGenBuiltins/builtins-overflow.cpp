@@ -44,6 +44,44 @@ bool test_add_overflow_p_int_int_schar(int x, int y) {
 //      CIR:   %{{.+}} = cir.load{{.*}} : !cir.ptr<!s32i>, !s32i
 //      CIR:   %{{.+}}, %{{.+}} = cir.binop.overflow(add, %{{.+}}, %{{.+}}) : {{.*}}
 //      CIR:   cir.return %{{.+}}
+//
+// LLVM: define{{.*}} i1 @{{.*}}test_add_overflow_p_int_int_schar{{.*}}
+// LLVM: [[S:%.+]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+// LLVM-DAG: [[OV:%.+]] = extractvalue { i32, i1 } [[S]], 1
+// LLVM-DAG: [[RES:%.+]] = extractvalue { i32, i1 } [[S]], 0
+// LLVM: [[TR:%.+]] = trunc i32 [[RES]] to i8
+// LLVM: [[EXT:%.+]] = sext i8 [[TR]] to i32
+// LLVM: [[NE:%.+]] = icmp ne i32 [[EXT]], [[RES]]
+// LLVM: [[OR:%.+]] = or i1 [[OV]], [[NE]]
+// LLVM: [[ZEXT:%.+]] = zext i1 [[OR]] to i8
+// LLVM: store i8 [[ZEXT]], ptr
+// LLVM: [[LOAD:%.+]] = load i8, ptr
+// LLVM: [[TRUNC:%.+]] = trunc i8 [[LOAD]] to i1
+// LLVM: ret i1 [[TRUNC]]
+
+bool test_add_overflow_p_int_int_bool(int x, int y) {
+  return __builtin_add_overflow_p(x, y, false);
+}
+
+//      CIR: cir.func {{.*}} @{{.*}}test_add_overflow_p_int_int_bool{{.*}}
+//      CIR:   %{{.+}} = cir.load{{.*}} : !cir.ptr<!s32i>, !s32i
+//      CIR:   %{{.+}} = cir.load{{.*}} : !cir.ptr<!s32i>, !s32i
+//      CIR:   %{{.+}}, %{{.+}} = cir.binop.overflow(add, %{{.+}}, %{{.+}}) : {{.*}}
+//      CIR:   cir.return %{{.+}}
+//
+// LLVM: define{{.*}} i1 @{{.*}}test_add_overflow_p_int_int_bool{{.*}}
+// LLVM: [[S:%.+]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+// LLVM-DAG: [[OV:%.+]] = extractvalue { i32, i1 } [[S]], 1
+// LLVM-DAG: [[RES:%.+]] = extractvalue { i32, i1 } [[S]], 0
+// LLVM: [[TR:%.+]] = trunc i32 [[RES]] to i1
+// LLVM: [[EXT:%.+]] = zext i1 [[TR]] to i32
+// LLVM: [[NE:%.+]] = icmp ne i32 [[EXT]], [[RES]]
+// LLVM: [[OR:%.+]] = or i1 [[OV]], [[NE]]
+// LLVM: [[ZEXT:%.+]] = zext i1 [[OR]] to i8
+// LLVM: store i8 [[ZEXT]], ptr
+// LLVM: [[LOAD:%.+]] = load i8, ptr
+// LLVM: [[TRUNC:%.+]] = trunc i8 [[LOAD]] to i1
+// LLVM: ret i1 [[TRUNC]]
 
 bool test_sub_overflow_p_int_int_schar(int x, int y) {
   return __builtin_sub_overflow_p(x, y, (signed char)0);

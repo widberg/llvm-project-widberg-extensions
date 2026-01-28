@@ -33,6 +33,8 @@ void test(void) {
   __builtin_add_overflow_p(1, 1, &r);  // expected-error {{result argument to overflow builtin must be an integer type ('unsigned int *' invalid)}}
   __builtin_add_overflow_p(1, 1, (_Bool)0);
   __builtin_add_overflow_p(1, 1, (enum E)0);
+  struct BF { unsigned b : 3; } bf = {0};
+  __builtin_add_overflow_p(1, 1, bf.b);
 
   {
     _BitInt(128) x = 1;

@@ -56,6 +56,10 @@ int test_add_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y) {
   return r;
 }
 
+struct Bitfield3 {
+  unsigned b : 3;
+};
+
 _Bool test_add_overflow_p_int_int_schar(int x, int y) {
   // CHECK-LABEL: define {{(dso_local )?(zeroext )?}}i1 @test_add_overflow_p_int_int_schar
   // CHECK: [[S:%.+]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
@@ -67,6 +71,45 @@ _Bool test_add_overflow_p_int_int_schar(int x, int y) {
   // CHECK: [[OR:%.+]] = or i1 [[OV]], [[NE]]
   // CHECK: ret i1 [[OR]]
   return __builtin_add_overflow_p(x, y, (signed char)0);
+}
+
+_Bool test_add_overflow_p_int_int_uchar(int x, int y) {
+  // CHECK-LABEL: define {{(dso_local )?(zeroext )?}}i1 @test_add_overflow_p_int_int_uchar
+  // CHECK: [[S:%.+]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+  // CHECK-DAG: [[OV:%.+]] = extractvalue { i32, i1 } [[S]], 1
+  // CHECK-DAG: [[RES:%.+]] = extractvalue { i32, i1 } [[S]], 0
+  // CHECK: [[TR:%.+]] = trunc i32 [[RES]] to i8
+  // CHECK: [[EXT:%.+]] = zext i8 [[TR]] to i32
+  // CHECK: [[NE:%.+]] = icmp ne i32 [[RES]], [[EXT]]
+  // CHECK: [[OR:%.+]] = or i1 [[OV]], [[NE]]
+  // CHECK: ret i1 [[OR]]
+  return __builtin_add_overflow_p(x, y, (unsigned char)0);
+}
+
+_Bool test_add_overflow_p_int_int_bool(int x, int y) {
+  // CHECK-LABEL: define {{(dso_local )?(zeroext )?}}i1 @test_add_overflow_p_int_int_bool
+  // CHECK: [[S:%.+]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+  // CHECK-DAG: [[OV:%.+]] = extractvalue { i32, i1 } [[S]], 1
+  // CHECK-DAG: [[RES:%.+]] = extractvalue { i32, i1 } [[S]], 0
+  // CHECK: [[TR:%.+]] = trunc i32 [[RES]] to i1
+  // CHECK: [[EXT:%.+]] = zext i1 [[TR]] to i32
+  // CHECK: [[NE:%.+]] = icmp ne i32 [[RES]], [[EXT]]
+  // CHECK: [[OR:%.+]] = or i1 [[OV]], [[NE]]
+  // CHECK: ret i1 [[OR]]
+  return __builtin_add_overflow_p(x, y, (_Bool)0);
+}
+
+_Bool test_add_overflow_p_int_int_bitfield(int x, int y, struct Bitfield3 s) {
+  // CHECK-LABEL: define {{(dso_local )?(zeroext )?}}i1 @test_add_overflow_p_int_int_bitfield
+  // CHECK: [[S:%.+]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+  // CHECK-DAG: [[OV:%.+]] = extractvalue { i32, i1 } [[S]], 1
+  // CHECK-DAG: [[RES:%.+]] = extractvalue { i32, i1 } [[S]], 0
+  // CHECK: [[TR:%.+]] = trunc i32 [[RES]] to i3
+  // CHECK: [[EXT:%.+]] = zext i3 [[TR]] to i32
+  // CHECK: [[NE:%.+]] = icmp ne i32 [[RES]], [[EXT]]
+  // CHECK: [[OR:%.+]] = or i1 [[OV]], [[NE]]
+  // CHECK: ret i1 [[OR]]
+  return __builtin_add_overflow_p(x, y, s.b);
 }
 
 _Bool test_sub_overflow_p_int_int_schar(int x, int y) {

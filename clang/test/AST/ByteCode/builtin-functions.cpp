@@ -1908,6 +1908,23 @@ namespace OverflowP {
     return __builtin_mul_overflow_p(64, 2, (signed char)0);
   }
   static_assert(mul_overflow());
+
+  constexpr bool add_overflow_bool() {
+    return __builtin_add_overflow_p(1, 2, false);
+  }
+  static_assert(add_overflow_bool());
+
+  int side_effect; // both-note {{declared here}}
+  constexpr bool side_effect_result = // both-error {{must be initialized by a constant expression}}
+      __builtin_add_overflow_p(1, 2, side_effect++); // both-note {{read of non-const variable 'side_effect' is not allowed in a constant expression}}
+}
+
+namespace OverflowNonPBool {
+  constexpr bool add_overflow() {
+    bool r = false;
+    return __builtin_add_overflow(1, 2, &r) && r;
+  }
+  static_assert(add_overflow());
 }
 
 namespace InitParam {
