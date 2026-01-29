@@ -219,6 +219,23 @@ int test_mul_overflow_xint128_xint128_xint128(_BitInt(128) x, _BitInt(128) y) {
   return r;
 }
 
+#if __BITINT_MAXWIDTH__ > 128
+unsigned _BitInt(129)
+test_add_overflow_uxint129_uxint129_uxint129(unsigned _BitInt(129) x,
+                                             unsigned _BitInt(129) y) {
+  // CHECK-LABEL: define {{.*}}@test_add_overflow_uxint129_uxint129_uxint129(
+  // CHECK: [[S:%.+]] = call { i129, i1 } @llvm.uadd.with.overflow.i129(i129 %{{.+}}, i129 %{{.+}})
+  // CHECK-DAG: [[Q:%.+]] = extractvalue { i129, i1 } [[S]], 0
+  // CHECK-DAG: [[C:%.+]] = extractvalue { i129, i1 } [[S]], 1
+  // CHECK: store
+  // CHECK: br i1 [[C]]
+  unsigned _BitInt(129) r;
+  if (__builtin_add_overflow(x, y, &r))
+    overflowed();
+  return r;
+}
+#endif
+
 int test_add_overflow_uint_int_int(unsigned x, int y) {
   // CHECK-LABEL: define {{(dso_local )?}}i32 @test_add_overflow_uint_int_int
   // CHECK: [[XE:%.+]] = zext i32 %{{.+}} to i33

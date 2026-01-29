@@ -78,6 +78,80 @@ bool test_add_overflow_uint_uint_bool(unsigned x, unsigned y, bool *res) {
 // CIR-NEXT:   cir.store{{.*}} %[[BOOL_RES]], %[[#RES_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 //      CIR: }
 
+bool test_add_overflow_bool_bool_bool(bool x, bool y, bool *res) {
+  return __builtin_add_overflow(x, y, res);
+}
+
+//      CIR: cir.func {{.*}} @{{.*}}test_add_overflow_bool_bool_bool{{.*}}
+//      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.bool>>, !cir.ptr<!cir.bool>
+// CIR-NEXT:   %[[#PROM_X:]] = cir.cast bool_to_int %[[#X]] : !cir.bool -> !cir.int<u, 1>
+// CIR-NEXT:   %[[#PROM_Y:]] = cir.cast bool_to_int %[[#Y]] : !cir.bool -> !cir.int<u, 1>
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#PROM_X]], %[[#PROM_Y]]) : !cir.int<u, 1>, (!cir.int<u, 1>, !cir.bool)
+// CIR-NEXT:   %[[BOOL_RES:.+]] = cir.cast int_to_bool %[[RES]] : !cir.int<u, 1> -> !cir.bool
+// CIR-NEXT:   cir.store{{.*}} %[[BOOL_RES]], %[[#RES_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
+//      CIR: }
+
+// LLVM: define{{.*}} i1 @{{.*}}test_add_overflow_bool_bool_bool
+// LLVM:   call { i1, i1 } @llvm.uadd.with.overflow.i1
+
+// OGCG: define{{.*}} i1 @{{.*}}test_add_overflow_bool_bool_bool
+// OGCG:   call { i1, i1 } @llvm.uadd.with.overflow.i1
+
+bool test_add_overflow_schar_uchar_ushort(signed char x, unsigned char y,
+                                          unsigned short *res) {
+  return __builtin_add_overflow(x, y, res);
+}
+
+//      CIR: cir.func {{.*}} @{{.*}}test_add_overflow_schar_uchar_ushort{{.*}}
+//      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s8i>, !s8i
+// CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u8i>, !u8i
+// CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u16i>>, !cir.ptr<!u16i>
+// CIR-NEXT:   %[[#PROM_X:]] = cir.cast integral %[[#X]] : !s8i -> !cir.int<s, 17>
+// CIR-NEXT:   %[[#PROM_Y:]] = cir.cast integral %[[#Y]] : !u8i -> !cir.int<s, 17>
+// CIR-NEXT:   %[[RES:.+]], %[[OV:.+]] = cir.binop.overflow(add, %[[#PROM_X]], %[[#PROM_Y]]) : !cir.int<s, 17>, (!cir.int<s, 17>, !cir.bool)
+// CIR-NEXT:   %[[TRUNC:.+]] = cir.cast integral %[[RES]] : !cir.int<s, 17> -> !u16i
+// CIR-NEXT:   %[[TRUNC_EXT:.+]] = cir.cast integral %[[TRUNC]] : !u16i -> !cir.int<s, 17>
+// CIR-NEXT:   %[[TRUNC_OV:.+]] = cir.cmp(ne, %[[RES]], %[[TRUNC_EXT]]) : !cir.int<s, 17>, !cir.bool
+// CIR-NEXT:   %[[OV2:.+]] = cir.binop(or, %[[OV]], %[[TRUNC_OV]]) : !cir.bool
+// CIR-NEXT:   cir.store{{.*}} %[[TRUNC]], %[[#RES_PTR]] : !u16i, !cir.ptr<!u16i>
+//      CIR: }
+
+// LLVM: define{{.*}} i1 @{{.*}}test_add_overflow_schar_uchar_ushort
+// LLVM:   call { i17, i1 } @llvm.sadd.with.overflow.i17
+
+// OGCG: define{{.*}} i1 @{{.*}}test_add_overflow_schar_uchar_ushort
+// OGCG:   call { i17, i1 } @llvm.sadd.with.overflow.i17
+
+enum UShortEnum : unsigned short { UShortEnum_A = 1 };
+enum SCharEnum : signed char { SCharEnum_A = -1 };
+
+bool test_add_overflow_enum_enum_enum(UShortEnum x, SCharEnum y,
+                                      UShortEnum *res) {
+  return __builtin_add_overflow(x, y, res);
+}
+
+//      CIR: cir.func {{.*}} @{{.*}}test_add_overflow_enum_enum_enum{{.*}}
+//      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u16i>, !u16i
+// CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s8i>, !s8i
+// CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u16i>>, !cir.ptr<!u16i>
+// CIR-NEXT:   %[[#PROM_X:]] = cir.cast integral %[[#X]] : !u16i -> !cir.int<s, 17>
+// CIR-NEXT:   %[[#PROM_Y:]] = cir.cast integral %[[#Y]] : !s8i -> !cir.int<s, 17>
+// CIR-NEXT:   %[[RES:.+]], %[[OV:.+]] = cir.binop.overflow(add, %[[#PROM_X]], %[[#PROM_Y]]) : !cir.int<s, 17>, (!cir.int<s, 17>, !cir.bool)
+// CIR-NEXT:   %[[TRUNC:.+]] = cir.cast integral %[[RES]] : !cir.int<s, 17> -> !u16i
+// CIR-NEXT:   %[[TRUNC_EXT:.+]] = cir.cast integral %[[TRUNC]] : !u16i -> !cir.int<s, 17>
+// CIR-NEXT:   %[[TRUNC_OV:.+]] = cir.cmp(ne, %[[RES]], %[[TRUNC_EXT]]) : !cir.int<s, 17>, !cir.bool
+// CIR-NEXT:   %[[OV2:.+]] = cir.binop(or, %[[OV]], %[[TRUNC_OV]]) : !cir.bool
+// CIR-NEXT:   cir.store{{.*}} %[[TRUNC]], %[[#RES_PTR]] : !u16i, !cir.ptr<!u16i>
+//      CIR: }
+
+// LLVM: define{{.*}} i1 @{{.*}}test_add_overflow_enum_enum_enum
+// LLVM:   call { i17, i1 } @llvm.sadd.with.overflow.i17
+
+// OGCG: define{{.*}} i1 @{{.*}}test_add_overflow_enum_enum_enum
+// OGCG:   call { i17, i1 } @llvm.sadd.with.overflow.i17
+
 bool test_add_overflow_int_int_int(int x, int y, int *res) {
   return __builtin_add_overflow(x, y, res);
 }
