@@ -45,6 +45,12 @@ static_assert(add<int>(INT_MIN + 22, -23) == Result<int>{true, INT_MAX});
 static_assert(add<bool>(1u, 1u) == Result<bool>{true, false});
 static_assert(add<bool>(1u, 0u) == Result<bool>{false, true});
 static_assert(add<bool>(255u, 1u) == Result<bool>{true, false});
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 1
+static_assert(add<unsigned _BitInt(1)>(1u, 1u) ==
+              Result<unsigned _BitInt(1)>{true, (unsigned _BitInt(1))0});
+static_assert(add<unsigned _BitInt(1)>(1u, 0u) ==
+              Result<unsigned _BitInt(1)>{false, (unsigned _BitInt(1))1});
+#endif
 
 constexpr Result<unsigned> uadd(unsigned lhs, unsigned rhs) {
   unsigned sum{};
@@ -81,6 +87,10 @@ static_assert(sub<int>(17,22) == Result<int>{false, -5});
 static_assert(sub<int>(INT_MAX - 22, -23) == Result<int>{true, INT_MIN});
 static_assert(sub<int>(INT_MIN + 22, 23) == Result<int>{true, INT_MAX});
 static_assert(sub<bool>(0u, 1u) == Result<bool>{true, true});
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 1
+static_assert(sub<unsigned _BitInt(1)>(0u, 1u) ==
+              Result<unsigned _BitInt(1)>{true, (unsigned _BitInt(1))1});
+#endif
 
 template <typename RET, typename LHS, typename RHS>
 constexpr Result<RET> mul(LHS &&lhs, RHS &&rhs) {
@@ -93,6 +103,27 @@ static_assert(mul<int>(INT_MAX / 22, 23) == Result<int>{true, -2049870757});
 static_assert(mul<int>(INT_MIN / 22, -23) == Result<int>{true, -2049870757});
 static_assert(mul<bool>(1u, 1u) == Result<bool>{false, true});
 static_assert(mul<bool>(1u, 2u) == Result<bool>{true, false});
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 1
+static_assert(mul<unsigned _BitInt(1)>(1u, 1u) ==
+              Result<unsigned _BitInt(1)>{false, (unsigned _BitInt(1))1});
+static_assert(mul<unsigned _BitInt(1)>(1u, 2u) ==
+              Result<unsigned _BitInt(1)>{true, (unsigned _BitInt(1))0});
+#endif
+
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 127
+static_assert(mul<_BitInt(127)>((_BitInt(127))3, (_BitInt(127))5) ==
+              Result<_BitInt(127)>{false, (_BitInt(127))15});
+static_assert(mul<unsigned _BitInt(127)>((_BitInt(127))-1,
+                                         (unsigned _BitInt(127))2) ==
+              Result<unsigned _BitInt(127)>{true,
+                                            (unsigned _BitInt(127))0 - 2});
+#if __BITINT_MAXWIDTH__ >= 128
+static_assert(mul<unsigned _BitInt(128)>((unsigned _BitInt(128))3,
+                                         (unsigned _BitInt(128))5) ==
+              Result<unsigned _BitInt(128)>{false,
+                                            (unsigned _BitInt(128))15});
+#endif
+#endif
 
 constexpr Result<int> sadd(int lhs, int rhs) {
   int sum{};
