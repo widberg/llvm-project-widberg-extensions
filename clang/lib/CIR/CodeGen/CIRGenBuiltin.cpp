@@ -1527,12 +1527,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     Address resultPtr = emitPointerWithAlignment(resultArg);
 
     // Extend each operand to the encompassing type, if necessary.
-    if (left.getType() != encompassingCIRTy)
-      left =
-          builder.createCast(cir::CastKind::integral, left, encompassingCIRTy);
-    if (right.getType() != encompassingCIRTy)
-      right =
-          builder.createCast(cir::CastKind::integral, right, encompassingCIRTy);
+    if (left.getType() != encompassingCIRTy) {
+      auto kind = mlir::isa<cir::BoolType>(left.getType())
+                      ? cir::CastKind::bool_to_int
+                      : cir::CastKind::integral;
+      left = builder.createCast(kind, left, encompassingCIRTy);
+    }
+    if (right.getType() != encompassingCIRTy) {
+      auto kind = mlir::isa<cir::BoolType>(right.getType())
+                      ? cir::CastKind::bool_to_int
+                      : cir::CastKind::integral;
+      right = builder.createCast(kind, right, encompassingCIRTy);
+    }
 
     // Perform the operation on the extended values.
     cir::BinOpOverflowKind opKind;

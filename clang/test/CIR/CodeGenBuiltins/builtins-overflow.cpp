@@ -31,8 +31,8 @@ bool test_add_overflow_bool_bool_uint(bool x, bool y, unsigned *res) {
 //      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u32i>>, !cir.ptr<!u32i>
-// CIR-NEXT:   %[[#PROM_X:]] = cir.cast integral %[[#X]] : !cir.bool -> !u32i
-// CIR-NEXT:   %[[#PROM_Y:]] = cir.cast integral %[[#Y]] : !cir.bool -> !u32i
+// CIR-NEXT:   %[[#PROM_X:]] = cir.cast bool_to_int %[[#X]] : !cir.bool -> !u32i
+// CIR-NEXT:   %[[#PROM_Y:]] = cir.cast bool_to_int %[[#Y]] : !cir.bool -> !u32i
 // CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#PROM_X]], %[[#PROM_Y]]) : !u32i, (!u32i, !cir.bool)
 // CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u32i, !cir.ptr<!u32i>
 //      CIR: }
