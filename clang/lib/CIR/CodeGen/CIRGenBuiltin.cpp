@@ -1520,7 +1520,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
     auto encompassingCIRTy = cir::IntType::get(
         &getMLIRContext(), encompassingInfo.width, encompassingInfo.isSigned);
-    auto resultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(resultQTy));
+    auto resultCIRType = cgm.convertType(resultQTy);
+    bool resultIsBool = mlir::isa<cir::BoolType>(resultCIRType);
+    auto resultCIRTy = resultIsBool
+                           ? cir::IntType::get(&getMLIRContext(), 1,
+                                               /*isSigned=*/false)
+                           : mlir::cast<cir::IntType>(resultCIRType);
 
     mlir::Value left = emitScalarExpr(leftArg);
     mlir::Value right = emitScalarExpr(rightArg);
@@ -1557,24 +1562,34 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     }
 
     mlir::Location loc = getLoc(e->getSourceRange());
-    auto arithOp = cir::BinOpOverflowOp::create(builder, loc, resultCIRTy,
-                                                opKind, left, right);
+    auto arithOp = cir::BinOpOverflowOp::create(
+        builder, loc, encompassingCIRTy, opKind, left, right);
 
-    // Here is a slight difference from the original clang CodeGen:
-    //   - In the original clang CodeGen, the checked arithmetic result is
-    //     first computed as a value of the encompassing type, and then it is
-    //     truncated to the actual result type with a second overflow checking.
-    //   - In CIRGen, the checked arithmetic operation directly produce the
-    //     checked arithmetic result in its expected type.
-    //
-    // So we don't need a truncation and a second overflow checking here.
+    mlir::Value resultVal = arithOp.getResult();
+    mlir::Value overflowVal = arithOp.getOverflow();
+
+    if (resultCIRTy.getWidth() < encompassingCIRTy.getWidth()) {
+      mlir::Value trunc =
+          builder.createCast(cir::CastKind::integral, resultVal, resultCIRTy);
+      mlir::Value truncExt = builder.createCast(cir::CastKind::integral, trunc,
+                                                encompassingCIRTy);
+      mlir::Value truncOverflow =
+          builder.createCompare(loc, cir::CmpOpKind::ne, resultVal, truncExt);
+      overflowVal = builder.createOr(loc, overflowVal, truncOverflow);
+      resultVal = trunc;
+    }
 
     // Finally, store the result using the pointer.
     bool isVolatile =
         resultArg->getType()->getPointeeType().isVolatileQualified();
-    builder.createStore(loc, arithOp.getResult(), resultPtr, isVolatile);
+    mlir::Value storeVal = resultVal;
+    if (resultIsBool)
+      storeVal = builder.createCast(
+          loc, cir::CastKind::int_to_bool, storeVal,
+          cir::BoolType::get(&getMLIRContext()));
+    builder.createStore(loc, storeVal, resultPtr, isVolatile);
 
-    return RValue::get(arithOp.getOverflow());
+    return RValue::get(overflowVal);
   }
 
   case Builtin::BI__builtin_uadd_overflow:
