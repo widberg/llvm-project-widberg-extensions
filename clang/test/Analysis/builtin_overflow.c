@@ -129,6 +129,18 @@ void test_nooverflow_diff_types(void)
    clang_analyzer_dump(res); //expected-warning{{2147483648 S64b}}
 }
 
+void test_uadd_overflow_constant(void)
+{
+   unsigned res;
+
+   if (__builtin_uadd_overflow(__UINT_MAX__, 1, &res)) {
+     clang_analyzer_dump(res); // expected-warning{{0 U32b}}
+     return;
+   }
+
+   clang_analyzer_warnIfReached();
+}
+
 void test_uaddll_overflow_contraints(unsigned long a, unsigned long b)
 {
    unsigned long long res;

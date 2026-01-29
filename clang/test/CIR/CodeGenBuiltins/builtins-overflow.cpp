@@ -23,6 +23,20 @@ bool test_add_overflow_uint_uint_uint(unsigned x, unsigned y, unsigned *res) {
 // OGCG: define{{.*}} i1 @_Z32test_add_overflow_uint_uint_uintjjPj(i32{{.*}}, i32{{.*}}, ptr{{.*}})
 // OGCG:   call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
 
+bool test_add_overflow_bool_bool_uint(bool x, bool y, unsigned *res) {
+  return __builtin_add_overflow(x, y, res);
+}
+
+//      CIR: cir.func {{.*}} @{{.*}}test_add_overflow_bool_bool_uint{{.*}}
+//      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT:   %[[#RES_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!u32i>>, !cir.ptr<!u32i>
+// CIR-NEXT:   %[[#PROM_X:]] = cir.cast integral %[[#X]] : !cir.bool -> !u32i
+// CIR-NEXT:   %[[#PROM_Y:]] = cir.cast integral %[[#Y]] : !cir.bool -> !u32i
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.binop.overflow(add, %[[#PROM_X]], %[[#PROM_Y]]) : !u32i, (!u32i, !cir.bool)
+// CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#RES_PTR]] : !u32i, !cir.ptr<!u32i>
+//      CIR: }
+
 bool test_add_overflow_int_int_int(int x, int y, int *res) {
   return __builtin_add_overflow(x, y, res);
 }
