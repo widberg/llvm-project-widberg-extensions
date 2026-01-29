@@ -21,6 +21,15 @@ void test(void) {
   __builtin_add_overflow(1, 1, &q);  // expected-error {{result argument to overflow builtin must be a pointer to a non-const integer type ('const unsigned int *' invalid)}}
   __builtin_sub_overflow(c, 1, &r);  // expected-error {{operand argument to overflow builtin must be an integer type ('const char *' invalid)}}
   __builtin_mul_overflow(1, 1, 3);  // expected-error {{result argument to overflow builtin must be a pointer to a non-const integer type ('int' invalid)}}
+  {
+    _Bool b0 = 0;
+    _Bool b1 = 1;
+    unsigned ur;
+    int ir;
+    __builtin_uadd_overflow(b0, b1, &ur);
+    __builtin_sadd_overflow(b0, b1, &ir);
+    __builtin_uadd_overflow(1u, 1u, &b0); // expected-error {{incompatible pointer types passing '_Bool *' to parameter of type 'unsigned int *'}}
+  }
 
   {
     _BitInt(128) x = 1;
