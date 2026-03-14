@@ -73,7 +73,10 @@ int __thiscall square(void *_this, int num) {
 }
 ```
 
-This project also adds some MSVC compatibility features not found in LLVM:
+This project adds one Watcom compatibility feature not found in LLVM:
+* Add `__watcall` calling convention.
+
+And it adds some MSVC compatibility features not found in LLVM:
 * Allow [`__FUNCDNAME__`, `__FUNCSIG__`, and `__FUNCTION__`](https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=msvc-170) to be used in `pragma`s.
 * Add [`#pragma comment(user, "...")`](https://learn.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?view=msvc-170).
 
