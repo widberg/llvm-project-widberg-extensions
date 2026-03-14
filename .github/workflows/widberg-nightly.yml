@@ -1,0 +1,98 @@
+name: Widberg Nightly
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  nightly-release:
+    name: Update Nightly Release
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: nightly-release
+      cancel-in-progress: false
+    permissions:
+      contents: write # Required to retag nightly and manage release assets.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Download latest build artifacts
+        id: download_artifacts
+        uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: widberg-build.yml
+          branch: ${{ github.event.repository.default_branch }}
+          workflow_conclusion: success
+          path: nightly-artifacts
+          skip_unpack: true
+          if_no_artifact_found: warn
+
+      - name: Check whether artifacts were downloaded
+        id: artifact_check
+        run: |
+          shopt -s nullglob
+          artifacts=(nightly-artifacts/*)
+          if [ ${#artifacts[@]} -eq 0 ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No nightly artifacts available."
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf 'Found artifacts:\n%s\n' "${artifacts[*]}"
+          fi
+
+      - name: Ensure nightly release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view nightly >/dev/null 2>&1; then
+            gh release create nightly \
+              --title "Nightly" \
+              --prerelease \
+              --target "$GITHUB_SHA"
+          fi
+
+      - name: Update nightly tag
+        if: ${{ steps.artifact_check.outputs.found == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "/repos/${GITHUB_REPOSITORY}/git/ref/tags/nightly" >/dev/null 2>&1; then
+            gh api \
+              --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/git/refs/tags/nightly" \
+              -F sha="$GITHUB_SHA" \
+              -F force=true
+          else
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/git/refs" \
+              -F ref="refs/tags/nightly" \
+              -F sha="$GITHUB_SHA"
+          fi
+
+      - name: Replace nightly release assets
+        if: ${{ steps.artifact_check.outputs.found == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for asset in $(gh release view nightly --json assets --jq '.assets[].name'); do
+            gh release delete-asset nightly "$asset" --yes
+          done
+
+          gh release upload nightly nightly-artifacts/* --clobber
+          gh release edit nightly \
+            --title "Nightly" \
+            --prerelease

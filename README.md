@@ -10,7 +10,8 @@ this repository and not to upstream LLVM.
 
 [![Build Status](https://github.com/widberg/llvm-project-widberg-extensions/actions/workflows/widberg-build.yml/badge.svg?branch=main)](https://github.com/widberg/llvm-project-widberg-extensions/actions/workflows/widberg-build.yml)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/widberg/llvm-project-widberg-extensions)](https://github.com/widberg/llvm-project-widberg-extensions/releases)
-[![Release Nightly](https://img.shields.io/badge/release-nightly-5e025f?labelColor=301934)](https://nightly.link/widberg/llvm-project-widberg-extensions/workflows/widberg-build/main)
+[![Release Nightly](https://img.shields.io/badge/release-nightly-5e025f?labelColor=301934)](https://github.com/widberg/llvm-project-widberg-extensions/releases/tag/nightly)
+[![Compiler Explorer](https://img.shields.io/badge/Compiler%20Explorer-212529?logo=compilerexplorer&logoColor=67c52a)](https://godbolt.org/z/9TdsYGqG9)
 
 ## Example
 
@@ -73,7 +74,10 @@ int __thiscall square(void *_this, int num) {
 }
 ```
 
-This project also adds some MSVC compatibility features not found in LLVM:
+This project adds one Watcom compatibility feature not found in LLVM:
+* Add `__watcall` calling convention.
+
+And it adds some MSVC compatibility features not found in LLVM:
 * Allow [`__FUNCDNAME__`, `__FUNCSIG__`, and `__FUNCTION__`](https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=msvc-170) to be used in `pragma`s.
 * Add [`#pragma comment(user, "...")`](https://learn.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?view=msvc-170).
 
@@ -109,9 +113,6 @@ Furthermore, scattered argument locations haven't been implemented yet and the
 name mangling scheme for `__usercall`/`__userpurge` function symbols,
 especially important when interacting with `extern "C"`, have not yet been
 finalized. These are lower priority since they are easily worked around.
-
-Finally, at the lowest priority is things like clang-format not working well
-with spoils and split register parameters.
 
 ## Enable and Disable the Extensions
 
