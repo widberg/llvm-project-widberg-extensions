@@ -1349,6 +1349,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("VariableTemplates", Style.VariableTemplates);
     IO.mapOptional("VerilogBreakBetweenInstancePorts",
                    Style.VerilogBreakBetweenInstancePorts);
+    IO.mapOptional("WidbergExt", Style.WidbergExt);
     IO.mapOptional("WhitespaceSensitiveMacros",
                    Style.WhitespaceSensitiveMacros);
     IO.mapOptional("WrapNamespaceBodyWithEmptyLines",
@@ -1843,6 +1844,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.TabWidth = 8;
   LLVMStyle.UseTab = FormatStyle::UT_Never;
   LLVMStyle.VerilogBreakBetweenInstancePorts = true;
+  LLVMStyle.WidbergExt = true;
   LLVMStyle.WhitespaceSensitiveMacros.push_back("BOOST_PP_STRINGIZE");
   LLVMStyle.WhitespaceSensitiveMacros.push_back("CF_SWIFT_NAME");
   LLVMStyle.WhitespaceSensitiveMacros.push_back("NS_SWIFT_NAME");
@@ -4264,6 +4266,9 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOpts.LineComment = 1;
   LangOpts.Bool = 1;
   LangOpts.ObjC = 1;
+  // Match clang frontend behavior: Widberg extensions are enabled unless
+  // explicitly disabled.
+  LangOpts.WidbergExt = Style.WidbergExt;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
   LangOpts.DeclSpecKeyword = 1; // To get __declspec.
   LangOpts.C99 = 1; // To get kw_restrict for non-underscore-prefixed restrict.
