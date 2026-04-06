@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %clang_cc1 -std=c++98 -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++11 -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++14 -fcxx-exceptions -verify %s

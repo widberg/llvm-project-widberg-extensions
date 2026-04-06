@@ -11655,9 +11655,40 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     return;
 
   DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
-  if (FTI.NumParams == 0)
-    return;
+  CallingConv CC = CC_C;
+  bool RequiresExplicitObjectForWidbergCC = false;
+  bool IsStaticMember = false;
+  if (!IsLambda && getLangOpts().WidbergExt && !R.isNull() && DC &&
+      DC->isRecord() && !D.getDeclSpec().isFriendSpecified()) {
+    IsStaticMember =
+        D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
+        (D.getContext() == clang::DeclaratorContext::Member &&
+         D.isStaticMember());
+
+    if (!IsStaticMember && D.getCXXScopeSpec().isSet() && !Name.isEmpty()) {
+      for (NamedDecl *ND : DC->lookup(Name)) {
+        const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(ND);
+        if (!Method) {
+          if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(ND))
+            Method = dyn_cast<CXXMethodDecl>(FTD->getTemplatedDecl());
+        }
+        if (!Method || !Method->isStatic())
+          continue;
+        if (Context.hasSameType(Method->getType(), R)) {
+          IsStaticMember = true;
+          break;
+        }
+      }
+    }
+
+    CC = R->castAs<FunctionType>()->getCallConv();
+    RequiresExplicitObjectForWidbergCC = !IsStaticMember &&
+                                         (CC == CC_UserCall ||
+                                          CC == CC_UserPurge);
+  }
   ParmVarDecl *ExplicitObjectParam = nullptr;
+  if (FTI.NumParams == 0 && !RequiresExplicitObjectForWidbergCC)
+    return;
   for (unsigned Idx = 0; Idx < FTI.NumParams; Idx++) {
     const auto &ParamInfo = FTI.Params[Idx];
     if (!ParamInfo.Param)
@@ -11674,6 +11705,14 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
           << IsLambda << Param->getSourceRange();
     }
   }
+
+  if (!ExplicitObjectParam && RequiresExplicitObjectForWidbergCC) {
+    Diag(D.getIdentifierLoc(),
+         diag::err_widberg_member_cconv_requires_explicit_object)
+        << FunctionType::getNameForCallConv(CC);
+    D.setInvalidType();
+  }
+
   if (!ExplicitObjectParam)
     return;
 

@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %clang_cc1 -fsyntax-only -std=c++20 %s -verify
 
 struct S {

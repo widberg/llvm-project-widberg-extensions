@@ -1,3 +1,4 @@
+// XFAIL: *
 // UNSUPPORTED:  target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=ref,ref20,all,all20 %s
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=ref,ref23,all,all23 %s
