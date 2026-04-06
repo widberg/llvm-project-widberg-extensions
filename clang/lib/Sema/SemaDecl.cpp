@@ -3603,6 +3603,15 @@ static bool haveIncompatibleLanguageLinkages(const T *Old, const T *New) {
   return false;
 }
 
+static bool haveMismatchedWidbergLocations(FunctionType::ExtInfo OldTypeInfo,
+                                           FunctionType::ExtInfo NewTypeInfo) {
+  if (!OldTypeInfo.getWidbergLocation() != !NewTypeInfo.getWidbergLocation())
+    return true;
+
+  return OldTypeInfo.getWidbergLocation() &&
+         *OldTypeInfo.getWidbergLocation() != *NewTypeInfo.getWidbergLocation();
+}
+
 template<typename T> static bool isExternC(T *D) { return D->isExternC(); }
 static bool isExternC(VarTemplateDecl *) { return false; }
 static bool isExternC(FunctionTemplateDecl *) { return false; }
@@ -3905,10 +3914,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     }
   }
 
-  if (!OldTypeInfo.getWidbergLocation() != !NewTypeInfo.getWidbergLocation()) {
-    // FIXME: Check that it's compatible
-    NewTypeInfo = NewTypeInfo.withWidbergLocation(OldTypeInfo.getWidbergLocation());
-    RequiresAdjustment = true;
+  if (haveMismatchedWidbergLocations(OldTypeInfo, NewTypeInfo)) {
+    Diag(New->getLocation(), diag::err_conflicting_types) << New->getDeclName();
+    Diag(OldLocation, PrevDiag) << Old << Old->getType();
+    return true;
   }
 
   // FIXME: diagnose the other way around?
@@ -11588,6 +11597,7 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
     InlineSpec = 3,
     Linkage = 4,
     LanguageLinkage = 5,
+    WidbergLocation = 6,
   };
 
   if (NoProtoDiagID.getDiagID() != 0 && OldFD &&
@@ -11661,8 +11671,11 @@ bool Sema::areMultiversionVariantFunctionsCompatible(
         ArmStreamingCCMismatched = true;
     }
 
-    if (OldTypeInfo.getCC() != NewTypeInfo.getCC() || (!OldTypeInfo.getWidbergLocation() != !NewTypeInfo.getWidbergLocation() || (OldTypeInfo.getWidbergLocation() && (*OldTypeInfo.getWidbergLocation() != *NewTypeInfo.getWidbergLocation()))) || ArmStreamingCCMismatched)
+    if (OldTypeInfo.getCC() != NewTypeInfo.getCC() || ArmStreamingCCMismatched)
       return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << CallingConv;
+
+    if (haveMismatchedWidbergLocations(OldTypeInfo, NewTypeInfo))
+      return Diag(DiffDiagIDAt.first, DiffDiagIDAt.second) << WidbergLocation;
 
     QualType OldReturnType = OldType->getReturnType();
 

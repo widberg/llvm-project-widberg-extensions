@@ -12607,7 +12607,7 @@ def err_omp_declare_variant_doesnt_support : Error<
 def err_omp_declare_variant_diff : Error<
   "function with '#pragma omp declare variant' has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|storage class|"
-  "linkage}0">;
+  "linkage|Widberg location}0">;
 def err_omp_declare_variant_prototype_required : Error<
   "function with '#pragma omp declare variant' must have a prototype when "
   "'append_args' is used">;
@@ -13171,7 +13171,7 @@ def err_multiversion_disallowed_other_attr
 def err_multiversion_diff : Error<
   "multiversioned function declaration has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|linkage|"
-  "language linkage}0">;
+  "language linkage|Widberg location}0">;
 def err_multiversion_doesnt_support
     : Error<"attribute "
             "'%select{|target|cpu_specific|cpu_dispatch|target_clones|target_version}0' "
