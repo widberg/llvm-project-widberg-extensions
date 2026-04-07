@@ -7,7 +7,7 @@
 int __userpurge foo@<ebx>(int* a1@<edi>, int a2);
 int __userpurge bar@<eax>(int* a1@<edx>, int a2);
 int __usercall baz@<ecx>(int a1);
-int __usercall qux(int a1);
+void __usercall qux(int a1);
 
 #else
 
@@ -20,13 +20,13 @@ int __userpurge bar@<eax>(int* a1@<edx>, int a2) {
     return *a1 + a2;
 }
 
-int __usercall baz(int a1) { // expected-error{{conflicting types for 'baz'}}
+int __usercall baz@<eax>(int a1) { // expected-error{{conflicting types for 'baz'}}
     return a1;
 }
 // expected-note@9{{previous declaration is here}}
 
-int __usercall qux@<ecx>(int a1) { // expected-error{{conflicting types for 'qux'}}
-    return a1;
+void __usercall qux(int a1@<ecx>) { // expected-error{{conflicting types for 'qux'}}
+    return;
 }
 // expected-note@10{{previous declaration is here}}
 

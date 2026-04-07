@@ -3862,6 +3862,21 @@ static CallingConv getCCForDeclaratorChunk(
   return CC;
 }
 
+static SourceLocation
+getWidbergCallingConvAttrLoc(const ParsedAttributesView &AttrList) {
+  for (const ParsedAttr &AL : AttrList) {
+    switch (AL.getKind()) {
+    case ParsedAttr::AT_UserCall:
+    case ParsedAttr::AT_UserPurge:
+      return AL.getLoc();
+    default:
+      break;
+    }
+  }
+
+  return SourceLocation();
+}
+
 namespace {
   /// A simple notion of pointer kinds, which matches up with the various
   /// pointer declarators.
@@ -5209,9 +5224,20 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (FTI.isAmbiguous)
         warnAboutAmbiguousFunction(S, D, DeclType, T);
 
-      FunctionType::ExtInfo EI(
-          getCCForDeclaratorChunk(S, D, DeclType.getAttrs(), FTI, chunkIndex),
-          D.getWidbergReturnLocation());
+      CallingConv CC =
+          getCCForDeclaratorChunk(S, D, DeclType.getAttrs(), FTI, chunkIndex);
+      FunctionType::ExtInfo EI(CC, D.getWidbergReturnLocation());
+
+      if ((CC == CC_UserCall || CC == CC_UserPurge) &&
+          !D.getWidbergReturnLocation() && !T->isDependentType() &&
+          !T->isVoidType()) {
+        SourceLocation Loc = getWidbergCallingConvAttrLoc(DeclType.getAttrs());
+        if (Loc.isInvalid())
+          Loc = D.getIdentifierLoc();
+        S.Diag(Loc, diag::err_widberg_cconv_requires_return_loc)
+            << FunctionType::getNameForCallConv(CC);
+        D.setInvalidType(true);
+      }
 
       // OpenCL disallows functions without a prototype, but it doesn't enforce
       // strict prototypes as in C23 because it allows a function definition to
