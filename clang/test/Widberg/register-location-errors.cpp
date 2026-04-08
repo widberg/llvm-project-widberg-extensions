@@ -34,6 +34,12 @@ decltype(nullptr) __usercall bad_nullptr_ret@<al>(int x); // expected-error {{re
 double __usercall bad_st_paren_name@<st(0)>(int x); // expected-error {{all Widberg location entries must be identifiers}} expected-error {{non-void function with usercall calling convention must specify a return location}}
 int __usercall bad_empty_ret@<>(int x); // expected-error {{widberg location for return value must contain at least one register}}
 int __usercall bad_empty_param@<eax>(int x@<>); // expected-error {{widberg location for parameter must contain at least one register}}
+int bad_default_cc_ret@<eax>(int x); // expected-error {{widberg location for return value requires 'usercall' or 'userpurge' calling convention}}
+int bad_default_cc_param(int x@<eax>); // expected-error {{widberg location for parameter requires 'usercall' or 'userpurge' calling convention}}
+int __stdcall bad_stdcall_cc_ret@<eax>(int x); // expected-error {{widberg location for return value requires 'usercall' or 'userpurge' calling convention}}
+int __stdcall bad_stdcall_cc_param(int x@<eax>); // expected-error {{widberg location for parameter requires 'usercall' or 'userpurge' calling convention}}
+int *__usercall ok_nested_fp@<eax>(int *(__usercall *x)@<ecx>(long @<edx>));
+int bad_nested_fp(int (*x)@<eax>(long @<ecx>)); // expected-error {{widberg location for return value requires 'usercall' or 'userpurge' calling convention}} expected-error {{widberg location for parameter requires 'usercall' or 'userpurge' calling convention}}
 
 long long __usercall ok_i64@<eax:edx>(long long x);
 int __usercall ok_i32@<eax>(int x);

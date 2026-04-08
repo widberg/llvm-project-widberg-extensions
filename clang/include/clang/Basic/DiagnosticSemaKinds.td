@@ -4109,6 +4109,8 @@ def err_widberg_member_cconv_requires_explicit_object : Error<
   "non-static member function with %0 calling convention must declare an explicit object parameter">;
 def err_widberg_cconv_requires_return_loc : Error<
   "non-void function with %0 calling convention must specify a return location">;
+def err_widberg_location_requires_widberg_cconv : Error<
+  "widberg location for %0 requires 'usercall' or 'userpurge' calling convention">;
 def err_widberg_invalid_register_name : Error<
   "invalid register name '%0' in Widberg location">;
 def err_widberg_spoils_invalid_register_name : Error<

@@ -2651,6 +2651,18 @@ static bool isWidbergCallingConv(CallingConv CC) {
   return CC == CC_UserCall || CC == CC_UserPurge;
 }
 
+static bool validateWidbergLocationCallingConv(Sema &S,
+                                               const WidbergLocation *Loc,
+                                               CallingConv CC,
+                                               StringRef EntityName) {
+  if (!Loc || isWidbergCallingConv(CC))
+    return true;
+
+  S.Diag(Loc->getATLoc(), diag::err_widberg_location_requires_widberg_cconv)
+      << EntityName;
+  return false;
+}
+
 static bool isWidbergIntegerLikeType(QualType T) {
   return T->isIntegralOrEnumerationType() || T->isAnyPointerType() ||
          T->isMemberPointerType() || T->isReferenceType() ||
@@ -2801,6 +2813,43 @@ static bool validateWidbergLocationForType(Sema &S, QualType T,
   }
 
   return !HadError;
+}
+
+static bool validateWidbergLocationCallingConvsInType(Sema &S, QualType T) {
+  T = S.Context.getCanonicalType(T);
+  const Type *Ty = T.getTypePtrOrNull();
+  if (!Ty)
+    return true;
+
+  if (const auto *FT = dyn_cast<FunctionType>(Ty)) {
+    const CallingConv CC = FT->getCallConv();
+    bool IsValid = validateWidbergLocationCallingConv(
+        S, FT->getExtInfo().getWidbergLocation(), CC, "return value");
+    IsValid &= validateWidbergLocationCallingConvsInType(S, FT->getReturnType());
+
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(FT)) {
+      for (unsigned I = 0, E = FPT->getNumParams(); I != E; ++I) {
+        IsValid &= validateWidbergLocationCallingConv(
+            S, FPT->getExtParameterInfo(I).getWidbergLocation(), CC,
+            "parameter");
+      }
+    }
+
+    return IsValid;
+  }
+
+  if (const auto *PT = dyn_cast<PointerType>(Ty))
+    return validateWidbergLocationCallingConvsInType(S, PT->getPointeeType());
+  if (const auto *MPT = dyn_cast<MemberPointerType>(Ty))
+    return validateWidbergLocationCallingConvsInType(S, MPT->getPointeeType());
+  if (const auto *BPT = dyn_cast<BlockPointerType>(Ty))
+    return validateWidbergLocationCallingConvsInType(S, BPT->getPointeeType());
+  if (const auto *RT = dyn_cast<ReferenceType>(Ty))
+    return validateWidbergLocationCallingConvsInType(S, RT->getPointeeType());
+  if (const auto *AT = dyn_cast<ArrayType>(Ty))
+    return validateWidbergLocationCallingConvsInType(S, AT->getElementType());
+
+  return true;
 }
 
 static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
@@ -5871,6 +5920,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   }
   processTypeAttrs(state, T, TAL_DeclName, NonSlidingAttrs);
   processTypeAttrs(state, T, TAL_DeclName, D.getAttributes());
+
+  if (!validateWidbergLocationCallingConvsInType(S, T))
+    D.setInvalidType(true);
 
   // Diagnose any ignored type attributes.
   state.diagnoseIgnoredTypeAttrs(T);
