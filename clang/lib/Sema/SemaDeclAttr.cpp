@@ -7294,7 +7294,9 @@ static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleSpoilsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  const TargetInfo &TI = S.Context.getTargetInfo();
   SmallVector<const IdentifierInfo *, 4> SpoilsList;
+  bool HadError = false;
   for (unsigned ArgNo = 0; ArgNo < getNumAttributeArgs(AL); ++ArgNo) {
     if (!AL.isArgIdent(ArgNo)) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
@@ -7303,9 +7305,20 @@ static void handleSpoilsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *RegisterArg = AL.getArgAsIdent(ArgNo);
+    StringRef RegName = RegisterArg->getIdentifierInfo()->getName();
+    if (!TI.getWidbergRegisterInfo(RegName)) {
+      S.Diag(RegisterArg->getLoc(),
+             diag::err_widberg_spoils_invalid_register_name)
+          << RegName;
+      HadError = true;
+      continue;
+    }
 
     SpoilsList.push_back(RegisterArg->getIdentifierInfo());
   }
+
+  if (HadError)
+    return;
 
   D->addAttr(::new (S.Context)
                  SpoilsAttr(S.Context, AL, SpoilsList.data(), SpoilsList.size()));

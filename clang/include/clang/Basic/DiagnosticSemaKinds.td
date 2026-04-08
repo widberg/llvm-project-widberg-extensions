@@ -4111,6 +4111,8 @@ def err_widberg_cconv_requires_return_loc : Error<
   "non-void function with %0 calling convention must specify a return location">;
 def err_widberg_invalid_register_name : Error<
   "invalid register name '%0' in Widberg location">;
+def err_widberg_spoils_invalid_register_name : Error<
+  "invalid register name '%0' in __spoils list">;
 def err_widberg_location_empty : Error<
   "widberg location for %0 must contain at least one register">;
 def err_widberg_location_insufficient_registers : Error<

@@ -13,6 +13,62 @@ entry:
   ret void
 }
 
+define dso_local usercallcc void @spoil_empty() local_unnamed_addr "spoils" {
+entry:
+; CHECK-LABEL: spoil_empty:
+; CHECK: pushl	%esi
+; CHECK: pushl	%edx
+; CHECK: pushl	%eax
+; CHECK: nop
+; CHECK: popl	%eax
+; CHECK: popl	%edx
+; CHECK: popl	%esi
+; CHECK: retl
+  tail call void asm sideeffect "nop", "~{eax},~{edx},~{esi},~{dirflag},~{fpsr},~{flags}"(), !srcloc !5
+  ret void
+}
+
+define dso_local void @spoil_cdecl(i32 %x) local_unnamed_addr "spoils"="edx" {
+entry:
+; CHECK-LABEL: spoil_cdecl:
+; CHECK: pushl	%esi
+; CHECK: pushl	%eax
+; CHECK: nop
+; CHECK: popl	%eax
+; CHECK: popl	%esi
+; CHECK: retl
+  tail call void asm sideeffect "nop", "~{eax},~{edx},~{esi},~{dirflag},~{fpsr},~{flags}"(), !srcloc !5
+  ret void
+}
+
+define dso_local x86_stdcallcc void @spoil_stdcall(i32 %x) local_unnamed_addr "spoils"="edx" {
+entry:
+; CHECK-LABEL: spoil_stdcall:
+; CHECK: pushl	%esi
+; CHECK: pushl	%eax
+; CHECK: nop
+; CHECK: popl	%eax
+; CHECK: popl	%esi
+; CHECK: retl	$4
+  tail call void asm sideeffect "nop", "~{eax},~{edx},~{esi},~{dirflag},~{fpsr},~{flags}"(), !srcloc !5
+  ret void
+}
+
+define dso_local x86_stdcallcc void @spoil_stdcall_empty(i32 %x) local_unnamed_addr "spoils" {
+entry:
+; CHECK-LABEL: spoil_stdcall_empty:
+; CHECK: pushl	%esi
+; CHECK: pushl	%edx
+; CHECK: pushl	%eax
+; CHECK: nop
+; CHECK: popl	%eax
+; CHECK: popl	%edx
+; CHECK: popl	%esi
+; CHECK: retl	$4
+  tail call void asm sideeffect "nop", "~{eax},~{edx},~{esi},~{dirflag},~{fpsr},~{flags}"(), !srcloc !5
+  ret void
+}
+
 !llvm.module.flags = !{!0, !1, !2, !3}
 !llvm.ident = !{!4}
 
