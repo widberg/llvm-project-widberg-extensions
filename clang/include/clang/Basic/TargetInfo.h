@@ -1115,6 +1115,21 @@ public:
   StringRef getNormalizedGCCRegisterName(StringRef Name,
                                          bool ReturnCanonical = false) const;
 
+  struct WidbergRegisterInfo {
+    unsigned BitWidth;
+    /// True if this register can carry integer-like Widberg pieces.
+    bool SupportsIntegerPieces;
+  };
+
+  /// Returns register information for Widberg usercall/userpurge locations.
+  ///
+  /// If the provided register name is not supported for Widberg locations on
+  /// this target, returns std::nullopt.
+  virtual std::optional<WidbergRegisterInfo>
+  getWidbergRegisterInfo(StringRef RegName) const {
+    return std::nullopt;
+  }
+
   virtual bool isSPRegName(StringRef) const { return false; }
 
   /// Extracts a register from the passed constraint (if it is a

@@ -249,6 +249,9 @@ public:
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 
+  std::optional<TargetInfo::WidbergRegisterInfo>
+  getWidbergRegisterInfo(StringRef RegName) const override;
+
   bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,
                                       bool &HasSizeMismatch) const override {
     // esp and ebp are the only 32-bit registers the x86 backend can currently

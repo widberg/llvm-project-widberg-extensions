@@ -4109,6 +4109,14 @@ def err_widberg_member_cconv_requires_explicit_object : Error<
   "non-static member function with %0 calling convention must declare an explicit object parameter">;
 def err_widberg_cconv_requires_return_loc : Error<
   "non-void function with %0 calling convention must specify a return location">;
+def err_widberg_invalid_register_name : Error<
+  "invalid register name '%0' in Widberg location">;
+def err_widberg_location_empty : Error<
+  "widberg location for %0 must contain at least one register">;
+def err_widberg_location_insufficient_registers : Error<
+  "widberg location for %0 requires at least %1 register%plural{1:|:s}1 for type '%2'">;
+def err_widberg_incompatible_register : Error<
+  "register '%0' in Widberg location for %1 is incompatible with type '%2'">;
 def err_regparm_mismatch : Error<"function declared with regparm(%0) "
   "attribute was previously declared "
   "%plural{0:without the regparm|:with the regparm(%1)}1 attribute">;

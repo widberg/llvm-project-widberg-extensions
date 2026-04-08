@@ -2645,13 +2645,169 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
 
 /// Check the extended parameter information.  Most of the necessary
 /// checking should occur when applying the parameter attribute; the
-/// only other checks required are positional restrictions.
+/// remaining checks required are positional restrictions and target-specific
+/// Widberg location validation.
+static bool isWidbergCallingConv(CallingConv CC) {
+  return CC == CC_UserCall || CC == CC_UserPurge;
+}
+
+static bool isWidbergIntegerLikeType(QualType T) {
+  return T->isIntegralOrEnumerationType() || T->isAnyPointerType() ||
+         T->isMemberPointerType() || T->isReferenceType() ||
+         T->isNullPtrType();
+}
+
+static uint64_t getWidbergIntegerLikeBitWidth(ASTContext &Context,
+                                              const TargetInfo &TI,
+                                              QualType T) {
+  if (T->isReferenceType() || T->isNullPtrType())
+    return TI.getPointerWidth(LangAS::Default);
+
+  return Context.getTypeSize(T);
+}
+
+static uint64_t getWidbergIntegerChunkBitWidth(uint64_t TypeBitWidth,
+                                               uint64_t PointerBitWidth) {
+  if (TypeBitWidth <= 8)
+    return 8;
+  if (TypeBitWidth <= 16)
+    return 16;
+  if (TypeBitWidth <= 32)
+    return 32;
+  return PointerBitWidth;
+}
+
+static bool validateWidbergLocationForType(Sema &S, QualType T,
+                                           const WidbergLocation *Loc,
+                                           CallingConv CC,
+                                           StringRef EntityName) {
+  if (!Loc || !isWidbergCallingConv(CC))
+    return true;
+  if (Loc->size() == 0) {
+    S.Diag(Loc->getLAngleLoc(), diag::err_widberg_location_empty) << EntityName;
+    return false;
+  }
+  if (T.isNull() || T->isDependentType() || T->isVoidType())
+    return true;
+
+  const TargetInfo &TI = S.Context.getTargetInfo();
+  struct WidbergCheckedRegister {
+    StringRef Name;
+    SourceLocation Loc;
+    TargetInfo::WidbergRegisterInfo Info;
+  };
+  SmallVector<WidbergCheckedRegister, 4> Registers;
+  Registers.reserve(Loc->size());
+
+  bool HadError = false;
+  for (const IdentifierLoc *Reg : Loc->asArray()) {
+    StringRef RegName = Reg->getIdentifierInfo()->getName();
+    std::optional<TargetInfo::WidbergRegisterInfo> Info =
+        TI.getWidbergRegisterInfo(RegName);
+    if (!Info) {
+      S.Diag(Reg->getLoc(), diag::err_widberg_invalid_register_name) << RegName;
+      HadError = true;
+      continue;
+    }
+    Registers.push_back({RegName, Reg->getLoc(), *Info});
+  }
+  if (HadError)
+    return false;
+
+  if (isWidbergIntegerLikeType(T)) {
+    const uint64_t TypeBitWidth = getWidbergIntegerLikeBitWidth(S.Context, TI, T);
+    const uint64_t PointerBitWidth = TI.getPointerWidth(LangAS::Default);
+    const uint64_t ChunkBitWidth =
+        getWidbergIntegerChunkBitWidth(TypeBitWidth, PointerBitWidth);
+    const uint64_t RequiredRegisters =
+        (TypeBitWidth + ChunkBitWidth - 1) / ChunkBitWidth;
+
+    if (Registers.size() < RequiredRegisters) {
+      S.Diag(Loc->getLAngleLoc(), diag::err_widberg_location_insufficient_registers)
+          << EntityName << RequiredRegisters << T;
+      return false;
+    }
+
+    if (Registers.size() > RequiredRegisters) {
+      for (uint64_t I = RequiredRegisters; I < Registers.size(); ++I) {
+        S.Diag(Registers[I].Loc, diag::err_widberg_incompatible_register)
+            << Registers[I].Name << EntityName << T;
+      }
+      HadError = true;
+    }
+
+    for (uint64_t I = 0; I < RequiredRegisters; ++I) {
+      const WidbergCheckedRegister &Reg = Registers[I];
+      if (Reg.Info.SupportsIntegerPieces) {
+        if (Reg.Info.BitWidth != ChunkBitWidth) {
+          S.Diag(Reg.Loc, diag::err_widberg_incompatible_register)
+              << Reg.Name << EntityName << T;
+          HadError = true;
+        }
+        continue;
+      }
+
+      S.Diag(Reg.Loc, diag::err_widberg_incompatible_register)
+          << Reg.Name << EntityName << T;
+      HadError = true;
+    }
+    return !HadError;
+  }
+
+  if (T->isRealFloatingType()) {
+    const uint64_t TypeBitWidth = S.Context.getTypeSize(T);
+    const uint64_t PointerBitWidth = TI.getPointerWidth(LangAS::Default);
+    const uint64_t RequiredRegisters =
+        (TypeBitWidth + PointerBitWidth - 1) / PointerBitWidth;
+
+    bool AllIntegerPieceRegs = true;
+    uint64_t TotalIntegerPieceBitWidth = 0;
+    for (const WidbergCheckedRegister &Reg : Registers) {
+      if (!Reg.Info.SupportsIntegerPieces) {
+        AllIntegerPieceRegs = false;
+        break;
+      }
+      TotalIntegerPieceBitWidth += Reg.Info.BitWidth;
+    }
+
+    if (AllIntegerPieceRegs && Registers.size() > RequiredRegisters) {
+      for (uint64_t I = RequiredRegisters; I < Registers.size(); ++I) {
+        S.Diag(Registers[I].Loc, diag::err_widberg_incompatible_register)
+            << Registers[I].Name << EntityName << T;
+      }
+      HadError = true;
+    }
+
+    if (AllIntegerPieceRegs && TotalIntegerPieceBitWidth < TypeBitWidth) {
+      S.Diag(Registers.front().Loc, diag::err_widberg_incompatible_register)
+          << Registers.front().Name << EntityName << T;
+      HadError = true;
+    }
+
+    if (!AllIntegerPieceRegs && Registers.size() > 1) {
+      for (uint64_t I = 1; I < Registers.size(); ++I) {
+        S.Diag(Registers[I].Loc, diag::err_widberg_incompatible_register)
+            << Registers[I].Name << EntityName << T;
+      }
+      HadError = true;
+    }
+
+    if (!AllIntegerPieceRegs && Registers.front().Info.BitWidth &&
+        Registers.front().Info.BitWidth < TypeBitWidth) {
+      S.Diag(Registers.front().Loc, diag::err_widberg_incompatible_register)
+          << Registers.front().Name << EntityName << T;
+      HadError = true;
+    }
+  }
+
+  return !HadError;
+}
+
 static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
                     const FunctionProtoType::ExtProtoInfo &EPI,
                     llvm::function_ref<SourceLocation(unsigned)> getParamLoc) {
   assert(EPI.ExtParameterInfos && "shouldn't get here without param infos");
 
-  // FIXME: Check WidLoc
   bool emittedError = false;
   auto actualCC = EPI.ExtInfo.getCC();
   enum class RequiredCC { OnlySwift, SwiftOrSwiftAsync };
@@ -2669,6 +2825,12 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
   };
   for (size_t paramIndex = 0, numParams = paramTypes.size();
           paramIndex != numParams; ++paramIndex) {
+    if (const WidbergLocation *WidLoc =
+            EPI.ExtParameterInfos[paramIndex].getWidbergLocation()) {
+      validateWidbergLocationForType(S, paramTypes[paramIndex], WidLoc, actualCC,
+                                     "parameter");
+    }
+
     switch (EPI.ExtParameterInfos[paramIndex].getABI()) {
     // Nothing interesting to check for orindary-ABI parameters.
     case ParameterABI::Ordinary:
@@ -2747,6 +2909,11 @@ QualType Sema::BuildFunctionType(QualType T,
 
     ParamTypes[Idx] = ParamType;
   }
+
+  if (const WidbergLocation *WidLoc = EPI.ExtInfo.getWidbergLocation())
+    Invalid |= !validateWidbergLocationForType(*this, T, WidLoc,
+                                               EPI.ExtInfo.getCC(),
+                                               "return value");
 
   if (EPI.ExtParameterInfos) {
     checkExtParameterInfos(*this, ParamTypes, EPI,
@@ -5236,6 +5403,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           Loc = D.getIdentifierLoc();
         S.Diag(Loc, diag::err_widberg_cconv_requires_return_loc)
             << FunctionType::getNameForCallConv(CC);
+        D.setInvalidType(true);
+      }
+
+      if (D.getWidbergReturnLocation() &&
+          !validateWidbergLocationForType(S, T, D.getWidbergReturnLocation(), CC,
+                                          "return value")) {
         D.setInvalidType(true);
       }
 

@@ -1834,6 +1834,129 @@ ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
   return llvm::ArrayRef(AddlRegNames);
 }
 
+static std::optional<unsigned> getX86NumberedGPRBitWidth(StringRef RegName) {
+  if (!RegName.consume_front("r") || RegName.empty())
+    return std::nullopt;
+
+  unsigned BitWidth = 64;
+  if (RegName.consume_back("d"))
+    BitWidth = 32;
+  else if (RegName.consume_back("w"))
+    BitWidth = 16;
+  else if (RegName.consume_back("b"))
+    BitWidth = 8;
+
+  unsigned RegNum;
+  if (RegName.getAsInteger(10, RegNum))
+    return std::nullopt;
+  if (RegNum > 31)
+    return std::nullopt;
+
+  return BitWidth;
+}
+
+static std::optional<unsigned> getX86NumberedGPRIndex(StringRef RegName) {
+  if (!RegName.consume_front("r") || RegName.empty())
+    return std::nullopt;
+
+  if (RegName.consume_back("d") || RegName.consume_back("w") ||
+      RegName.consume_back("b")) {
+    if (RegName.empty())
+      return std::nullopt;
+  }
+
+  unsigned RegNum;
+  if (RegName.getAsInteger(10, RegNum))
+    return std::nullopt;
+  if (RegNum > 31)
+    return std::nullopt;
+
+  return RegNum;
+}
+
+static std::optional<unsigned> getX86NumberedRegIndex(StringRef RegName,
+                                                      StringRef Prefix) {
+  if (!RegName.consume_front(Prefix) || RegName.empty())
+    return std::nullopt;
+
+  unsigned RegNum;
+  if (RegName.getAsInteger(10, RegNum))
+    return std::nullopt;
+
+  return RegNum;
+}
+
+static std::optional<unsigned> getX86GPRBitWidth(StringRef RegName) {
+  if (auto BitWidth = getX86NumberedGPRBitWidth(RegName))
+    return BitWidth;
+
+  unsigned BitWidth =
+      llvm::StringSwitch<unsigned>(RegName)
+          .Cases({"al", "ah", "bl", "bh", "cl", "ch", "dl", "dh"}, 8)
+          .Cases({"sil", "dil", "spl", "bpl"}, 8)
+          .Cases({"ax", "bx", "cx", "dx", "si", "di", "sp", "bp"}, 16)
+          .Cases({"eax", "ebx", "ecx", "edx", "esi", "edi", "esp", "ebp"}, 32)
+          .Cases({"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rsp", "rbp"}, 64)
+          .Default(0);
+  if (!BitWidth)
+    return std::nullopt;
+  return BitWidth;
+}
+
+static bool is64BitOnlyGPRAlias(StringRef RegName) {
+  return llvm::StringSwitch<bool>(RegName)
+      .Cases({"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rsp", "rbp"}, true)
+      .Cases({"sil", "dil", "spl", "bpl"}, true)
+      .Default(false);
+}
+
+static bool is64BitOnlyX86Register(StringRef RegName) {
+  if (is64BitOnlyGPRAlias(RegName))
+    return true;
+
+  if (std::optional<unsigned> GPRIndex = getX86NumberedGPRIndex(RegName))
+    return *GPRIndex >= 8;
+
+  if (std::optional<unsigned> XMMIndex = getX86NumberedRegIndex(RegName, "xmm"))
+    return *XMMIndex >= 8;
+  if (std::optional<unsigned> YMMIndex = getX86NumberedRegIndex(RegName, "ymm"))
+    return *YMMIndex >= 8;
+  if (std::optional<unsigned> ZMMIndex = getX86NumberedRegIndex(RegName, "zmm"))
+    return *ZMMIndex >= 8;
+
+  return false;
+}
+
+std::optional<TargetInfo::WidbergRegisterInfo>
+X86TargetInfo::getWidbergRegisterInfo(StringRef RegName) const {
+  if (RegName.empty())
+    return std::nullopt;
+
+  std::string LowerRegName = RegName.lower();
+  StringRef Name(LowerRegName);
+
+  // The backend currently expects fp0..fp7 spellings for x87 stack registers
+  // in Widberg locations. Do not accept "st"/"st0" aliases here.
+  if (Name == "st" || Name == "st0")
+    return std::nullopt;
+
+  if (Name.size() == 3 && Name.starts_with("fp") && Name[2] >= '0' &&
+      Name[2] <= '7')
+    return TargetInfo::WidbergRegisterInfo{80, false};
+
+  if (!isValidGCCRegisterName(Name))
+    return std::nullopt;
+
+  if (getTriple().getArch() == llvm::Triple::x86 &&
+      is64BitOnlyX86Register(Name))
+    return std::nullopt;
+
+  if (auto BitWidth = getX86GPRBitWidth(Name))
+    return TargetInfo::WidbergRegisterInfo{*BitWidth, true};
+
+  return TargetInfo::WidbergRegisterInfo{0, false};
+}
+
 llvm::SmallVector<Builtin::InfosShard>
 X86_32TargetInfo::getTargetBuiltins() const {
   return {
