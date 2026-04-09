@@ -7187,9 +7187,14 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
         SourceLocation LAngleLoc, RAngleLoc;
         SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
         if (TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers,
-                                    RAngleLoc))
-          Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers,
-                                       RAngleLoc);
+                                    RAngleLoc)) {
+          if (IsFunctionDeclaration) {
+            Diag(ATLoc, diag::err_widberg_post_location_on_function_decl);
+          } else {
+            Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc,
+                                         RegisterIdentifiers, RAngleLoc);
+          }
+        }
       }
     } else if (Tok.is(tok::l_square)) {
       ParseBracketDeclarator(D);
