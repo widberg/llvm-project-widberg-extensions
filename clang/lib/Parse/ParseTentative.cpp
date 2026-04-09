@@ -887,6 +887,28 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
                                             bool mayHaveIdentifier,
                                             bool mayHaveDirectInit,
                                             bool mayHaveTrailingReturnType) {
+  auto TryConsumeWidbergLocation = [&]() -> TPResult {
+    if (!getLangOpts().WidbergExt || Tok.isNot(tok::at) ||
+        NextToken().isNot(tok::less))
+      return TPResult::False;
+
+    ConsumeToken(); // '@'
+    ConsumeToken(); // '<'
+
+    while (Tok.isNot(tok::greater)) {
+      if (Tok.is(tok::colon)) {
+        ConsumeToken();
+        continue;
+      }
+      if (Tok.isNot(tok::identifier))
+        return TPResult::Error;
+      ConsumeToken();
+    }
+
+    ConsumeToken(); // '>'
+    return TPResult::True;
+  };
+
   // declarator:
   //   direct-declarator
   //   ptr-operator declarator
@@ -938,7 +960,7 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
       if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec, tok::kw___cdecl,
                       tok::kw___stdcall, tok::kw___fastcall, tok::kw___thiscall,
                       tok::kw___regcall, tok::kw___vectorcall, tok::kw___usercall,
-                      tok::kw___userpurge, tok::kw___watcall))
+                      tok::kw___userpurge, tok::kw___spoils, tok::kw___watcall))
         return TPResult::True; // attributes indicate declaration
       TPResult TPR = TryParseDeclarator(mayBeAbstract, mayHaveIdentifier);
       if (TPR != TPResult::Ambiguous)
@@ -951,13 +973,22 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
     return TPResult::False;
   }
 
+  TPResult WidTPR = TryConsumeWidbergLocation();
+  if (WidTPR == TPResult::Error)
+    return TPResult::Error;
+
   if (mayHaveDirectInit)
     return TPResult::Ambiguous;
 
   while (true) {
     TPResult TPR(TPResult::Ambiguous);
 
-    if (Tok.is(tok::l_paren)) {
+    WidTPR = TryConsumeWidbergLocation();
+    if (WidTPR == TPResult::Error)
+      return TPResult::Error;
+    if (WidTPR == TPResult::True) {
+      continue;
+    } else if (Tok.is(tok::l_paren)) {
       // Check whether we have a function declarator or a possible ctor-style
       // initializer that follows the declarator. Note that ctor-style
       // initializers are not possible in contexts where abstract declarators

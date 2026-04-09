@@ -7117,7 +7117,17 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
     MaybeParseCXX11Attributes(D);
 
   while (true) {
-    if (Tok.is(tok::l_paren)) {
+    if (Tok.is(tok::at) && NextToken().is(tok::less) &&
+        getLangOpts().WidbergExt) {
+      SourceLocation ATLoc;
+      SourceLocation LAngleLoc, RAngleLoc;
+      SmallVector<IdentifierLoc *, 2> RegisterIdentifiers;
+      if (TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers,
+                                  RAngleLoc)) {
+        Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers,
+                                     RAngleLoc);
+      }
+    } else if (Tok.is(tok::l_paren)) {
       bool IsFunctionDeclaration = D.isFunctionDeclaratorAFunctionDeclaration();
       // Enter function-declaration scope, limiting any declarators to the
       // function prototype scope, including parameter declarators.
@@ -7130,7 +7140,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // In such a case, check if we actually have a function declarator; if it
       // is not, the declarator has been fully parsed.
       bool IsAmbiguous = false;
-      if (getLangOpts().CPlusPlus && D.mayBeFollowedByCXXDirectInit()) {
+      if (getLangOpts().CPlusPlus && D.mayBeFollowedByCXXDirectInit() &&
+          !(getLangOpts().WidbergExt && D.getWidbergLocation())) {
         // C++2a [temp.res]p5
         // A qualified-id is assumed to name a type if
         //   - [...]
@@ -7170,7 +7181,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       D.setWidbergReturnLocation(D.getWidbergLocation());
       D.setWidbergLocation(nullptr);
 
-      if (Tok.is(tok::at) && getLangOpts().WidbergExt) {
+      if (Tok.is(tok::at) && NextToken().is(tok::less) &&
+          getLangOpts().WidbergExt) {
         SourceLocation ATLoc;
         SourceLocation LAngleLoc, RAngleLoc;
         SmallVector<IdentifierLoc*, 2> RegisterIdentifiers;
@@ -7354,6 +7366,7 @@ void Parser::ParseParenDeclarator(Declarator &D) {
 
   // Eat any Widberg extensions.
   ParseWidbergTypeAttributes(attrs);
+  MaybeParseWidbergSpoils(attrs);
 
   // Eat any Borland extensions.
   if  (Tok.is(tok::kw___pascal))
@@ -7398,6 +7411,19 @@ void Parser::ParseParenDeclarator(Declarator &D) {
     ParseDeclaratorInternal(D, &Parser::ParseDirectDeclarator);
     // Match the ')'.
     T.consumeClose();
+
+    if (Tok.is(tok::at) && NextToken().is(tok::less) &&
+        getLangOpts().WidbergExt) {
+      SourceLocation ATLoc;
+      SourceLocation LAngleLoc, RAngleLoc;
+      SmallVector<IdentifierLoc *, 2> RegisterIdentifiers;
+      if (TryParseWidbergLocation(ATLoc, LAngleLoc, RegisterIdentifiers,
+                                  RAngleLoc)) {
+        Actions.ActOnWidbergLocation(D, ATLoc, LAngleLoc, RegisterIdentifiers,
+                                     RAngleLoc);
+      }
+    }
+
     D.AddTypeInfo(
         DeclaratorChunk::getParen(T.getOpenLocation(), T.getCloseLocation()),
         std::move(attrs), T.getCloseLocation());
