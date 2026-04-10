@@ -1994,6 +1994,7 @@ enum class PredefinedIdentKind {
   Function,
   LFunction, // Same as Function, but as wide string.
   FuncDName,
+  LastSymDName,
   FuncSig,
   LFuncSig, // Same as FuncSig, but as wide string
   PrettyFunction,

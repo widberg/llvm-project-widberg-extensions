@@ -3935,6 +3935,7 @@ private:
   ///         '__func__'        [C99 6.4.2.2]
   /// [GNU]   '__FUNCTION__'
   /// [MS]    '__FUNCDNAME__'
+  /// [MS]    '__LASTSYMDNAME__'
   /// [MS]    'L__FUNCTION__'
   /// [MS]    '__FUNCSIG__'
   /// [MS]    'L__FUNCSIG__'

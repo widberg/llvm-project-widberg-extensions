@@ -445,7 +445,7 @@ bool clang::isFunctionLocalStringLiteralMacro(tok::TokenKind K,
   return LO.MicrosoftExt &&
          (K == tok::kw___FUNCTION__ || K == tok::kw_L__FUNCTION__ ||
           K == tok::kw___FUNCSIG__ || K == tok::kw_L__FUNCSIG__ ||
-          K == tok::kw___FUNCDNAME__);
+          K == tok::kw___FUNCDNAME__ || K == tok::kw___LASTSYMDNAME__);
 }
 
 bool clang::tokenIsLikeStringLiteral(const Token &Tok, const LangOptions &LO) {

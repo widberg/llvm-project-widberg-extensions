@@ -654,6 +654,8 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedIdentKind IK) {
     return "__FUNCTION__";
   case PredefinedIdentKind::FuncDName:
     return "__FUNCDNAME__";
+  case PredefinedIdentKind::LastSymDName:
+    return "__LASTSYMDNAME__";
   case PredefinedIdentKind::LFunction:
     return "L__FUNCTION__";
   case PredefinedIdentKind::PrettyFunction:
@@ -675,7 +677,8 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
                                         bool ForceElaboratedPrinting) {
   ASTContext &Context = CurrentDecl->getASTContext();
 
-  if (IK == PredefinedIdentKind::FuncDName) {
+  if (IK == PredefinedIdentKind::FuncDName ||
+      IK == PredefinedIdentKind::LastSymDName) {
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(CurrentDecl)) {
       std::unique_ptr<MangleContext> MC;
       MC.reset(Context.createMangleContext());
@@ -698,7 +701,9 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
           return std::string(Buffer.substr(1));
         return std::string(Buffer);
       }
-      return std::string(ND->getIdentifier()->getName());
+      if (const IdentifierInfo *II = ND->getIdentifier())
+        return std::string(II->getName());
+      return "";
     }
     return "";
   }

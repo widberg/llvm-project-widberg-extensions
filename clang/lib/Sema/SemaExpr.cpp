@@ -2094,6 +2094,8 @@ static PredefinedIdentKind getPredefinedExprKind(tok::TokenKind Kind) {
     return PredefinedIdentKind::Function;
   case tok::kw___FUNCDNAME__:
     return PredefinedIdentKind::FuncDName; // [MS]
+  case tok::kw___LASTSYMDNAME__:
+    return PredefinedIdentKind::LastSymDName; // [MS]
   case tok::kw___FUNCSIG__:
     return PredefinedIdentKind::FuncSig; // [MS]
   case tok::kw_L__FUNCTION__:
@@ -2206,7 +2208,18 @@ Sema::ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks) {
       ExpandedToks.emplace_back(Tok);
       continue;
     }
-    if (isa<TranslationUnitDecl>(CurrentDecl))
+
+    PredefinedIdentKind IK = getPredefinedExprKind(Tok.getKind());
+    Decl *PredefinedDecl = CurrentDecl;
+    if (IK == PredefinedIdentKind::LastSymDName) {
+      if (const NamedDecl *Last = getLastSymbolWithDName())
+        PredefinedDecl = const_cast<NamedDecl *>(Last);
+      else
+        PredefinedDecl = Context.getTranslationUnitDecl();
+    }
+
+    if (isa<TranslationUnitDecl>(PredefinedDecl) &&
+        IK != PredefinedIdentKind::LastSymDName)
       Diag(Tok.getLocation(), diag::ext_predef_outside_function);
     // Stringify predefined expression
     Diag(Tok.getLocation(), diag::ext_string_literal_from_predefined)
@@ -2224,7 +2237,7 @@ Sema::ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks) {
     }
     OS << '"'
        << Lexer::Stringify(PredefinedExpr::ComputeName(
-              getPredefinedExprKind(Tok.getKind()), CurrentDecl))
+              IK, PredefinedDecl))
        << '"';
     PP.CreateString(OS.str(), Exp, Tok.getLocation(), Tok.getEndLoc());
   }
@@ -3620,15 +3633,27 @@ static void ConvertUTF8ToWideString(unsigned CharByteWidth, StringRef Source,
 
 ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
                                      PredefinedIdentKind IK) {
-  Decl *currentDecl = getPredefinedExprDecl(CurContext);
-  if (!currentDecl) {
-    Diag(Loc, diag::ext_predef_outside_function);
-    currentDecl = Context.getTranslationUnitDecl();
+  Decl *currentDecl;
+  if (IK == PredefinedIdentKind::LastSymDName) {
+    if (const NamedDecl *Last = getLastSymbolWithDName())
+      currentDecl = const_cast<NamedDecl *>(Last);
+    else
+      currentDecl = Context.getTranslationUnitDecl();
+  } else {
+    currentDecl = getPredefinedExprDecl(CurContext);
+    if (!currentDecl) {
+      Diag(Loc, diag::ext_predef_outside_function);
+      currentDecl = Context.getTranslationUnitDecl();
+    }
   }
+
+  const DeclContext *DependentDC = dyn_cast<DeclContext>(currentDecl);
+  if (!DependentDC)
+    DependentDC = currentDecl->getDeclContext();
 
   QualType ResTy;
   StringLiteral *SL = nullptr;
-  if (cast<DeclContext>(currentDecl)->isDependentContext())
+  if (DependentDC && DependentDC->isDependentContext())
     ResTy = Context.DependentTy;
   else {
     // Pre-defined identifiers are of type char[x], where x is the length of

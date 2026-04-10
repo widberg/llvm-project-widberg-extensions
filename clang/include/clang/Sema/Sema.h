@@ -1446,6 +1446,10 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
+  /// The most recently declared symbol that can produce a decorated name for
+  /// __LASTSYMDNAME__.
+  const NamedDecl *LastSymbolWithDName = nullptr;
+
   SemaAMDGPU &AMDGPU() {
     assert(AMDGPUPtr);
     return *AMDGPUPtr;
@@ -3908,6 +3912,11 @@ public:
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
                               MultiTemplateParamsArg TemplateParameterLists);
+
+  void MaybeTrackLastSymbolWithDName(const NamedDecl *D);
+  const NamedDecl *getLastSymbolWithDName() const {
+    return LastSymbolWithDName;
+  }
 
   /// Attempt to fold a variable-sized type to a constant-sized type, returning
   /// true if we were successful.

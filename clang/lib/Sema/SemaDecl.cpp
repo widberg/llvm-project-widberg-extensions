@@ -6711,6 +6711,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   New->setWidbergReturnLocation(D.getWidbergReturnLocation());
 
   warnOnCTypeHiddenInCPlusPlus(New);
+  if (isa<FunctionDecl, FunctionTemplateDecl>(New))
+    MaybeTrackLastSymbolWithDName(New);
 
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
@@ -6721,6 +6723,24 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     OpenMP().checkDeclIsAllowedInOpenMPTarget(nullptr, New);
 
   return New;
+}
+
+void Sema::MaybeTrackLastSymbolWithDName(const NamedDecl *D) {
+  if (!D || D->isInvalidDecl())
+    return;
+
+  if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    D = FTD->getTemplatedDecl();
+  else if (const auto *VTD = dyn_cast<VarTemplateDecl>(D))
+    D = VTD->getTemplatedDecl();
+
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    LastSymbolWithDName = FD;
+    return;
+  }
+
+  if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->hasGlobalStorage())
+    LastSymbolWithDName = VD;
 }
 
 /// Helper method to turn variable array types into constant array
@@ -15348,6 +15368,8 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   VarDecl *VD = dyn_cast_or_null<VarDecl>(ThisDecl);
   if (!VD)
     return;
+
+  MaybeTrackLastSymbolWithDName(VD);
 
   // Emit any deferred warnings for the variable's initializer, even if the
   // variable is invalid
