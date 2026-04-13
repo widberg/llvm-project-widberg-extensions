@@ -8,23 +8,33 @@ on:
       - "*"
   pull_request:
 
+permissions: {}
+
+concurrency:
+  group: widberg-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build
     runs-on: windows-latest
+    permissions:
+      contents: read # Required to clone the repository.
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+        persist-credentials: false
 
-    - uses: ilammy/msvc-dev-cmd@v1.12.0
+    - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
     - name: Build
       run: |
            cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="X86"
            cmake --build build --config RelWithDebInfo --target vt_gen
-           cmake --build build --config RelWithDebInfo --target clang clangd clang-format clang-tidy lld llvm-lib llvm-ar
+           cmake --build build --config RelWithDebInfo --target clang clangd clang-format clang-tidy lld llvm-lib llvm-ar llvm-rc
 
     - name: Archive Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: widberg-windows-x86_64-${{ github.sha }}
         path: |
@@ -35,3 +45,4 @@ jobs:
           ./build/bin/lld-link.exe
           ./build/bin/llvm-lib.exe
           ./build/bin/llvm-ar.exe
+          ./build/bin/llvm-rc.exe
