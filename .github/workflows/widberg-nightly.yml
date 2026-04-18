@@ -15,6 +15,7 @@ jobs:
       group: nightly-release
       cancel-in-progress: false
     permissions:
+      actions: read # Required to discover and download artifacts from widberg-build.
       contents: write # Required to retag nightly and manage release assets.
 
     steps:
@@ -26,29 +27,76 @@ jobs:
           persist-credentials: false
 
       - name: Download latest build artifacts
-        id: download_artifacts
-        uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: widberg-build.yml
-          branch: ${{ github.event.repository.default_branch }}
-          workflow_conclusion: success
-          path: nightly-artifacts
-          skip_unpack: true
-          if_no_artifact_found: warn
-
-      - name: Check whether artifacts were downloaded
         id: artifact_check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          shopt -s nullglob
-          artifacts=(nightly-artifacts/*)
-          if [ ${#artifacts[@]} -eq 0 ]; then
+          set -euo pipefail
+          mkdir -p nightly-artifacts
+
+          run_id="$(gh run list \
+            --workflow widberg-build.yml \
+            --branch "$DEFAULT_BRANCH" \
+            --event push \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')"
+
+          if [ -z "$run_id" ]; then
             echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "No nightly artifacts available."
+            echo "No successful widberg-build runs found on branch $DEFAULT_BRANCH."
+            exit 0
+          fi
+
+          artifact_index="nightly-artifacts/.artifact-index"
+          if ! gh api \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+            --paginate \
+            --jq '.artifacts[] | select(.expired == false) | "\(.id)\t\(.name)"' \
+            > "$artifact_index"; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Failed to list artifacts from run $run_id."
+            exit 0
+          fi
+
+          mapfile -t run_artifacts < "$artifact_index"
+          rm -f "$artifact_index"
+
+          if [ "${#run_artifacts[@]}" -eq 0 ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No artifacts found in run $run_id."
+            exit 0
+          fi
+
+          download_failed=false
+          for artifact in "${run_artifacts[@]}"; do
+            artifact_id="${artifact%%$'\t'*}"
+            artifact_name="${artifact#*$'\t'}"
+            artifact_path="nightly-artifacts/${artifact_name}"
+
+            if ! gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "$artifact_path"; then
+              echo "error downloading ${artifact_name}"
+              download_failed=true
+              break
+            fi
+          done
+
+          if [ "$download_failed" = true ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Failed to download artifacts from run $run_id."
+            exit 0
+          fi
+
+          mapfile -d '' artifacts < <(find nightly-artifacts -type f -print0)
+          if [ "${#artifacts[@]}" -eq 0 ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No downloadable artifact files found in run $run_id."
           else
             echo "found=true" >> "$GITHUB_OUTPUT"
-            printf 'Found artifacts:\n%s\n' "${artifacts[*]}"
+            printf 'Found artifacts from run %s:\n' "$run_id"
+            printf '%s\n' "${artifacts[@]}"
           fi
 
       - name: Ensure nightly release exists
@@ -88,11 +136,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for asset in $(gh release view nightly --json assets --jq '.assets[].name'); do
+          mapfile -t existing_assets < <(gh release view nightly --json assets --jq '.assets[].name')
+          for asset in "${existing_assets[@]}"; do
             gh release delete-asset nightly "$asset" --yes
           done
 
-          gh release upload nightly nightly-artifacts/* --clobber
+          mapfile -d '' artifacts < <(find nightly-artifacts -type f -print0)
+          gh release upload nightly "${artifacts[@]}" --clobber
           gh release edit nightly \
             --title "Nightly" \
             --prerelease
