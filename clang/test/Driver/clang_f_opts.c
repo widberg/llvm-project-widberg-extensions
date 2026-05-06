@@ -474,6 +474,24 @@
 // RUN: %clang -### -S -fno-unsigned-char %s 2>&1 | FileCheck -check-prefix=CHAR-SIGN4 %s
 // CHAR-SIGN4-NOT: -fno-signed-char
 
+// RUN: %clang -### -S -fsigned-bitfields %s 2>&1 | FileCheck -check-prefix=BITFIELD-SIGN1 %s
+// BITFIELD-SIGN1-NOT: -fno-signed-bitfields
+
+// RUN: %clang -### -S -funsigned-bitfields %s 2>&1 | FileCheck -check-prefix=BITFIELD-SIGN2 %s
+// BITFIELD-SIGN2: -fno-signed-bitfields
+
+// RUN: %clang -### -S -fno-signed-bitfields %s 2>&1 | FileCheck -check-prefix=BITFIELD-SIGN3 %s
+// BITFIELD-SIGN3: -fno-signed-bitfields
+
+// RUN: %clang -### -S -fno-unsigned-bitfields %s 2>&1 | FileCheck -check-prefix=BITFIELD-SIGN4 %s
+// BITFIELD-SIGN4-NOT: -fno-signed-bitfields
+
+// RUN: %clang -### -S -fsigned-bitfields -funsigned-bitfields %s 2>&1 | FileCheck -check-prefix=BITFIELD-SIGN5 %s
+// BITFIELD-SIGN5: -fno-signed-bitfields
+
+// RUN: %clang -### -S -funsigned-bitfields -fsigned-bitfields %s 2>&1 | FileCheck -check-prefix=BITFIELD-SIGN6 %s
+// BITFIELD-SIGN6-NOT: -fno-signed-bitfields
+
 // RUN: %clang --target=x86_64-unknown-none-none -### -fshort-wchar -fno-short-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR1 -check-prefix=DELIMITERS %s
 // RUN: %clang --target=x86_64-unknown-none-none -### -fno-short-wchar -fshort-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR2 -check-prefix=DELIMITERS %s
 // Make sure we don't match the -NOT lines with the linker invocation.

@@ -7735,14 +7735,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fno-common is the default, set -fcommon only when that flag is set.
   Args.addOptInFlag(CmdArgs, options::OPT_fcommon, options::OPT_fno_common);
 
-  // -fsigned-bitfields is default, and clang doesn't yet support
-  // -funsigned-bitfields.
-  if (!Args.hasFlag(options::OPT_fsigned_bitfields,
-                    options::OPT_funsigned_bitfields, true))
-    D.Diag(diag::warn_drv_clang_unsupported)
-        << Args.getLastArg(options::OPT_funsigned_bitfields)->getAsString(Args);
+  // -fsigned-bitfields is the default.
+  Args.addOptOutFlag(CmdArgs, options::OPT_fsigned_bitfields,
+                     options::OPT_fno_signed_bitfields);
 
-  // -fsigned-bitfields is default, and clang doesn't support -fno-for-scope.
+  // -ffor-scope is default, and clang doesn't support -fno-for-scope.
   if (!Args.hasFlag(options::OPT_ffor_scope, options::OPT_fno_for_scope, true))
     D.Diag(diag::err_drv_clang_unsupported)
         << Args.getLastArg(options::OPT_fno_for_scope)->getAsString(Args);

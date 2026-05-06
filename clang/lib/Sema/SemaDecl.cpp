@@ -29,6 +29,7 @@
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/HLSLRuntime.h"
@@ -19338,6 +19339,73 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
   return NewFD;
 }
 
+static bool hasExplicitSignednessAsWritten(TypeSourceInfo *TSI) {
+  if (!TSI)
+    return false;
+  if (BuiltinTypeLoc BTL =
+          TSI->getTypeLoc().getUnqualifiedLoc().getAsAdjusted<BuiltinTypeLoc>())
+    return BTL.getWrittenSignSpec() != TypeSpecifierSign::Unspecified;
+  return false;
+}
+
+static bool hasExplicitSignednessInAliasChain(QualType T,
+                                              const ASTContext &Context) {
+  llvm::SmallPtrSet<const TypedefNameDecl *, 8> VisitedTypedefs;
+
+  T = T.getUnqualifiedType();
+  while (const Type *Ty = T.getTypePtrOrNull()) {
+    if (const auto *TT = dyn_cast<TypedefType>(Ty)) {
+      const TypedefNameDecl *TD = TT->getDecl();
+      if (!VisitedTypedefs.insert(TD).second)
+        return false;
+      if (hasExplicitSignednessAsWritten(TD->getTypeSourceInfo()))
+        return true;
+    } else if (const auto *UT = dyn_cast<UsingType>(Ty)) {
+      const NamedDecl *Target = UT->getDecl()->getTargetDecl();
+      if (const auto *TD = dyn_cast_or_null<TypedefNameDecl>(
+              Target ? Target->getUnderlyingDecl() : nullptr)) {
+        if (!VisitedTypedefs.insert(TD).second)
+          return false;
+        if (hasExplicitSignednessAsWritten(TD->getTypeSourceInfo()))
+          return true;
+      }
+    }
+
+    QualType Next = T.getSingleStepDesugaredType(Context).getUnqualifiedType();
+    if (Next == T)
+      return false;
+    T = Next;
+  }
+
+  return false;
+}
+
+static bool isSignednessControllablePlainBitFieldType(QualType T) {
+  const auto *BT = T->getAs<BuiltinType>();
+  if (!BT)
+    return false;
+
+  switch (BT->getKind()) {
+  case BuiltinType::Char_S:
+  case BuiltinType::Char_U:
+  case BuiltinType::SChar:
+  case BuiltinType::UChar:
+  case BuiltinType::Short:
+  case BuiltinType::UShort:
+  case BuiltinType::Int:
+  case BuiltinType::UInt:
+  case BuiltinType::Long:
+  case BuiltinType::ULong:
+  case BuiltinType::LongLong:
+  case BuiltinType::ULongLong:
+  case BuiltinType::Int128:
+  case BuiltinType::UInt128:
+    return true;
+  default:
+    return false;
+  }
+}
+
 FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
                                 TypeSourceInfo *TInfo,
                                 RecordDecl *Record, SourceLocation Loc,
@@ -19427,6 +19495,24 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
 
   if (InvalidDecl)
     BitWidth = nullptr;
+
+  if (!InvalidDecl && BitWidth && !getLangOpts().CPlusPlus &&
+      !getLangOpts().SignedBitfields && !T->isDependentType() &&
+      isSignednessControllablePlainBitFieldType(T)) {
+    bool HasExplicitSignedness =
+        D ? D->getDeclSpec().getTypeSpecSign() != TypeSpecifierSign::Unspecified
+          : hasExplicitSignednessAsWritten(TInfo);
+    if (!HasExplicitSignedness)
+      HasExplicitSignedness = hasExplicitSignednessInAliasChain(T, Context);
+
+    if (!HasExplicitSignedness) {
+      QualType Unqualified = T.getUnqualifiedType();
+      QualType UnsignedAdjusted =
+          Context.getCorrespondingUnsignedType(Unqualified);
+      T = Context.getQualifiedType(UnsignedAdjusted, T.getQualifiers());
+    }
+  }
+
   // If this is declared as a bit-field, check the bit-field.
   if (BitWidth) {
     BitWidth =

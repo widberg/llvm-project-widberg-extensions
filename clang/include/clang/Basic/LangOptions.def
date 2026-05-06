@@ -318,6 +318,7 @@ ENUM_LANGOPT(FPExceptionMode, FPExceptionModeKind, 2, FPE_Default, Benign, "FP E
 ENUM_LANGOPT(FPEvalMethod, FPEvalMethodKind, 2, FEM_UnsetOnCommandLine, Benign, "FP type used for floating point arithmetic")
 ENUM_LANGOPT(Float16ExcessPrecision, ExcessPrecisionKind, 2, FPP_Standard, NotCompatible, "Intermediate truncation behavior for Float16 arithmetic")
 ENUM_LANGOPT(BFloat16ExcessPrecision, ExcessPrecisionKind, 2, FPP_Standard, NotCompatible, "Intermediate truncation behavior for BFloat16 arithmetic")
+LANGOPT(SignedBitfields, 1, 1, NotCompatible, "signed plain bit-fields")
 LANGOPT(NoBitFieldTypeAlign , 1, 0, NotCompatible, "bit-field type alignment")
 LANGOPT(HexagonQdsp6Compat , 1, 0, NotCompatible, "hexagon-qdsp6 backward compatibility")
 LANGOPT(ObjCAutoRefCount , 1, 0, NotCompatible, "Objective-C automated reference counting")

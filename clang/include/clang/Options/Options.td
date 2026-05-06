@@ -4384,7 +4384,10 @@ def fspell_checking_limit_EQ : Joined<["-"], "fspell-checking-limit=">, Group<f_
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum number of times to perform spell checking on unrecognized identifiers (0 = no limit)">,
   MarshallingInfoInt<DiagnosticOpts<"SpellCheckingLimit">, "DiagnosticOptions::DefaultSpellCheckingLimit">;
-def fsigned_bitfields : Flag<["-"], "fsigned-bitfields">, Group<f_Group>;
+defm signed_bitfields : BoolFOption<"signed-bitfields",
+  LangOpts<"SignedBitfields">, DefaultTrue,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use unsigned for plain C bit-fields">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use signed for plain C bit-fields">>;
 defm signed_char : BoolFOption<"signed-char",
   LangOpts<"CharIsSigned">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "char is unsigned">,
@@ -4674,7 +4677,10 @@ def unique_source_file_identifier_EQ: Joined<["-"], "funique-source-file-identif
   HelpText<"Specify the source file identifier for -funique-source-file-names; "
            "uses the source file path if not specified">,
   MarshallingInfoString<CodeGenOpts<"UniqueSourceFileIdentifier">>;
-def funsigned_bitfields : Flag<["-"], "funsigned-bitfields">, Group<f_Group>;
+def funsigned_bitfields : Flag<["-"], "funsigned-bitfields">, Group<f_Group>,
+  Alias<fno_signed_bitfields>;
+def fno_unsigned_bitfields : Flag<["-"], "fno-unsigned-bitfields">, Group<f_Group>,
+  Alias<fsigned_bitfields>;
 def funsigned_char : Flag<["-"], "funsigned-char">, Group<f_Group>;
 def fno_unsigned_char : Flag<["-"], "fno-unsigned-char">;
 def funwind_tables : Flag<["-"], "funwind-tables">, Group<f_Group>;
