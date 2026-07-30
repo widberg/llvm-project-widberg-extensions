@@ -11,10 +11,23 @@
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 
 using namespace clang;
+
+static bool checkASTMergeLanguageCompatibility(CompilerInstance &CI,
+                                               const ASTUnit &Unit,
+                                               StringRef ASTFile) {
+  if (Unit.getLangOpts().CPlusPlus && !CI.getLangOpts().CPlusPlus) {
+    CI.getDiagnostics().Report(diag::err_ast_merge_cxx_lang_mismatch)
+        << ASTFile;
+    return false;
+  }
+
+  return true;
+}
 
 std::unique_ptr<ASTConsumer>
 ASTMergeAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
@@ -40,6 +53,7 @@ void ASTMergeAction::ExecuteAction() {
       DiagIDs(CI.getDiagnostics().getDiagnosticIDs());
   auto SharedState = std::make_shared<ASTImporterSharedState>(
       *CI.getASTContext().getTranslationUnitDecl());
+  bool HadASTMergeError = false;
   for (unsigned I = 0, N = ASTFiles.size(); I != N; ++I) {
     auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
         DiagIDs, CI.getDiagnosticOpts(),
@@ -52,6 +66,11 @@ void ASTMergeAction::ExecuteAction() {
 
     if (!Unit)
       continue;
+
+    if (!checkASTMergeLanguageCompatibility(CI, *Unit, ASTFiles[I])) {
+      HadASTMergeError = true;
+      break;
+    }
 
     ASTImporter Importer(CI.getASTContext(), CI.getFileManager(),
                          Unit->getASTContext(), Unit->getFileManager(),
@@ -76,7 +95,8 @@ void ASTMergeAction::ExecuteAction() {
     }
   }
 
-  AdaptedAction->ExecuteAction();
+  if (!HadASTMergeError)
+    AdaptedAction->ExecuteAction();
   CI.getDiagnostics().getClient()->EndSourceFile();
 }
 
